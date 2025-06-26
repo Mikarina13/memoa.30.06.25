@@ -279,6 +279,12 @@ export function MementoPage() {
         return;
       }
       
+      // Check if already favorited to prevent duplicate insertion
+      if (isProfileFavorited(profileId, profileType)) {
+        console.log('Profile is already in favorites');
+        return;
+      }
+      
       await MemoirIntegrations.addProfileToFavorites(user.id, profileId, profileType);
       
       // Refresh favorites
