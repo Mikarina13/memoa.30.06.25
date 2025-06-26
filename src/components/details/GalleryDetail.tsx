@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Image, Video, ChevronLeft, ChevronRight, Download, ExternalLink, Play, Pause } from 'lucide-react';
+import { Image, Video, ChevronLeft, ChevronRight, Download, ExternalLink, Play, Pause, Folder } from 'lucide-react';
 
 interface GalleryDetailProps {
   data: Array<{

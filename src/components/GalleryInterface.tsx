@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
-import { Image, Video, Upload, Play, Pause, Trash2, Download, Eye, X } from 'lucide-react';
+import { Image as ImageIcon, Video, Upload, Play, Pause, Trash2, Download, Eye, X, Filter, AlertCircle } from 'lucide-react';
 import { MemoirIntegrations } from '../lib/memoir-integrations';
 import { useAuth } from '../hooks/useAuth';
 
@@ -16,7 +16,7 @@ interface GalleryItem {
   metadata: any;
   tags: string[];
   created_at: string;
-  sort_order?: number;
+  sort_order: number;
 }
 
 interface GalleryInterfaceProps {
@@ -37,9 +37,9 @@ export function GalleryInterface({ onGallerySaved, onClose, context = 'memoir', 
   const [selectedItem, setSelectedItem] = useState<GalleryItem | null>(null);
   const [showViewer, setShowViewer] = useState(false);
   const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [hasOrderChanged, setHasOrderChanged] = useState(false);
-
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasReordered, setHasReordered] = useState(false);
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRefs = useRef<{ [key: string]: HTMLVideoElement }>({});
 
@@ -47,6 +47,8 @@ export function GalleryInterface({ onGallerySaved, onClose, context = 'memoir', 
     if (user) {
       if (!initialData) {
         loadGalleryItems();
+      } else {
+        setIsLoading(false);
       }
     }
   }, [user, initialData]);
@@ -56,31 +58,6 @@ export function GalleryInterface({ onGallerySaved, onClose, context = 'memoir', 
       setIsLoading(true);
       console.log(`Loading gallery items for ${memoriaProfileId ? 'Memoria' : 'Memoir'} profile...`);
       let items = await MemoirIntegrations.getGalleryItems(user.id, memoriaProfileId);
-      
-      // Filter out AI tribute images
-      items = items.filter(item => {
-        // More thorough check for tribute images
-        if (!item.metadata) return true;
-        
-        // Check multiple possible tribute indicators
-        const isTribute = 
-          item.metadata.tribute === true || 
-          item.metadata.isTribute === true ||
-          (item.metadata.type === 'tribute') ||
-          (item.tags && item.tags.includes('tribute')) ||
-          (item.title && item.title.toLowerCase().includes('tribute'));
-        
-        return !isTribute;
-      });
-      
-      // Sort items by sort_order if available, otherwise fall back to created_at
-      items.sort((a, b) => {
-        if (a.sort_order !== undefined && b.sort_order !== undefined) {
-          return a.sort_order - b.sort_order;
-        }
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      });
-      
       setGalleryItems(items || []);
       console.log(`Loaded ${items?.length || 0} gallery items`);
     } catch (error) {
@@ -142,15 +119,13 @@ export function GalleryInterface({ onGallerySaved, onClose, context = 'memoir', 
             uploadedAt: new Date().toISOString(),
             memoriaProfileId: memoriaProfileId || null
           },
-          tags: memoriaProfileId ? [`memoria:${memoriaProfileId}`] : [],
-          sort_order: -(Date.now()) // Use negative timestamp for default ordering (newer first)
+          tags: memoriaProfileId ? [`memoria:${memoriaProfileId}`] : []
         }, memoriaProfileId);
 
         uploadedItems.push(galleryItem);
         console.log(`Successfully uploaded and created gallery item: ${galleryItem.id}`);
       }
 
-      // Add new items at the beginning of the gallery
       setGalleryItems(prev => [...uploadedItems, ...prev]);
       setSelectedFiles([]);
       setUploadStatus('success');
@@ -210,43 +185,46 @@ export function GalleryInterface({ onGallerySaved, onClose, context = 'memoir', 
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
-
-  const handleReorderItems = async (reorderedItems: GalleryItem[]) => {
-    setGalleryItems(reorderedItems);
-    setHasOrderChanged(true);
+  
+  const handleReorderEnd = () => {
+    setHasReordered(true);
   };
-
-  const saveItemOrder = async () => {
-    if (!hasOrderChanged) return;
+  
+  const saveNewOrder = async () => {
+    if (!hasReordered) return;
     
     try {
-      // Update sort_order for each item based on its position in the array
+      setIsLoading(true);
+      
+      // Create an array of items with their new sort order
+      // We'll use their index * 100 to leave space between items for future ordering
       const updatedItems = galleryItems.map((item, index) => ({
-        ...item,
-        sort_order: index
+        id: item.id,
+        sort_order: index * 100
       }));
       
-      // Update sort_order in the database
-      for (const item of updatedItems) {
-        await MemoirIntegrations.updateGalleryItemOrder(item.id, item.sort_order);
-      }
+      // Update the items in the database
+      await MemoirIntegrations.updateGalleryItemsOrder(updatedItems);
       
-      setGalleryItems(updatedItems);
-      setHasOrderChanged(false);
+      // Update local state
+      setGalleryItems(prev => prev.map((item, index) => ({
+        ...item,
+        sort_order: index * 100
+      })));
       
-      if (onGallerySaved) {
-        onGallerySaved(updatedItems);
-      }
+      setHasReordered(false);
     } catch (error) {
-      console.error('Error saving item order:', error);
-      setUploadError('Failed to save item order');
+      console.error('Error saving new order:', error);
+      alert('Failed to save new order. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const contextTitle = context === 'memoria' ? 'Gallery - Memories of Your Loved One' : 'Gallery';
+  const contextTitle = context === 'memoria' ? 'Memories Gallery' : 'Personal Gallery';
   const contextDescription = context === 'memoria' 
-    ? 'Preserve and organize photos and videos of your loved one to keep their memory alive.'
-    : 'Upload and organize your photos and videos as part of your digital legacy.';
+    ? 'Preserve and organize photos and videos of your loved one.'
+    : 'Upload and organize photos and videos as part of your digital legacy.';
 
   return (
     <motion.div
@@ -258,7 +236,7 @@ export function GalleryInterface({ onGallerySaved, onClose, context = 'memoir', 
       <div className="bg-black border border-white/20 rounded-xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-3">
-            <Image className="w-8 h-8 text-blue-400" />
+            <ImageIcon className="w-8 h-8 text-blue-400" />
             <h2 className="text-2xl font-bold text-white font-[Orbitron]">{contextTitle}</h2>
           </div>
           <button
@@ -333,7 +311,7 @@ export function GalleryInterface({ onGallerySaved, onClose, context = 'memoir', 
                       {selectedFiles.map((file, index) => (
                         <div key={index} className="bg-white/5 rounded-lg p-3">
                           <div className="w-full h-20 bg-white/10 rounded mb-2 flex items-center justify-center">
-                            {file.type.startsWith('image/') && <Image className="w-8 h-8 text-white/60" />}
+                            {file.type.startsWith('image/') && <ImageIcon className="w-8 h-8 text-white/60" />}
                             {file.type.startsWith('video/') && <Video className="w-8 h-8 text-white/60" />}
                           </div>
                           <h4 className="text-white text-sm font-medium truncate">{file.name}</h4>
@@ -363,8 +341,12 @@ export function GalleryInterface({ onGallerySaved, onClose, context = 'memoir', 
                 )}
 
                 {uploadError && (
-                  <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
-                    {uploadError}
+                  <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm flex items-start gap-2">
+                    <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Upload Error</p>
+                      <p>{uploadError}</p>
+                    </div>
                   </div>
                 )}
 
@@ -389,78 +371,106 @@ export function GalleryInterface({ onGallerySaved, onClose, context = 'memoir', 
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold text-white">Gallery Items</h3>
                     
-                    {hasOrderChanged && (
+                    {hasReordered && (
                       <button
-                        onClick={saveItemOrder}
+                        onClick={saveNewOrder}
                         className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
                       >
                         Save Order
                       </button>
                     )}
                   </div>
-                  
-                  <p className="text-white/60 text-sm">Drag and drop items to reorder them. Changes will be saved automatically.</p>
                 
-                  <Reorder.Group 
-                    axis="y" 
-                    values={galleryItems} 
-                    onReorder={handleReorderItems}
-                    className="space-y-2"
-                  >
-                    {galleryItems.map((item) => (
-                      <Reorder.Item
-                        key={item.id}
-                        value={item}
-                        className="bg-black/40 rounded-lg overflow-hidden border border-white/10 cursor-move"
-                      >
-                        <div className="flex items-center p-2 gap-3">
-                          <div className="w-16 h-16 bg-black/50 relative flex-shrink-0">
-                            {item.media_type === 'image' ? (
-                              <img 
-                                src={item.file_path} 
-                                alt={item.title}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <div className="relative w-full h-full flex items-center justify-center">
-                                <Video className="w-6 h-6 text-white/60" />
-                              </div>
-                            )}
+                  <div className="space-y-2 bg-black/20 rounded-lg p-4">
+                    <p className="text-white/70 text-sm mb-4">
+                      Drag and drop items to reorder them. Click an item to view it.
+                    </p>
+                    
+                    <Reorder.Group 
+                      axis="y" 
+                      values={galleryItems} 
+                      onReorder={setGalleryItems}
+                      className="space-y-2"
+                      onDragEnd={handleReorderEnd}
+                    >
+                      {galleryItems.map((item) => (
+                        <Reorder.Item
+                          key={item.id}
+                          value={item}
+                          className="bg-white/5 border border-white/10 rounded-lg overflow-hidden cursor-move"
+                        >
+                          <div className="flex items-center p-3">
+                            <div className="flex-shrink-0 w-20 h-20 bg-black/40 mr-4 rounded overflow-hidden">
+                              {item.media_type === 'image' ? (
+                                <img 
+                                  src={item.file_path} 
+                                  alt={item.title}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="relative w-full h-full flex items-center justify-center">
+                                  <video
+                                    ref={el => { if (el) videoRefs.current[item.id] = el; }}
+                                    src={item.file_path}
+                                    className="w-full h-full object-cover"
+                                    onEnded={() => setCurrentlyPlaying(null)}
+                                  />
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      playVideo(item.id);
+                                    }}
+                                    className="absolute inset-0 flex items-center justify-center bg-black/50 hover:bg-black/70 transition-colors"
+                                  >
+                                    {currentlyPlaying === item.id ? (
+                                      <Pause className="w-8 h-8 text-white" />
+                                    ) : (
+                                      <Play className="w-8 h-8 text-white" />
+                                    )}
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                            
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-medium text-white truncate">{item.title}</h4>
+                              <p className="text-white/60 text-xs">
+                                {formatFileSize(item.file_size)} • {item.media_type}
+                              </p>
+                              <p className="text-white/50 text-xs">
+                                {new Date(item.created_at).toLocaleDateString()}
+                              </p>
+                            </div>
+                            
+                            <div className="flex-shrink-0 flex items-center gap-2 ml-4">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleViewItem(item);
+                                }}
+                                className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
+                              >
+                                <Eye className="w-4 h-4 text-white" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteItem(item.id);
+                                }}
+                                className="p-2 bg-red-500/20 rounded-lg hover:bg-red-500/30 transition-colors"
+                              >
+                                <Trash2 className="w-4 h-4 text-red-400" />
+                              </button>
+                            </div>
                           </div>
-                          
-                          <div className="flex-1 min-w-0">
-                            <h4 className="text-white font-medium truncate">{item.title}</h4>
-                            <p className="text-white/60 text-xs">{formatFileSize(item.file_size)}</p>
-                          </div>
-                          
-                          <div className="flex gap-1 pr-2">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleViewItem(item);
-                              }}
-                              className="p-2 bg-black/50 rounded-lg hover:bg-black/70 transition-colors"
-                            >
-                              <Eye className="w-4 h-4 text-white" />
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteItem(item.id);
-                              }}
-                              className="p-2 bg-red-500/20 rounded-lg hover:bg-red-500/30 transition-colors"
-                            >
-                              <Trash2 className="w-4 h-4 text-white" />
-                            </button>
-                          </div>
-                        </div>
-                      </Reorder.Item>
-                    ))}
-                  </Reorder.Group>
+                        </Reorder.Item>
+                      ))}
+                    </Reorder.Group>
+                  </div>
                 </div>
               ) : (
                 <div className="text-center py-12">
-                  <Image className="w-16 h-16 text-white/40 mx-auto mb-4" />
+                  <ImageIcon className="w-16 h-16 text-white/30 mx-auto mb-4" />
                   <h4 className="text-xl font-semibold text-white mb-2">No Media Yet</h4>
                   <p className="text-white/60 mb-6">Upload your first photos and videos to get started.</p>
                   <button
@@ -510,14 +520,13 @@ export function GalleryInterface({ onGallerySaved, onClose, context = 'memoir', 
               <div className="mt-4 text-center">
                 <h3 className="text-xl font-semibold text-white mb-2">{selectedItem.title}</h3>
                 <p className="text-white/60">{formatFileSize(selectedItem.file_size)} • {selectedItem.mime_type}</p>
-                
-                <div className="mt-4 flex justify-center gap-4">
+                <div className="mt-2 flex items-center justify-center">
                   <a 
                     href={selectedItem.file_path} 
-                    download 
-                    className="px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg transition-colors flex items-center gap-2"
+                    download
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-colors mt-2"
                   >
-                    <Download className="w-5 h-5" />
+                    <Download className="w-4 h-4" />
                     Download
                   </a>
                 </div>
