@@ -13,10 +13,10 @@ interface Gallery3DCarouselProps {
 export function CarouselCameraControls() {
   const { camera } = useThree();
   
-  // Set initial camera position slightly above the center
+  // Set initial camera position above the center
   useEffect(() => {
-    // Position camera slightly above the carousel plane for better viewing angle
-    camera.position.set(0, 2, 0.1);
+    // Position camera above the carousel plane for better viewing angle
+    camera.position.set(0, 5, 0.1);
     camera.lookAt(0, 0, 0);
     
     // Store original camera position for cleanup
@@ -27,6 +27,15 @@ export function CarouselCameraControls() {
       camera.position.copy(originalPosition);
     };
   }, [camera]);
+  
+  // Restrict camera movement to rotation around the y-axis
+  useFrame(() => {
+    // Keep camera at fixed height
+    camera.position.y = 5;
+    
+    // Ensure camera is looking at the center
+    camera.lookAt(0, 0, 0);
+  });
   
   return null;
 }
@@ -40,7 +49,7 @@ export function Gallery3DCarousel({ galleryItems, onClose, onItemSelect }: Galle
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const isDragging = useRef(false);
   const lastMouseX = useRef(0);
-  const { camera, size } = useThree();
+  const { size } = useThree();
   
   // Calculate the angle between each item
   const angleStep = (Math.PI * 2) / Math.max(galleryItems.length, 1);
@@ -69,7 +78,7 @@ export function Gallery3DCarousel({ galleryItems, onClose, onItemSelect }: Galle
       carouselRef.current.rotation.y = MathUtils.lerp(
         carouselRef.current.rotation.y,
         targetRotationY.current,
-        0.05
+        0.1
       );
     }
   });
@@ -212,6 +221,7 @@ export function Gallery3DCarousel({ galleryItems, onClose, onItemSelect }: Galle
           onChange={handleSliderChange}
           onPrev={() => navigateCarousel(-1)}
           onNext={() => navigateCarousel(1)}
+          onClose={onClose}
         />
       </Html>
     </>
@@ -224,19 +234,21 @@ function SliderControl({
   totalItems, 
   onChange, 
   onPrev, 
-  onNext 
+  onNext,
+  onClose 
 }: { 
   currentIndex: number; 
   totalItems: number; 
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onPrev: () => void;
   onNext: () => void;
+  onClose: () => void;
 }) {
   const [sliderValue, setSliderValue] = useState(0);
   
   // Update slider value when currentIndex changes
   useEffect(() => {
-    const normalizedValue = (currentIndex / (totalItems - 1)) * 100;
+    const normalizedValue = totalItems <= 1 ? 50 : (currentIndex / (totalItems - 1)) * 100;
     setSliderValue(normalizedValue || 0);
   }, [currentIndex, totalItems]);
   
@@ -256,60 +268,107 @@ function SliderControl({
         transform: 'translateX(-50%)',
         width: '80%',
         maxWidth: '800px',
-        padding: '10px 20px',
-        background: 'rgba(0, 0, 0, 0.5)',
+        padding: '15px 20px',
+        background: 'rgba(0, 0, 0, 0.7)',
         backdropFilter: 'blur(10px)',
         borderRadius: '10px',
         border: '1px solid rgba(255, 255, 255, 0.1)',
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
         gap: '10px',
         zIndex: 1000,
+        fontFamily: 'Orbitron, sans-serif',
       }}
     >
-      <button
-        onClick={onPrev}
-        style={{
-          background: 'none',
-          border: 'none',
-          color: 'white',
-          fontSize: '24px',
-          cursor: 'pointer',
-          padding: '0 10px',
-        }}
-      >
-        ←
-      </button>
+      <div style={{ 
+        width: '100%',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '5px'
+      }}>
+        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '14px' }}>
+          {currentIndex + 1} of {totalItems}
+        </span>
+        <button
+          onClick={onClose}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: 'white',
+            fontSize: '16px',
+            cursor: 'pointer',
+            padding: '5px',
+            opacity: 0.7,
+          }}
+        >
+          Close ✕
+        </button>
+      </div>
       
-      <input
-        type="range"
-        min="0"
-        max="100"
-        value={sliderValue}
-        onChange={handleSliderInput}
-        style={{
-          flex: 1,
-          height: '6px',
-          borderRadius: '3px',
-          background: 'rgba(255, 255, 255, 0.2)',
-          outline: 'none',
-          WebkitAppearance: 'none',
-        }}
-      />
-      
-      <button
-        onClick={onNext}
-        style={{
-          background: 'none',
-          border: 'none',
-          color: 'white',
-          fontSize: '24px',
-          cursor: 'pointer',
-          padding: '0 10px',
-        }}
-      >
-        →
-      </button>
+      <div style={{
+        width: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px'
+      }}>
+        <button
+          onClick={onPrev}
+          style={{
+            background: 'rgba(255, 255, 255, 0.1)',
+            border: 'none',
+            color: 'white',
+            fontSize: '20px',
+            cursor: 'pointer',
+            padding: '5px 15px',
+            borderRadius: '5px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '40px',
+            height: '40px',
+          }}
+        >
+          ←
+        </button>
+        
+        <input
+          type="range"
+          min="0"
+          max="100"
+          value={sliderValue}
+          onChange={handleSliderInput}
+          style={{
+            flex: 1,
+            height: '6px',
+            borderRadius: '3px',
+            background: 'rgba(255, 255, 255, 0.2)',
+            outline: 'none',
+            WebkitAppearance: 'none',
+          }}
+        />
+        
+        <button
+          onClick={onNext}
+          style={{
+            background: 'rgba(255, 255, 255, 0.1)',
+            border: 'none',
+            color: 'white',
+            fontSize: '20px',
+            cursor: 'pointer',
+            padding: '5px 15px',
+            borderRadius: '5px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '40px',
+            height: '40px',
+          }}
+        >
+          →
+        </button>
+      </div>
     </div>
   );
 }
@@ -374,8 +433,8 @@ function CarouselItem({
       meshRef.current.scale.y = MathUtils.lerp(meshRef.current.scale.y, targetScale, 0.1);
       meshRef.current.scale.z = MathUtils.lerp(meshRef.current.scale.z, targetScale, 0.1);
       
-      // Ensure the item always faces the camera while maintaining its y-rotation
-      // This prevents the image from rotating with the camera's vertical movement
+      // Ensure the item always faces the camera on the XZ plane
+      // This keeps the frame upright while still facing the user
       if (isActive || isHovered) {
         // Create a vector pointing from the mesh to the camera
         const direction = new Vector3().subVectors(camera.position, meshRef.current.getWorldPosition(new Vector3()));
@@ -396,6 +455,30 @@ function CarouselItem({
     }
   });
   
+  // Calculate aspect ratio for video items
+  const videoOverlay = item.media_type === 'video' ? (
+    <Html center position={[0, 0, 0.02]}>
+      <div style={{
+        width: '60px', 
+        height: '60px', 
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        borderRadius: '50%',
+      }}>
+        <div style={{
+          width: '0', 
+          height: '0',
+          borderTop: '15px solid transparent',
+          borderLeft: '25px solid white',
+          borderBottom: '15px solid transparent',
+          marginLeft: '5px',
+        }}></div>
+      </div>
+    </Html>
+  ) : null;
+  
   return (
     <group position={position} rotation={rotation}>
       {/* Frame */}
@@ -413,13 +496,19 @@ function CarouselItem({
             <meshBasicMaterial color={isActive ? "#333333" : "#222222"} />
           </mesh>
           
+          {/* Image/video mat */}
+          <mesh position={[0, 0, -0.02]}>
+            <planeGeometry args={[6.2, 4.2]} />
+            <meshBasicMaterial color="#000000" />
+          </mesh>
+          
           {/* Image plane */}
           <mesh>
             <planeGeometry args={[6, 4]} />
             <meshBasicMaterial 
               {...materialProps} 
               transparent 
-              opacity={!!texture || item.media_type === 'video' ? 1 : 0.8}
+              opacity={!!texture || item.media_type === 'video' ? 1 : 0.8} 
             />
           </mesh>
           
@@ -427,20 +516,30 @@ function CarouselItem({
           {item.media_type === 'video' && (
             <mesh position={[0, 0, 0.01]}>
               <planeGeometry args={[6, 4]} />
-              <meshBasicMaterial transparent opacity={0.7} color="#000000" />
-              <Html center position={[0, 0, 0.02]}>
-                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-black/80 border border-white/30">
-                  <div className="w-0 h-0 border-t-8 border-t-transparent border-l-16 border-l-white border-b-8 border-b-transparent ml-1"></div>
-                </div>
-              </Html>
+              <meshBasicMaterial transparent opacity={0.5} color="#000000" />
+              {videoOverlay}
             </mesh>
           )}
           
           {/* Item title */}
           <Html center position={[0, -2.5, 0.1]}>
-            <div className={`px-3 py-1 rounded text-white text-center transition-all duration-200 ${
-              isActive || isHovered ? 'bg-black/80 text-white scale-110' : 'bg-black/50 text-white/80'
-            }`} style={{maxWidth: '200px'}}>
+            <div style={{
+              padding: '5px 10px',
+              borderRadius: '4px',
+              backgroundColor: isActive ? 'rgba(0,0,0,0.8)' : 'rgba(0,0,0,0.5)',
+              color: 'white',
+              textAlign: 'center',
+              maxWidth: '200px',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              fontFamily: 'Orbitron, sans-serif',
+              fontSize: '14px',
+              transform: isActive ? 'scale(1.1)' : 'scale(1)',
+              transition: 'all 0.2s ease',
+              boxShadow: isActive ? '0 0 15px rgba(255,255,255,0.2)' : 'none',
+              border: isActive ? '1px solid rgba(255,255,255,0.3)' : '1px solid rgba(255,255,255,0.1)'
+            }}>
               {item.title}
             </div>
           </Html>
