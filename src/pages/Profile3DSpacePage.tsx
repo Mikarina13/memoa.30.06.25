@@ -187,7 +187,6 @@ export function Profile3DSpacePage() {
           // Load gallery items
           const galleryItems = await MemoirIntegrations.getGalleryItems(user.id, memoriaProfileId);
           console.log(`Loaded ${galleryItems?.length || 0} gallery items`);
-          console.log('Gallery items:', galleryItems);
           setGalleryItems(galleryItems || []);
           
           // Add gallery items to profile data for easy access
@@ -263,9 +262,7 @@ export function Profile3DSpacePage() {
               hasMemoirData: !!profile.memoir_data,
               hasMemoirPreferences: !!profile.memoir_data?.preferences?.personal,
               hasMemoirAvaturn: !!profile.memoir_data?.avaturn_avatars,
-              hasMemoirTributeImages: !!profile.memoir_data?.tribute_images,
-              
-              galleryItemsCount: galleryItems?.length || 0
+              hasMemoirTributeImages: !!profile.memoir_data?.tribute_images
             });
           }
         }
@@ -367,8 +364,6 @@ export function Profile3DSpacePage() {
       // Reload all data
       const profile = await MemoirIntegrations.getMemoirProfile(user.id, memoriaProfileId);
       const galleryItems = await MemoirIntegrations.getGalleryItems(user.id, memoriaProfileId);
-      
-      console.log(`Refreshed data: ${galleryItems?.length || 0} gallery items loaded`);
       
       // Update state
       if (profile) {
