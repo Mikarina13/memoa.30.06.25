@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Image, Video, Upload, Play, Pause, Trash2, Download, Eye, X, Folder, FolderPlus, Filter, AlertCircle } from 'lucide-react';
+import { motion, AnimatePresence, Reorder } from 'framer-motion';
+import { Image, Video, Upload, Play, Pause, Trash2, Download, Eye, X } from 'lucide-react';
 import { MemoirIntegrations } from '../lib/memoir-integrations';
 import { useAuth } from '../hooks/useAuth';
 
@@ -13,10 +13,10 @@ interface GalleryItem {
   file_size: number;
   mime_type: string;
   thumbnail_url?: string;
-  folder?: string;
   metadata: any;
   tags: string[];
   created_at: string;
+  sort_order?: number;
 }
 
 interface GalleryInterfaceProps {
@@ -33,15 +33,12 @@ export function GalleryInterface({ onGallerySaved, onClose, context = 'memoir', 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'upload' | 'gallery' | 'folders'>('upload');
+  const [activeTab, setActiveTab] = useState<'upload' | 'gallery'>('upload');
   const [selectedItem, setSelectedItem] = useState<GalleryItem | null>(null);
   const [showViewer, setShowViewer] = useState(false);
   const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null);
-  const [folders, setFolders] = useState<string[]>(['Family Photos', 'Portraits', 'Personal Art', 'Memories', 'Uncategorized']);
-  const [activeFolder, setActiveFolder] = useState<string | null>('Uncategorized');
-  const [newFolderName, setNewFolderName] = useState('');
-  const [showNewFolderInput, setShowNewFolderInput] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasOrderChanged, setHasOrderChanged] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRefs = useRef<{ [key: string]: HTMLVideoElement }>({});
@@ -50,15 +47,6 @@ export function GalleryInterface({ onGallerySaved, onClose, context = 'memoir', 
     if (user) {
       if (!initialData) {
         loadGalleryItems();
-      } else {
-        // Extract folders from initial data
-        const extractedFolders = [...new Set(initialData
-          .filter(item => item.folder)
-          .map(item => item.folder as string))];
-        
-        if (extractedFolders.length > 0) {
-          setFolders(prev => [...new Set([...prev, ...extractedFolders])]);
-        }
       }
     }
   }, [user, initialData]);
@@ -80,20 +68,18 @@ export function GalleryInterface({ onGallerySaved, onClose, context = 'memoir', 
           item.metadata.isTribute === true ||
           (item.metadata.type === 'tribute') ||
           (item.tags && item.tags.includes('tribute')) ||
-          (item.folder === 'Tribute Images') ||
           (item.title && item.title.toLowerCase().includes('tribute'));
         
         return !isTribute;
       });
       
-      // Extract folders from loaded items
-      const extractedFolders = [...new Set(items
-        .filter(item => item.folder)
-        .map(item => item.folder as string))];
-      
-      if (extractedFolders.length > 0) {
-        setFolders(prev => [...new Set([...prev, ...extractedFolders])]);
-      }
+      // Sort items by sort_order if available, otherwise fall back to created_at
+      items.sort((a, b) => {
+        if (a.sort_order !== undefined && b.sort_order !== undefined) {
+          return a.sort_order - b.sort_order;
+        }
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
       
       setGalleryItems(items || []);
       console.log(`Loaded ${items?.length || 0} gallery items`);
@@ -147,7 +133,6 @@ export function GalleryInterface({ onGallerySaved, onClose, context = 'memoir', 
         const galleryItem = await MemoirIntegrations.createGalleryItem({
           user_id: user.id,
           title: file.name.split('.')[0],
-          folder: activeFolder || 'Uncategorized',
           media_type: mediaType,
           file_path: filePath,
           file_size: file.size,
@@ -157,14 +142,16 @@ export function GalleryInterface({ onGallerySaved, onClose, context = 'memoir', 
             uploadedAt: new Date().toISOString(),
             memoriaProfileId: memoriaProfileId || null
           },
-          tags: memoriaProfileId ? [`memoria:${memoriaProfileId}`] : []
+          tags: memoriaProfileId ? [`memoria:${memoriaProfileId}`] : [],
+          sort_order: -(Date.now()) // Use negative timestamp for default ordering (newer first)
         }, memoriaProfileId);
 
         uploadedItems.push(galleryItem);
         console.log(`Successfully uploaded and created gallery item: ${galleryItem.id}`);
       }
 
-      setGalleryItems(prev => [...prev, ...uploadedItems]);
+      // Add new items at the beginning of the gallery
+      setGalleryItems(prev => [...uploadedItems, ...prev]);
       setSelectedFiles([]);
       setUploadStatus('success');
       setActiveTab('gallery');
@@ -224,29 +211,42 @@ export function GalleryInterface({ onGallerySaved, onClose, context = 'memoir', 
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const handleAddFolder = () => {
-    if (!newFolderName.trim()) return;
-    
-    // Add new folder to the list
-    setFolders(prev => [...prev, newFolderName.trim()]);
-    setActiveFolder(newFolderName.trim());
-    setNewFolderName('');
-    setShowNewFolderInput(false);
+  const handleReorderItems = async (reorderedItems: GalleryItem[]) => {
+    setGalleryItems(reorderedItems);
+    setHasOrderChanged(true);
   };
 
-  const filteredGalleryItems = activeFolder 
-    ? galleryItems.filter(item => item.folder === activeFolder)
-    : galleryItems;
+  const saveItemOrder = async () => {
+    if (!hasOrderChanged) return;
+    
+    try {
+      // Update sort_order for each item based on its position in the array
+      const updatedItems = galleryItems.map((item, index) => ({
+        ...item,
+        sort_order: index
+      }));
+      
+      // Update sort_order in the database
+      for (const item of updatedItems) {
+        await MemoirIntegrations.updateGalleryItemOrder(item.id, item.sort_order);
+      }
+      
+      setGalleryItems(updatedItems);
+      setHasOrderChanged(false);
+      
+      if (onGallerySaved) {
+        onGallerySaved(updatedItems);
+      }
+    } catch (error) {
+      console.error('Error saving item order:', error);
+      setUploadError('Failed to save item order');
+    }
+  };
 
-  const contextTitle = context === 'memoria' ? 'Visual Memories of Your Loved One' : 'Personal Gallery';
+  const contextTitle = context === 'memoria' ? 'Gallery - Memories of Your Loved One' : 'Gallery';
   const contextDescription = context === 'memoria' 
     ? 'Preserve and organize photos and videos of your loved one to keep their memory alive.'
     : 'Upload and organize your photos and videos as part of your digital legacy.';
-
-  const folderCounts = folders.reduce((acc, folder) => {
-    acc[folder] = galleryItems.filter(item => item.folder === folder).length;
-    return acc;
-  }, {} as Record<string, number>);
 
   return (
     <motion.div
@@ -284,12 +284,6 @@ export function GalleryInterface({ onGallerySaved, onClose, context = 'memoir', 
             onClick={() => setActiveTab('gallery')}
           >
             Gallery ({galleryItems.length})
-          </button>
-          <button
-            className={`flex-1 py-3 text-center transition-colors ${activeTab === 'folders' ? 'bg-blue-500 text-white' : 'bg-black/50 text-white/60 hover:text-white'}`}
-            onClick={() => setActiveTab('folders')}
-          >
-            Folders ({folders.length})
           </button>
         </div>
 
@@ -335,31 +329,12 @@ export function GalleryInterface({ onGallerySaved, onClose, context = 'memoir', 
                 {selectedFiles.length > 0 && (
                   <div className="mt-6">
                     <h4 className="text-white font-medium mb-3">Selected Files ({selectedFiles.length})</h4>
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        <div>
-                          <label className="block text-sm text-white/60 mb-2">Save to Folder</label>
-                          <select
-                            value={activeFolder || ''}
-                            onChange={(e) => setActiveFolder(e.target.value || null)}
-                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
-                          >
-                            {folders.map(folder => (
-                              <option key={folder} value={folder} className="bg-black">{folder}</option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-                    </div>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4 my-4">
                       {selectedFiles.map((file, index) => (
                         <div key={index} className="bg-white/5 rounded-lg p-3">
                           <div className="w-full h-20 bg-white/10 rounded mb-2 flex items-center justify-center">
                             {file.type.startsWith('image/') && <Image className="w-8 h-8 text-white/60" />}
                             {file.type.startsWith('video/') && <Video className="w-8 h-8 text-white/60" />}
-                            <div className="ml-2 text-white/60 text-xs">
-                              {activeFolder || 'Uncategorized'}
-                            </div>
                           </div>
                           <h4 className="text-white text-sm font-medium truncate">{file.name}</h4>
                           <p className="text-white/60 text-xs">{formatFileSize(file.size)}</p>
@@ -388,12 +363,8 @@ export function GalleryInterface({ onGallerySaved, onClose, context = 'memoir', 
                 )}
 
                 {uploadError && (
-                  <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm flex items-start gap-2">
-                    <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-medium">Upload Error</p>
-                      <p>{uploadError}</p>
-                    </div>
+                  <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+                    {uploadError}
                   </div>
                 )}
 
@@ -416,203 +387,87 @@ export function GalleryInterface({ onGallerySaved, onClose, context = 'memoir', 
               ) : galleryItems.length > 0 ? (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-white">{activeFolder ? activeFolder : 'All Gallery Items'}</h3>
-                    <select
-                      value={activeFolder || ''}
-                      onChange={(e) => setActiveFolder(e.target.value || null)}
-                      className="bg-black/50 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 flex items-center"
-                    >
-                      <option value="" className="bg-black">All Folders</option>
-                      {folders.map(folder => (
-                        <option key={folder} value={folder} className="bg-black">{folder}</option>
-                      ))}
-                    </select>
+                    <h3 className="text-lg font-semibold text-white">Gallery Items</h3>
+                    
+                    {hasOrderChanged && (
+                      <button
+                        onClick={saveItemOrder}
+                        className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
+                      >
+                        Save Order
+                      </button>
+                    )}
                   </div>
+                  
+                  <p className="text-white/60 text-sm">Drag and drop items to reorder them. Changes will be saved automatically.</p>
                 
-                  {filteredGalleryItems.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {filteredGalleryItems.map((item) => (
-                        <div key={item.id} className="bg-black/40 rounded-lg overflow-hidden border border-white/10">
-                          <div className="relative">
+                  <Reorder.Group 
+                    axis="y" 
+                    values={galleryItems} 
+                    onReorder={handleReorderItems}
+                    className="space-y-2"
+                  >
+                    {galleryItems.map((item) => (
+                      <Reorder.Item
+                        key={item.id}
+                        value={item}
+                        className="bg-black/40 rounded-lg overflow-hidden border border-white/10 cursor-move"
+                      >
+                        <div className="flex items-center p-2 gap-3">
+                          <div className="w-16 h-16 bg-black/50 relative flex-shrink-0">
                             {item.media_type === 'image' ? (
                               <img 
                                 src={item.file_path} 
                                 alt={item.title}
-                                className="w-full h-48 object-cover cursor-pointer"
-                                onClick={() => handleViewItem(item)}
+                                className="w-full h-full object-cover"
                               />
                             ) : (
-                              <div className="relative">
-                                <video
-                                  ref={el => { if (el) videoRefs.current[item.id] = el; }}
-                                  src={item.file_path}
-                                  className="w-full h-48 object-cover"
-                                  onEnded={() => setCurrentlyPlaying(null)}
-                                />
-                                <button
-                                  onClick={() => playVideo(item.id)}
-                                  className="absolute inset-0 flex items-center justify-center bg-black/50 hover:bg-black/70 transition-colors"
-                                >
-                                  {currentlyPlaying === item.id ? (
-                                    <Pause className="w-12 h-12 text-white" />
-                                  ) : (
-                                    <Play className="w-12 h-12 text-white" />
-                                  )}
-                                </button>
+                              <div className="relative w-full h-full flex items-center justify-center">
+                                <Video className="w-6 h-6 text-white/60" />
                               </div>
                             )}
-                            
-                            <div className="absolute top-2 right-2 flex gap-2">
-                              <button
-                                onClick={() => handleViewItem(item)}
-                                className="p-2 bg-black/50 rounded-full hover:bg-black/70 transition-colors"
-                              >
-                                <Eye className="w-4 h-4 text-white" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteItem(item.id)}
-                                className="p-2 bg-red-500/50 rounded-full hover:bg-red-500/70 transition-colors"
-                              >
-                                <Trash2 className="w-4 h-4 text-white" />
-                              </button>
-                            </div>
                           </div>
                           
-                          <div className="p-3">
-                            <h4 className="text-white font-medium mb-1 truncate">{item.title}</h4>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-white font-medium truncate">{item.title}</h4>
                             <p className="text-white/60 text-xs">{formatFileSize(item.file_size)}</p>
-                            <div className="flex items-center mt-1 bg-blue-500/10 px-2 py-1 rounded-full w-fit">
-                              <Folder className="w-3 h-3 text-blue-400 mr-1 flex-shrink-0" />
-                              <p className="text-blue-300 text-xs font-semibold">{item.folder || 'Uncategorized'}</p>
-                            </div>
-                            <p className="text-white/50 text-xs mt-1">
-                              {new Date(item.created_at).toLocaleDateString()}
-                            </p>
+                          </div>
+                          
+                          <div className="flex gap-1 pr-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewItem(item);
+                              }}
+                              className="p-2 bg-black/50 rounded-lg hover:bg-black/70 transition-colors"
+                            >
+                              <Eye className="w-4 h-4 text-white" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteItem(item.id);
+                              }}
+                              className="p-2 bg-red-500/20 rounded-lg hover:bg-red-500/30 transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4 text-white" />
+                            </button>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 bg-black/20 rounded-lg border border-white/10">
-                      <Folder className="w-12 h-12 text-white/30 mx-auto mb-2" />
-                      <p className="text-white/60">No items in this folder</p>
-                      <button
-                        onClick={() => setActiveTab('upload')}
-                        className="mt-4 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm"
-                      >
-                        Upload to this folder
-                      </button>
-                    </div>
-                  )}
+                      </Reorder.Item>
+                    ))}
+                  </Reorder.Group>
                 </div>
               ) : (
                 <div className="text-center py-12">
                   <Image className="w-16 h-16 text-white/40 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold text-white mb-2">No Media Yet</h3>
+                  <h4 className="text-xl font-semibold text-white mb-2">No Media Yet</h4>
                   <p className="text-white/60 mb-6">Upload your first photos and videos to get started.</p>
                   <button
                     onClick={() => setActiveTab('upload')}
                     className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
                   >
                     Upload Media
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-          
-          {activeTab === 'folders' && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-white">Manage Folders</h3>
-                <button
-                  onClick={() => setShowNewFolderInput(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
-                >
-                  <FolderPlus className="w-4 h-4" />
-                  New Folder
-                </button>
-              </div>
-              
-              {showNewFolderInput && (
-                <div className="flex gap-2 mb-4">
-                  <input
-                    type="text"
-                    value={newFolderName}
-                    onChange={(e) => setNewFolderName(e.target.value)}
-                    placeholder="Enter folder name"
-                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white placeholder-white/40 focus:outline-none focus:border-blue-500"
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        handleAddFolder();
-                      }
-                    }}
-                  />
-                  <button
-                    onClick={handleAddFolder}
-                    className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
-                  >
-                    Add
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowNewFolderInput(false);
-                      setNewFolderName('');
-                    }}
-                    className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              )}
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {folders.map((folder) => {                  
-                  return (
-                    <div 
-                      key={folder} 
-                      className={`bg-black/40 rounded-lg p-4 cursor-pointer transition-all border border-white/10 ${
-                        activeFolder === folder ? 'ring-1 ring-blue-400' : 'hover:bg-black/60'
-                      }`}
-                      onClick={() => {
-                        setActiveFolder(folder);
-                        setActiveTab('gallery');
-                      }}
-                    >
-                      <div className="flex items-center gap-3 mb-2">
-                        <Folder className="w-5 h-5 text-blue-400" />
-                        <h4 className="text-white font-medium">{folder}</h4>
-                        <span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded-full">
-                          {folderCounts[folder] || 0}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <p className="text-white/60 text-xs">{new Date().toLocaleDateString()}</p>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setActiveFolder(folder);
-                            setActiveTab('gallery');
-                          }}
-                          className="text-xs px-2 py-1 bg-blue-500/20 text-blue-400 rounded hover:bg-blue-500/30 transition-colors"
-                        >
-                          View
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              
-              {folders.length === 0 && (
-                <div className="text-center py-8">
-                  <Folder className="w-16 h-16 text-white/30 mx-auto mb-4" />
-                  <p className="text-white/60 mb-4">No folders created yet.</p>
-                  <button
-                    onClick={() => setShowNewFolderInput(true)}
-                    className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
-                  >
-                    Create First Folder
                   </button>
                 </div>
               )}
@@ -655,9 +510,16 @@ export function GalleryInterface({ onGallerySaved, onClose, context = 'memoir', 
               <div className="mt-4 text-center">
                 <h3 className="text-xl font-semibold text-white mb-2">{selectedItem.title}</h3>
                 <p className="text-white/60">{formatFileSize(selectedItem.file_size)} • {selectedItem.mime_type}</p>
-                <div className="mt-2 flex items-center justify-center">
-                  <Folder className="w-4 h-4 text-blue-400 mr-1" />
-                  <p className="text-white/60 text-sm">{selectedItem.folder || 'Uncategorized'}</p>
+                
+                <div className="mt-4 flex justify-center gap-4">
+                  <a 
+                    href={selectedItem.file_path} 
+                    download 
+                    className="px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg transition-colors flex items-center gap-2"
+                  >
+                    <Download className="w-5 h-5" />
+                    Download
+                  </a>
                 </div>
               </div>
             </div>

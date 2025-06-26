@@ -497,7 +497,7 @@ export class MemoirIntegrations {
           .select('*')
           .eq('user_id', userId)
           .contains('metadata', { memoriaProfileId })
-          .order('created_at', { ascending: false });
+          .order('sort_order', { ascending: true });
         
         if (error) throw error;
         return data || [];
@@ -509,7 +509,7 @@ export class MemoirIntegrations {
           .select('*')
           .eq('user_id', userId)
           .is('metadata->memoriaProfileId', null)
-          .order('created_at', { ascending: false });
+          .order('sort_order', { ascending: true });
         
         if (error) throw error;
         return data || [];
@@ -557,6 +557,41 @@ export class MemoirIntegrations {
       return true;
     } catch (error) {
       console.error('Error deleting gallery item:', error);
+      throw error;
+    }
+  }
+  
+  // Update a gallery item's sort order
+  static async updateGalleryItemOrder(itemId: string, sortOrder: number) {
+    try {
+      const { error } = await supabase
+        .from('gallery_items')
+        .update({ sort_order: sortOrder })
+        .eq('id', itemId);
+      
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error updating gallery item sort order:', error);
+      throw error;
+    }
+  }
+  
+  // Update multiple gallery items' sort orders in a batch
+  static async updateGalleryItemsOrder(items: { id: string; sort_order: number }[]) {
+    try {
+      // Use a transaction to ensure all updates succeed or fail together
+      const updates = items.map(item => 
+        supabase
+          .from('gallery_items')
+          .update({ sort_order: item.sort_order })
+          .eq('id', item.id)
+      );
+      
+      await Promise.all(updates);
+      return true;
+    } catch (error) {
+      console.error('Error updating gallery items sort order:', error);
       throw error;
     }
   }
