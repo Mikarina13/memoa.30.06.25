@@ -683,10 +683,11 @@ export function Profile3DSpacePage() {
       {profileType === 'memoria' && memoriaProfileId && (
         <button 
           onClick={() => setShowTributeImageInterface(true)}
-          className="fixed bottom-16 left-4 p-3 bg-black/50 backdrop-blur-sm rounded-full border border-white/10 text-amber-400 hover:text-amber-300 transition-colors z-40" 
-          title="AI Tribute Images"
+          className="fixed bottom-16 left-4 px-4 py-2 bg-black/60 backdrop-blur-sm rounded-full border border-amber-500/30 text-amber-400 hover:text-amber-300 transition-colors z-40 flex items-center gap-2 shadow-lg shadow-amber-500/10" 
+          title="Generate AI Tribute Images"
         >
           <Sparkles className="w-5 h-5" />
+          <span className="text-sm font-medium">AI Tributes</span>
         </button>
       )}
       
