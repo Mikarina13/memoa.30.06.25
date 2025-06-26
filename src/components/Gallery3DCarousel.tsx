@@ -15,12 +15,12 @@ export function CarouselCameraControls() {
   
   // Set initial camera position slightly above the center
   useEffect(() => {
-    // Position camera slightly above the carousel plane for better viewing angle
-    camera.position.set(0, 2, 0.1);
-    camera.lookAt(0, 0, 0);
-    
     // Store original camera position for cleanup
     const originalPosition = camera.position.clone();
+    
+    // Position camera slightly above the carousel plane for better viewing angle
+    camera.position.set(0, 3, 0.1);
+    camera.lookAt(0, 0, 0);
     
     return () => {
       // Reset camera position when component unmounts
@@ -46,7 +46,7 @@ export function Gallery3DCarousel({ galleryItems, onClose, onItemSelect }: Galle
   const angleStep = (Math.PI * 2) / Math.max(galleryItems.length, 1);
   
   // Radius of the carousel - set a fixed radius for all images
-  const radius = 10;
+  const radius = 12; // Slightly increased radius for better spacing
   
   // Animate carousel rotation
   useFrame(({ mouse }) => {
@@ -76,8 +76,12 @@ export function Gallery3DCarousel({ galleryItems, onClose, onItemSelect }: Galle
   
   // Set up event handlers for mouse/touch interaction
   useEffect(() => {
-    const handleMouseDown = () => {
-      isDragging.current = true;
+    const handleMouseDown = (e: MouseEvent) => {
+      // Only start dragging if left mouse button is pressed
+      if (e.button === 0) {
+        isDragging.current = true;
+        lastMouseX.current = (e.clientX / size.width) * 2 - 1;
+      }
     };
     
     const handleMouseUp = () => {
@@ -90,29 +94,71 @@ export function Gallery3DCarousel({ galleryItems, onClose, onItemSelect }: Galle
       }
     };
     
+    // Touch event handlers for mobile support
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 1) {
+        isDragging.current = true;
+        lastMouseX.current = (e.touches[0].clientX / size.width) * 2 - 1;
+      }
+    };
+    
+    const handleTouchMove = (e: TouchEvent) => {
+      if (isDragging.current && e.touches.length === 1) {
+        const currentX = (e.touches[0].clientX / size.width) * 2 - 1;
+        const deltaX = (currentX - lastMouseX.current) * 5;
+        targetRotationY.current += deltaX;
+        lastMouseX.current = currentX;
+        
+        // Update current index based on rotation
+        const normalizedRotation = ((targetRotationY.current % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+        const newIndex = Math.round(normalizedRotation / angleStep) % galleryItems.length;
+        if (newIndex !== currentIndex) {
+          setCurrentIndex(newIndex);
+        }
+        
+        // Prevent default to avoid scrolling the page
+        e.preventDefault();
+      }
+    };
+    
+    const handleTouchEnd = () => {
+      isDragging.current = false;
+    };
+    
     // Set up keyboard navigation
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') {
         navigateCarousel(-1);
+        e.preventDefault();
       } else if (e.key === 'ArrowRight') {
         navigateCarousel(1);
+        e.preventDefault();
       } else if (e.key === 'Escape') {
         onClose();
+        e.preventDefault();
       }
     };
     
+    // Add all event listeners
     window.addEventListener('mousedown', handleMouseDown);
     window.addEventListener('mouseup', handleMouseUp);
     window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('touchstart', handleTouchStart, { passive: false });
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
+    window.addEventListener('touchend', handleTouchEnd);
     window.addEventListener('keydown', handleKeyDown);
     
+    // Clean up event listeners
     return () => {
       window.removeEventListener('mousedown', handleMouseDown);
       window.removeEventListener('mouseup', handleMouseUp);
       window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [onClose, size.width]);
+  }, [onClose, size.width, currentIndex, angleStep]);
   
   // Handle manual navigation
   const navigateCarousel = (direction: number) => {
@@ -158,51 +204,84 @@ export function Gallery3DCarousel({ galleryItems, onClose, onItemSelect }: Galle
     setCurrentIndex(adjustedIndex);
   };
   
+  // Add close button for better UX
+  const handleCloseCarousel = () => {
+    onClose();
+  };
+  
   return (
     <>
-      <group>
-        {/* Add camera controls component */}
-        <CarouselCameraControls />
-        
-        {/* Carousel items */}
-        <group ref={carouselRef}>
-          {galleryItems.map((item, index) => {
-            // Calculate position on the circle
-            const angle = index * angleStep;
-            const x = Math.sin(angle) * radius;
-            const z = Math.cos(angle) * radius; 
-            const y = 0; // Keep all items at the same height (flat circle)
-            
-            // Determine if this is the current/active item
-            const isActive = index === currentIndex;
-            
-            // Calculate distance from current item (accounting for wrapping)
-            const distance = Math.abs(index - currentIndex);
-            const distanceWrapped = Math.min(distance, galleryItems.length - distance);
-            
-            // Adjust scale based on distance from center for better visibility
-            // Items further from current have smaller scale but never too small
-            const scale = isActive ? 1.2 : Math.max(0.8, 1 - (distanceWrapped * 0.1));
-            
-            return (
-              <CarouselItem 
-                key={`${item.id}-carousel`}
-                item={item}
-                position={[x, y, z]}
-                rotation={[0, -angle + Math.PI, 0]} // Rotate to face center
-                isActive={isActive}
-                isLoaded={!!loadingStatesRef.current[item.id]}
-                onImageLoaded={() => handleImageLoaded(item.id)}
-                onClick={() => handleItemSelect(item)} 
-                onHover={() => setHoveredItem(item.id)}
-                onUnhover={() => setHoveredItem(null)}
-                isHovered={hoveredItem === item.id}
-                initialScale={scale}
-              />
-            );
-          })}
-        </group>
+      {/* Add camera controls component */}
+      <CarouselCameraControls />
+      
+      {/* Carousel items */}
+      <group ref={carouselRef}>
+        {galleryItems.map((item, index) => {
+          // Calculate position on the circle
+          const angle = index * angleStep;
+          const x = Math.sin(angle) * radius;
+          const z = Math.cos(angle) * radius; 
+          const y = 0; // Keep all items at the same height (flat circle)
+          
+          // Determine if this is the current/active item
+          const isActive = index === currentIndex;
+          
+          // Calculate distance from current item (accounting for wrapping)
+          const distance = Math.abs(index - currentIndex);
+          const distanceWrapped = Math.min(distance, galleryItems.length - distance);
+          
+          // Adjust scale based on distance from center for better visibility
+          // Items further from current have smaller scale but never too small
+          const scale = isActive ? 1.2 : Math.max(0.8, 1 - (distanceWrapped * 0.1));
+          
+          return (
+            <CarouselItem 
+              key={`${item.id}-carousel`}
+              item={item}
+              position={[x, y, z]}
+              rotation={[0, -angle + Math.PI, 0]} // Rotate to face center
+              isActive={isActive}
+              isLoaded={!!loadingStatesRef.current[item.id]}
+              onImageLoaded={() => handleImageLoaded(item.id)}
+              onClick={() => handleItemSelect(item)} 
+              onHover={() => setHoveredItem(item.id)}
+              onUnhover={() => setHoveredItem(null)}
+              isHovered={hoveredItem === item.id}
+              initialScale={scale}
+            />
+          );
+        })}
       </group>
+
+      {/* Close button */}
+      <Html position={[0, 6, 0]}>
+        <button 
+          onClick={handleCloseCarousel}
+          style={{
+            padding: '10px 20px',
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            color: 'white',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            borderRadius: '20px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            backdropFilter: 'blur(5px)',
+            transition: 'background-color 0.2s ease',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '5px',
+          }}
+          onMouseOver={e => {
+            e.currentTarget.style.backgroundColor = 'rgba(50, 50, 50, 0.8)';
+          }}
+          onMouseOut={e => {
+            e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+          }}
+        >
+          <span style={{ fontSize: '16px' }}>×</span>
+          Close Gallery
+        </button>
+      </Html>
 
       {/* Slider control - rendered as HTML overlay */}
       <Html position={[0, -5, 0]}>
@@ -236,6 +315,7 @@ function SliderControl({
   
   // Update slider value when currentIndex changes
   useEffect(() => {
+    if (totalItems <= 1) return; // Avoid division by zero
     const normalizedValue = (currentIndex / (totalItems - 1)) * 100;
     setSliderValue(normalizedValue || 0);
   }, [currentIndex, totalItems]);
@@ -265,6 +345,7 @@ function SliderControl({
         alignItems: 'center',
         gap: '10px',
         zIndex: 1000,
+        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08)',
       }}
     >
       <button
@@ -276,26 +357,44 @@ function SliderControl({
           fontSize: '24px',
           cursor: 'pointer',
           padding: '0 10px',
+          transition: 'opacity 0.2s',
         }}
+        onMouseOver={e => { e.currentTarget.style.opacity = '0.8' }}
+        onMouseOut={e => { e.currentTarget.style.opacity = '1' }}
       >
         ←
       </button>
       
-      <input
-        type="range"
-        min="0"
-        max="100"
-        value={sliderValue}
-        onChange={handleSliderInput}
-        style={{
-          flex: 1,
-          height: '6px',
-          borderRadius: '3px',
-          background: 'rgba(255, 255, 255, 0.2)',
-          outline: 'none',
-          WebkitAppearance: 'none',
-        }}
-      />
+      <div style={{ flex: 1, position: 'relative' }}>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          value={sliderValue}
+          onChange={handleSliderInput}
+          style={{
+            width: '100%',
+            height: '6px',
+            borderRadius: '3px',
+            background: 'rgba(255, 255, 255, 0.2)',
+            outline: 'none',
+            WebkitAppearance: 'none',
+            cursor: 'pointer',
+          }}
+        />
+        <div 
+          style={{ 
+            position: 'absolute', 
+            top: '12px', 
+            width: '100%', 
+            textAlign: 'center',
+            fontSize: '12px',
+            color: 'rgba(255, 255, 255, 0.6)'
+          }}
+        >
+          {currentIndex + 1} / {totalItems}
+        </div>
+      </div>
       
       <button
         onClick={onNext}
@@ -306,7 +405,10 @@ function SliderControl({
           fontSize: '24px',
           cursor: 'pointer',
           padding: '0 10px',
+          transition: 'opacity 0.2s',
         }}
+        onMouseOver={e => { e.currentTarget.style.opacity = '0.8' }}
+        onMouseOut={e => { e.currentTarget.style.opacity = '1' }}
       >
         →
       </button>
@@ -373,28 +475,13 @@ function CarouselItem({
       meshRef.current.scale.x = MathUtils.lerp(meshRef.current.scale.x, targetScale, 0.1);
       meshRef.current.scale.y = MathUtils.lerp(meshRef.current.scale.y, targetScale, 0.1);
       meshRef.current.scale.z = MathUtils.lerp(meshRef.current.scale.z, targetScale, 0.1);
-      
-      // Ensure the item always faces the camera while maintaining its y-rotation
-      // This prevents the image from rotating with the camera's vertical movement
-      if (isActive || isHovered) {
-        // Create a vector pointing from the mesh to the camera
-        const direction = new Vector3().subVectors(camera.position, meshRef.current.getWorldPosition(new Vector3()));
-        // Project the direction onto the XZ plane to maintain the y-axis rotation
-        direction.y = 0;
-        direction.normalize();
-        
-        // Only adjust the item rotation if camera position changes significantly
-        if (direction.length() > 0.1) {
-          // Look at the camera, but only on the horizontal plane
-          meshRef.current.lookAt(
-            meshRef.current.position.x + direction.x,
-            meshRef.current.position.y,
-            meshRef.current.position.z + direction.z
-          );
-        }
-      }
     }
   });
+  
+  // Define a proper shadow color based on active state
+  const shadowColor = isActive ? "#4466ff" : "#222222";
+  const frameColor = isActive ? "#444444" : "#222222";
+  const frameBorderColor = isActive ? "#5588ff" : "#333333";
   
   return (
     <group position={position} rotation={rotation}>
@@ -407,14 +494,26 @@ function CarouselItem({
       >
         {/* Image plane with frame */}
         <group>
+          {/* Shadow/Glow effect */}
+          <mesh position={[0, 0, -0.1]} receiveShadow>
+            <planeGeometry args={[6.8, 4.8]} />
+            <meshBasicMaterial color={shadowColor} transparent opacity={0.3} />
+          </mesh>
+          
           {/* Background frame */}
           <mesh position={[0, 0, -0.05]}>
             <boxGeometry args={[6.4, 4.4, 0.1]} />
-            <meshBasicMaterial color={isActive ? "#333333" : "#222222"} />
+            <meshBasicMaterial color={frameColor} />
+          </mesh>
+          
+          {/* Frame border */}
+          <mesh position={[0, 0, -0.02]}>
+            <boxGeometry args={[6.5, 4.5, 0.01]} />
+            <meshBasicMaterial color={frameBorderColor} />
           </mesh>
           
           {/* Image plane */}
-          <mesh>
+          <mesh position={[0, 0, 0]}>
             <planeGeometry args={[6, 4]} />
             <meshBasicMaterial 
               {...materialProps} 
@@ -427,10 +526,23 @@ function CarouselItem({
           {item.media_type === 'video' && (
             <mesh position={[0, 0, 0.01]}>
               <planeGeometry args={[6, 4]} />
-              <meshBasicMaterial transparent opacity={0.7} color="#000000" />
+              <meshBasicMaterial transparent opacity={0.5} color="#000000" />
               <Html center position={[0, 0, 0.02]}>
-                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-black/80 border border-white/30">
-                  <div className="w-0 h-0 border-t-8 border-t-transparent border-l-16 border-l-white border-b-8 border-b-transparent ml-1"></div>
+                <div 
+                  className="flex items-center justify-center w-16 h-16 rounded-full bg-black/80 border border-white/40 shadow-lg"
+                  style={{ 
+                    transition: 'transform 0.2s ease-out',
+                    transform: isHovered || isActive ? 'scale(1.1)' : 'scale(1)'
+                  }}
+                >
+                  <div 
+                    className="w-0 h-0 ml-2" 
+                    style={{
+                      borderTop: '10px solid transparent',
+                      borderLeft: '20px solid white',
+                      borderBottom: '10px solid transparent'
+                    }}
+                  ></div>
                 </div>
               </Html>
             </mesh>
@@ -438,9 +550,23 @@ function CarouselItem({
           
           {/* Item title */}
           <Html center position={[0, -2.5, 0.1]}>
-            <div className={`px-3 py-1 rounded text-white text-center transition-all duration-200 ${
-              isActive || isHovered ? 'bg-black/80 text-white scale-110' : 'bg-black/50 text-white/80'
-            }`} style={{maxWidth: '200px'}}>
+            <div 
+              className="px-4 py-2 rounded-lg text-white text-center transition-all duration-300"
+              style={{
+                maxWidth: '250px',
+                backgroundColor: isActive || isHovered ? 'rgba(0,0,0,0.85)' : 'rgba(0,0,0,0.6)',
+                transform: isActive || isHovered ? 'scale(1.1)' : 'scale(1)',
+                boxShadow: isActive || isHovered ? '0 0 15px rgba(100,150,255,0.3)' : 'none',
+                border: isActive || isHovered ? '1px solid rgba(100,150,255,0.3)' : '1px solid rgba(255,255,255,0.1)',
+                backdropFilter: 'blur(3px)',
+                fontFamily: 'Rajdhani, sans-serif',
+                fontSize: isActive ? '16px' : '14px',
+                fontWeight: isActive ? 'bold' : 'normal',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
               {item.title}
             </div>
           </Html>
