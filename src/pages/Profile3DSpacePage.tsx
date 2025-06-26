@@ -238,7 +238,7 @@ export function Profile3DSpacePage() {
               // Try loading personal preferences directly
               const personalPrefs = await MemoirIntegrations.getPersonalPreferences(
                 initialUserId || user.id, 
-                memoriaProfileId
+                memoriaProfileId || undefined
               );
               if (personalPrefs) {
                 console.log('Loaded personal preferences:', personalPrefs);

@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useTexture, Html } from '@react-three/drei';
-import { Group, MathUtils, Vector3 } from 'three';
+import { Group, MathUtils } from 'three';
 
 interface Gallery3DCarouselProps {
   galleryItems: any[];
@@ -13,29 +13,32 @@ interface Gallery3DCarouselProps {
 export function CarouselCameraControls() {
   const { camera } = useThree();
   
-  // Set initial camera position above the center
+  // Set initial camera position in the center looking outward
   useEffect(() => {
-    // Position camera above the carousel plane for better viewing angle
-    // Not too high but enough to see the carousel layout
-    camera.position.set(0, 8, 0.1);
-    camera.lookAt(0, 0, 0);
+    // Position camera at the center of the carousel (origin)
+    camera.position.set(0, 0, 0);
+    camera.lookAt(1, 0, 0); // Look along positive X axis to start
     
     // Store original camera position for cleanup
     const originalPosition = camera.position.clone();
+    const originalRotation = camera.rotation.clone();
     
     return () => {
       // Reset camera position when component unmounts
       camera.position.copy(originalPosition);
+      camera.rotation.copy(originalRotation);
     };
   }, [camera]);
   
-  // Restrict camera movement to rotation around the y-axis
+  // Restrict camera movement - keep it at center and only allow rotation around Y axis
   useFrame(() => {
-    // Keep camera at fixed height
-    camera.position.y = 8;
+    // Lock position to center
+    camera.position.set(0, 0, 0);
     
-    // Ensure camera is looking at the center
-    camera.lookAt(0, 0, 0);
+    // Lock up/down rotation to keep on horizontal plane
+    // This keeps the user from looking up/down, only left/right
+    camera.rotation.x = 0;
+    camera.rotation.z = 0;
   });
   
   return null;
@@ -55,33 +58,31 @@ export function Gallery3DCarousel({ galleryItems, onClose, onItemSelect }: Galle
   // Calculate the angle between each item
   const angleStep = (Math.PI * 2) / Math.max(galleryItems.length, 1);
   
-  // Radius of the carousel - set a fixed radius for all images
+  // Radius of the carousel
   const radius = 15;
   
-  // Animate carousel rotation
-  useFrame(({ mouse }) => {
-    if (carouselRef.current) {
-      if (isDragging.current) {
-        // Calculate rotation change based on mouse movement
-        const deltaX = (mouse.x - lastMouseX.current) * 5; // Amplify the effect
-        targetRotationY.current += deltaX;
-        lastMouseX.current = mouse.x;
-        
-        // Update current index based on rotation
-        const normalizedRotation = ((targetRotationY.current % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-        const newIndex = Math.round(normalizedRotation / angleStep) % galleryItems.length;
-        if (newIndex !== currentIndex) {
-          setCurrentIndex(newIndex);
-        }
-      }
+  // We don't rotate the carousel group anymore - instead we rotate the camera
+  useFrame(({ camera, mouse }) => {
+    if (isDragging.current) {
+      // Calculate rotation change based on mouse movement
+      const deltaX = (mouse.x - lastMouseX.current) * 5; // Amplify effect
+      targetRotationY.current -= deltaX; // Inverted for natural movement
+      lastMouseX.current = mouse.x;
       
-      // Smoothly interpolate current rotation towards target rotation
-      carouselRef.current.rotation.y = MathUtils.lerp(
-        carouselRef.current.rotation.y,
-        targetRotationY.current,
-        0.1
-      );
+      // Update current index based on rotation
+      const normalizedRotation = ((targetRotationY.current % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+      const newIndex = Math.round(normalizedRotation / angleStep) % galleryItems.length;
+      if (newIndex !== currentIndex) {
+        setCurrentIndex(newIndex);
+      }
     }
+    
+    // Smoothly rotate the camera around Y axis
+    camera.rotation.y = MathUtils.lerp(
+      camera.rotation.y,
+      targetRotationY.current,
+      0.1
+    );
   });
   
   // Set up event handlers for mouse/touch interaction
@@ -103,9 +104,9 @@ export function Gallery3DCarousel({ galleryItems, onClose, onItemSelect }: Galle
     // Set up keyboard navigation
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') {
-        navigateCarousel(-1);
+        navigateCarousel(1); // Reversed direction for natural feeling
       } else if (e.key === 'ArrowRight') {
-        navigateCarousel(1);
+        navigateCarousel(-1); // Reversed direction for natural feeling
       } else if (e.key === 'Escape') {
         onClose();
       }
@@ -128,11 +129,11 @@ export function Gallery3DCarousel({ galleryItems, onClose, onItemSelect }: Galle
   const navigateCarousel = (direction: number) => {
     if (isTransitioning) return;
     
-    // Update target rotation
+    // Update target rotation - direction is reversed for natural feeling
     targetRotationY.current += direction * angleStep;
     
     // Update current index
-    const newIndex = (currentIndex + direction) % galleryItems.length;
+    const newIndex = (currentIndex - direction) % galleryItems.length;
     const adjustedIndex = newIndex < 0 ? galleryItems.length + newIndex : newIndex;
     
     setIsTransitioning(true);
@@ -147,11 +148,11 @@ export function Gallery3DCarousel({ galleryItems, onClose, onItemSelect }: Galle
   // Handle item selection
   const handleItemSelect = (item: any) => {
     if (onItemSelect) {
-      onItemSelect(item); 
+      onItemSelect(item);
     }
   };
   
-  // Track image loading state - wrapped in useCallback to prevent re-renders
+  // Track image loading state
   const handleImageLoaded = useCallback((itemId: string) => {
     loadingStatesRef.current[itemId] = true;
   }, []);
@@ -163,214 +164,169 @@ export function Gallery3DCarousel({ galleryItems, onClose, onItemSelect }: Galle
     const targetIndex = Math.floor(normalizedValue * galleryItems.length);
     const adjustedIndex = Math.min(Math.max(0, targetIndex), galleryItems.length - 1);
     
-    // Calculate the target rotation
+    // Calculate the target rotation to show this index
+    // We use negative angle because we're rotating the camera, not the carousel
     targetRotationY.current = adjustedIndex * angleStep;
     setCurrentIndex(adjustedIndex);
   };
   
   return (
     <>
-      <group>
-        {/* Add camera controls component */}
-        <CarouselCameraControls />
-        
-        {/* Carousel items */}
-        <group ref={carouselRef}>
-          {galleryItems.map((item, index) => {
-            // Calculate position on the circle
-            const angle = index * angleStep;
-            const x = Math.sin(angle) * radius;
-            const z = Math.cos(angle) * radius; 
-            const y = 0; // Keep all items at the same height (flat circle)
-            
-            // Determine if this is the current/active item
-            const isActive = index === currentIndex;
-            
-            // Calculate distance from current item (accounting for wrapping)
-            const distance = Math.abs(index - currentIndex);
-            const distanceWrapped = Math.min(distance, galleryItems.length - distance);
-            
-            // Adjust scale based on distance from center for better visibility
-            // Items further from current have smaller scale but never too small
-            const scale = isActive ? 1.2 : Math.max(0.8, 1 - (distanceWrapped * 0.1));
-            
-            return (
-              <CarouselItem 
-                key={`${item.id}-carousel`}
-                item={item}
-                position={[x, y, z]}
-                rotation={[0, -angle + Math.PI, 0]} // Rotate to face center
-                isActive={isActive}
-                isLoaded={!!loadingStatesRef.current[item.id]}
-                onImageLoaded={() => handleImageLoaded(item.id)}
-                onClick={() => handleItemSelect(item)} 
-                onHover={() => setHoveredItem(item.id)}
-                onUnhover={() => setHoveredItem(null)}
-                isHovered={hoveredItem === item.id}
-                initialScale={scale}
-              />
-            );
-          })}
-        </group>
+      {/* Camera controls - crucial for first-person view from center */}
+      <CarouselCameraControls />
+      
+      {/* Fixed carousel of images - does not rotate */}
+      <group ref={carouselRef}>
+        {galleryItems.map((item, index) => {
+          // Calculate position on the circle
+          const angle = index * angleStep;
+          const x = Math.sin(angle) * radius;
+          const z = Math.cos(angle) * radius; 
+          const y = 0; // Keep all items at same height (flat circle)
+          
+          // Determine if this is the active item
+          const isActive = index === currentIndex;
+          
+          // Calculate distance from current item (accounting for wrapping)
+          const distance = Math.abs(index - currentIndex);
+          const distanceWrapped = Math.min(distance, galleryItems.length - distance);
+          
+          // Adjust scale based on distance from current view
+          const scale = isActive ? 1.2 : Math.max(0.8, 1 - (distanceWrapped * 0.1));
+          
+          return (
+            <CarouselItem 
+              key={`${item.id}-carousel`}
+              item={item}
+              position={[x, y, z]}
+              rotation={[0, Math.PI + angle, 0]} // Face toward center (inward)
+              isActive={isActive}
+              isLoaded={!!loadingStatesRef.current[item.id]}
+              onImageLoaded={() => handleImageLoaded(item.id)}
+              onClick={() => handleItemSelect(item)} 
+              onHover={() => setHoveredItem(item.id)}
+              onUnhover={() => setHoveredItem(null)}
+              isHovered={hoveredItem === item.id}
+              initialScale={scale}
+            />
+          );
+        })}
       </group>
 
-      {/* Slider control - rendered as HTML overlay */}
-      <Html position={[0, -5, 0]}>
-        <SliderControl 
-          currentIndex={currentIndex}
-          totalItems={galleryItems.length}
-          onChange={handleSliderChange}
-          onPrev={() => navigateCarousel(-1)}
-          onNext={() => navigateCarousel(1)}
-          onClose={onClose}
-        />
+      {/* Controls overlay */}
+      <Html position={[0, -5, 10]} center>
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: '80%',
+            maxWidth: '800px',
+            padding: '15px 20px',
+            background: 'rgba(0, 0, 0, 0.7)',
+            backdropFilter: 'blur(10px)',
+            borderRadius: '10px',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '10px',
+            zIndex: 1000,
+            fontFamily: 'Orbitron, sans-serif',
+          }}
+        >
+          <div style={{ 
+            width: '100%',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '5px'
+          }}>
+            <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '14px' }}>
+              {currentIndex + 1} of {galleryItems.length}
+            </span>
+            <button
+              onClick={onClose}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'white',
+                fontSize: '16px',
+                cursor: 'pointer',
+                padding: '5px',
+                opacity: 0.7,
+              }}
+            >
+              Close ✕
+            </button>
+          </div>
+          
+          <div style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px'
+          }}>
+            <button
+              onClick={() => navigateCarousel(1)} // Reversed for natural feel
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: 'none',
+                color: 'white',
+                fontSize: '20px',
+                cursor: 'pointer',
+                padding: '5px 15px',
+                borderRadius: '5px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '40px',
+                height: '40px',
+              }}
+            >
+              ←
+            </button>
+            
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={(currentIndex / (galleryItems.length - 1)) * 100}
+              onChange={handleSliderChange}
+              style={{
+                flex: 1,
+                height: '6px',
+                borderRadius: '3px',
+                background: 'rgba(255, 255, 255, 0.2)',
+                outline: 'none',
+                WebkitAppearance: 'none',
+              }}
+            />
+            
+            <button
+              onClick={() => navigateCarousel(-1)} // Reversed for natural feel
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: 'none',
+                color: 'white',
+                fontSize: '20px',
+                cursor: 'pointer',
+                padding: '5px 15px',
+                borderRadius: '5px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '40px',
+                height: '40px',
+              }}
+            >
+              →
+            </button>
+          </div>
+        </div>
       </Html>
     </>
-  );
-}
-
-// Slider control component rendered as HTML
-function SliderControl({ 
-  currentIndex, 
-  totalItems, 
-  onChange, 
-  onPrev, 
-  onNext,
-  onClose 
-}: { 
-  currentIndex: number; 
-  totalItems: number; 
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onPrev: () => void;
-  onNext: () => void;
-  onClose: () => void;
-}) {
-  const [sliderValue, setSliderValue] = useState(0);
-  
-  // Update slider value when currentIndex changes
-  useEffect(() => {
-    const normalizedValue = totalItems <= 1 ? 50 : (currentIndex / (totalItems - 1)) * 100;
-    setSliderValue(normalizedValue || 0);
-  }, [currentIndex, totalItems]);
-  
-  // Handle slider input
-  const handleSliderInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseFloat(e.target.value);
-    setSliderValue(value);
-    onChange(e);
-  };
-  
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        bottom: '20px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: '80%',
-        maxWidth: '800px',
-        padding: '15px 20px',
-        background: 'rgba(0, 0, 0, 0.7)',
-        backdropFilter: 'blur(10px)',
-        borderRadius: '10px',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '10px',
-        zIndex: 1000,
-        fontFamily: 'Orbitron, sans-serif',
-      }}
-    >
-      <div style={{ 
-        width: '100%',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '5px'
-      }}>
-        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '14px' }}>
-          {currentIndex + 1} of {totalItems}
-        </span>
-        <button
-          onClick={onClose}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: 'white',
-            fontSize: '16px',
-            cursor: 'pointer',
-            padding: '5px',
-            opacity: 0.7,
-          }}
-        >
-          Close ✕
-        </button>
-      </div>
-      
-      <div style={{
-        width: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '10px'
-      }}>
-        <button
-          onClick={onPrev}
-          style={{
-            background: 'rgba(255, 255, 255, 0.1)',
-            border: 'none',
-            color: 'white',
-            fontSize: '20px',
-            cursor: 'pointer',
-            padding: '5px 15px',
-            borderRadius: '5px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '40px',
-            height: '40px',
-          }}
-        >
-          ←
-        </button>
-        
-        <input
-          type="range"
-          min="0"
-          max="100"
-          value={sliderValue}
-          onChange={handleSliderInput}
-          style={{
-            flex: 1,
-            height: '6px',
-            borderRadius: '3px',
-            background: 'rgba(255, 255, 255, 0.2)',
-            outline: 'none',
-            WebkitAppearance: 'none',
-          }}
-        />
-        
-        <button
-          onClick={onNext}
-          style={{
-            background: 'rgba(255, 255, 255, 0.1)',
-            border: 'none',
-            color: 'white',
-            fontSize: '20px',
-            cursor: 'pointer',
-            padding: '5px 15px',
-            borderRadius: '5px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '40px',
-            height: '40px',
-          }}
-        >
-          →
-        </button>
-      </div>
-    </div>
   );
 }
 
@@ -403,7 +359,6 @@ function CarouselItem({
 }: CarouselItemProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const loadedRef = useRef(false);
-  const { camera } = useThree();
   
   // Load texture for image items
   const texture = item.media_type === 'image' 
@@ -433,13 +388,10 @@ function CarouselItem({
       meshRef.current.scale.x = MathUtils.lerp(meshRef.current.scale.x, targetScale, 0.1);
       meshRef.current.scale.y = MathUtils.lerp(meshRef.current.scale.y, targetScale, 0.1);
       meshRef.current.scale.z = MathUtils.lerp(meshRef.current.scale.z, targetScale, 0.1);
-      
-      // The mesh should maintain its original rotation to face center
-      // No need to modify it since we already set it correctly in the parent component
     }
   });
   
-  // Calculate aspect ratio for video items
+  // Video overlay for video items
   const videoOverlay = item.media_type === 'video' ? (
     <Html center position={[0, 0, 0.02]}>
       <div style={{
