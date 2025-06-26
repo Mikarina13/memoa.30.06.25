@@ -706,10 +706,10 @@ export class MemoirIntegrations {
       
       // Filter by memoria profile ID if provided
       if (memoriaProfileId) {
-        query = query.filter('metadata->memoriaProfileId', 'eq', memoriaProfileId);
+        query = query.filter('metadata->>memoriaProfileId', 'eq', memoriaProfileId);
       } else {
         // For memoir, only get items without a memoriaProfileId
-        query = query.or('metadata->memoriaProfileId.is.null,metadata->>memoriaProfileId.eq.');
+        query = query.or('metadata->>memoriaProfileId.is.null,metadata->>memoriaProfileId.eq.');
       }
       
       const { data, error } = await query;
