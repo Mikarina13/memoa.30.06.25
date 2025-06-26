@@ -116,7 +116,7 @@ export function MementoPage() {
       // Redirect to terms acceptance page if user hasn't accepted terms
       navigate('/terms-acceptance?redirectTo=/memento');
     }
-  }, [navigate, user, loading, location.pathname]);
+  }, [user, loading, location.pathname]);
 
   const loadMemoriaProfiles = async () => {
     try {
@@ -727,7 +727,7 @@ export function MementoPage() {
                                       className="p-2 bg-pink-500/20 text-pink-400 rounded-lg hover:bg-pink-500/30 transition-colors"
                                       title="Remove from favorites"
                                     >
-                                      <Star className="w-5 h-5 fill-current" />
+                                      <Heart className="w-5 h-5 fill-current" />
                                     </button>
                                   ) : (
                                     <button
@@ -735,7 +735,7 @@ export function MementoPage() {
                                       className="p-2 bg-white/10 text-white/60 rounded-lg hover:bg-white/20 hover:text-white transition-colors"
                                       title="Add to favorites"
                                     >
-                                      <Star className="w-5 h-5" />
+                                      <Heart className="w-5 h-5" />
                                     </button>
                                   )}
                                 </div>
@@ -786,7 +786,7 @@ export function MementoPage() {
                                       className="p-2 bg-pink-500/20 text-pink-400 rounded-lg hover:bg-pink-500/30 transition-colors"
                                       title="Remove from favorites"
                                     >
-                                      <Star className="w-5 h-5 fill-current" />
+                                      <Heart className="w-5 h-5 fill-current" />
                                     </button>
                                   ) : (
                                     <button
@@ -794,7 +794,7 @@ export function MementoPage() {
                                       className="p-2 bg-white/10 text-white/60 rounded-lg hover:bg-white/20 hover:text-white transition-colors"
                                       title="Add to favorites"
                                     >
-                                      <Star className="w-5 h-5" />
+                                      <Heart className="w-5 h-5" />
                                     </button>
                                   )}
                                 </div>
