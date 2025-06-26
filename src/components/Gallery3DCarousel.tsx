@@ -16,7 +16,8 @@ export function CarouselCameraControls() {
   // Set initial camera position above the center
   useEffect(() => {
     // Position camera above the carousel plane for better viewing angle
-    camera.position.set(0, 5, 0.1);
+    // Not too high but enough to see the carousel layout
+    camera.position.set(0, 8, 0.1);
     camera.lookAt(0, 0, 0);
     
     // Store original camera position for cleanup
@@ -31,7 +32,7 @@ export function CarouselCameraControls() {
   // Restrict camera movement to rotation around the y-axis
   useFrame(() => {
     // Keep camera at fixed height
-    camera.position.y = 5;
+    camera.position.y = 8;
     
     // Ensure camera is looking at the center
     camera.lookAt(0, 0, 0);
@@ -55,7 +56,7 @@ export function Gallery3DCarousel({ galleryItems, onClose, onItemSelect }: Galle
   const angleStep = (Math.PI * 2) / Math.max(galleryItems.length, 1);
   
   // Radius of the carousel - set a fixed radius for all images
-  const radius = 10;
+  const radius = 15;
   
   // Animate carousel rotation
   useFrame(({ mouse }) => {
@@ -433,25 +434,8 @@ function CarouselItem({
       meshRef.current.scale.y = MathUtils.lerp(meshRef.current.scale.y, targetScale, 0.1);
       meshRef.current.scale.z = MathUtils.lerp(meshRef.current.scale.z, targetScale, 0.1);
       
-      // Ensure the item always faces the camera on the XZ plane
-      // This keeps the frame upright while still facing the user
-      if (isActive || isHovered) {
-        // Create a vector pointing from the mesh to the camera
-        const direction = new Vector3().subVectors(camera.position, meshRef.current.getWorldPosition(new Vector3()));
-        // Project the direction onto the XZ plane to maintain the y-axis rotation
-        direction.y = 0;
-        direction.normalize();
-        
-        // Only adjust the item rotation if camera position changes significantly
-        if (direction.length() > 0.1) {
-          // Look at the camera, but only on the horizontal plane
-          meshRef.current.lookAt(
-            meshRef.current.position.x + direction.x,
-            meshRef.current.position.y,
-            meshRef.current.position.z + direction.z
-          );
-        }
-      }
+      // The mesh should maintain its original rotation to face center
+      // No need to modify it since we already set it correctly in the parent component
     }
   });
   

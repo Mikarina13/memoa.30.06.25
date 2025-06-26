@@ -99,6 +99,7 @@ export function Profile3DSpacePage() {
     { id: 'gallery', name: 'Gallery', color: '#ec4899' },
     { id: 'personality', name: 'Personality', color: '#f43f5e' },
     { id: 'family_tree', name: 'Family Tree', color: '#22c55e' },
+    { id: 'ai_tribute_images', name: 'AI Tributes', color: '#f97316' },
     { id: 'media_links', name: 'Media Links', color: '#f59e0b' },
     { id: 'documents', name: 'Documents', color: '#3b82f6' }
   ], []);
@@ -431,6 +432,9 @@ export function Profile3DSpacePage() {
     return [0, 10, 40 * (1 / Math.max(customizationSettings.itemSizeMultiplier, 0.5))];
   }, [customizationSettings.itemSizeMultiplier]);
   
+  // Calculate star count based on density setting
+  const starCount = Math.floor(8000 * customizationSettings.particleDensity);
+  
   // Show loading while checking authentication
   if (loading || isLoading) {
     return (
@@ -470,9 +474,6 @@ export function Profile3DSpacePage() {
       </div>
     );
   }
-  
-  // Calculate star count based on density setting
-  const starCount = Math.floor(8000 * customizationSettings.particleDensity);
   
   return (
     <motion.div 
