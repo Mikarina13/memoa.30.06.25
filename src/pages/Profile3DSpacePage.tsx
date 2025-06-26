@@ -182,103 +182,91 @@ export function Profile3DSpacePage() {
             setCustomizationSettings(dataObject.space_customization.settings);
           }
           
-          // Load gallery items separately and then attach to profile data
+          setProfileData(profile);
+          
+          // Load gallery items
           const galleryItems = await MemoirIntegrations.getGalleryItems(user.id, memoriaProfileId);
           console.log(`Loaded ${galleryItems?.length || 0} gallery items`);
           console.log('Gallery items:', galleryItems);
           setGalleryItems(galleryItems || []);
           
-          // Create a new profile object with gallery items attached
-          const profileWithGallery = {...profile};
-          if (profileWithGallery) {
-            profileWithGallery.gallery_items = galleryItems;
+          // Add gallery items to profile data for easy access
+          if (profile) {
+            profile.gallery_items = galleryItems;
             console.log('Added gallery items to profile data:', galleryItems.length);
-            
             // Log profile data structure for debugging
             console.log('Profile data structure before loading personal preferences:', {
-              hasMemoriaData: !!profileWithGallery.profile_data,
-              hasMemoriaPreferences: !!profileWithGallery.profile_data?.preferences?.personal,
-              hasMemoirData: !!profileWithGallery.memoir_data,
-              hasMemoirPreferences: !!profileWithGallery.memoir_data?.preferences?.personal
+              hasMemoriaData: !!profile.profile_data,
+              hasMemoriaPreferences: !!profile.profile_data?.preferences?.personal,
+              hasMemoirData: !!profile.memoir_data,
+              hasMemoirPreferences: !!profile.memoir_data?.preferences?.personal
             });
             
-            // Load media links if they don't exist
-            if (!profileWithGallery.memoir_data?.media_links && !profileWithGallery.profile_data?.media_links) {
-              try {
-                const mediaLinksData = await MemoirIntegrations.getMediaLinks(user.id, memoriaProfileId);
-                if (mediaLinksData && mediaLinksData.length > 0) {
-                  if (memoriaProfileId) {
-                    // For Memoria profiles
-                    if (!profileWithGallery.profile_data) profileWithGallery.profile_data = {};
-                    profileWithGallery.profile_data.media_links = mediaLinksData;
-                  } else {
-                    // For Memoir profiles
-                    if (!profileWithGallery.memoir_data) profileWithGallery.memoir_data = {};
-                    profileWithGallery.memoir_data.media_links = mediaLinksData;
-                  }
-                  console.log(`Loaded and added ${mediaLinksData.length} media links to profile data`);
+            
+            // Load media links if they exist
+            if (!profile.memoir_data?.media_links && !profile.profile_data?.media_links) {
+              const mediaLinksData = await MemoirIntegrations.getMediaLinks(user.id, memoriaProfileId);
+              if (mediaLinksData && mediaLinksData.length > 0) {
+                if (memoriaProfileId) {
+                  // For Memoria profiles
+                  if (!profile.profile_data) profile.profile_data = {};
+                  profile.profile_data.media_links = mediaLinksData;
+                } else {
+                  // For Memoir profiles
+                  if (!profile.memoir_data) profile.memoir_data = {};
+                  profile.memoir_data.media_links = mediaLinksData;
                 }
-              } catch (mediaError) {
-                console.error('Error loading media links:', mediaError);
+                console.log(`Loaded and added ${mediaLinksData.length} media links to profile data`);
               }
             }
             
             // Check if we have personal preferences data loaded
             const personalData = memoriaProfileId 
-              ? profileWithGallery.profile_data?.preferences?.personal 
-              : profileWithGallery.memoir_data?.preferences?.personal;
+              ? profile.profile_data?.preferences?.personal 
+              : profile.memoir_data?.preferences?.personal;
               
             if (!personalData) {
-              try {
-                // Try loading personal preferences directly
-                const personalPrefs = await MemoirIntegrations.getPersonalPreferences(user.id, memoriaProfileId);
-                if (personalPrefs) {
-                  console.log('Loaded personal preferences:', personalPrefs);
-                  if (memoriaProfileId) {
+              // Try loading personal preferences directly
+              const personalPrefs = await MemoirIntegrations.getPersonalPreferences(user.id, memoriaProfileId);
+              if (personalPrefs) {
+                console.log('Loaded personal preferences:', personalPrefs);
+                if (memoriaProfileId) {
                     console.log('Adding personal preferences to profile_data for Memoria profile');
-                    if (!profileWithGallery.profile_data) profileWithGallery.profile_data = {};
-                    if (!profileWithGallery.profile_data.preferences) profileWithGallery.profile_data.preferences = {};
-                    profileWithGallery.profile_data.preferences.personal = personalPrefs;
-                  } else {
+                    if (!profile.profile_data) profile.profile_data = {};
+                    if (!profile.profile_data.preferences) profile.profile_data.preferences = {};
+                    profile.profile_data.preferences.personal = personalPrefs;
+                } else {
                     console.log('Adding personal preferences to memoir_data');
                     // For Memoir profiles
-                    if (!profileWithGallery.memoir_data) {
-                      profileWithGallery.memoir_data = {};
+                    if (!profile.memoir_data) {
+                      profile.memoir_data = {};
                       console.log('Created memoir_data object');
                     }
-                    if (!profileWithGallery.memoir_data.preferences) {
-                      profileWithGallery.memoir_data.preferences = {};
+                    if (!profile.memoir_data.preferences) {
+                      profile.memoir_data.preferences = {};
                       console.log('Created memoir_data.preferences object');
                     }
-                    profileWithGallery.memoir_data.preferences.personal = personalPrefs; 
+                    profile.memoir_data.preferences.personal = personalPrefs; 
                     console.log('Set memoir_data.preferences.personal to:', personalPrefs);
-                  }
-                  console.log('Personal preferences loaded and added:', personalPrefs);
                 }
-              } catch (prefsError) {
-                console.error('Error loading personal preferences:', prefsError);
+                console.log('Personal preferences loaded and added:', personalPrefs);
               }
             }
             
             // Final check of profile data structure
             console.log('Final profile data structure:', {
-              hasMemoriaData: !!profileWithGallery.profile_data,
-              hasMemoriaPreferences: !!profileWithGallery.profile_data?.preferences?.personal,
-              hasMemoriaAvaturn: !!profileWithGallery.profile_data?.avaturn_avatars,
-              hasMemoriaTributeImages: !!profileWithGallery.profile_data?.tribute_images,
+              hasMemoriaData: !!profile.profile_data,
+              hasMemoriaPreferences: !!profile.profile_data?.preferences?.personal,
+              hasMemoriaAvaturn: !!profile.profile_data?.avaturn_avatars,
+              hasMemoriaTributeImages: !!profile.profile_data?.tribute_images,
               
-              hasMemoirData: !!profileWithGallery.memoir_data,
-              hasMemoirPreferences: !!profileWithGallery.memoir_data?.preferences?.personal,
-              hasMemoirAvaturn: !!profileWithGallery.memoir_data?.avaturn_avatars,
-              hasMemoirTributeImages: !!profileWithGallery.memoir_data?.tribute_images,
+              hasMemoirData: !!profile.memoir_data,
+              hasMemoirPreferences: !!profile.memoir_data?.preferences?.personal,
+              hasMemoirAvaturn: !!profile.memoir_data?.avaturn_avatars,
+              hasMemoirTributeImages: !!profile.memoir_data?.tribute_images,
               
               galleryItemsCount: galleryItems?.length || 0
             });
-            
-            // Finally set the updated profile data in state
-            setProfileData(profileWithGallery);
-          } else {
-            setProfileData(profile);
           }
         }
       } catch (error) {
@@ -384,33 +372,27 @@ export function Profile3DSpacePage() {
       
       // Update state
       if (profile) {
-        // Create a new profile object with gallery items attached
-        const profileWithGallery = {...profile};
-        profileWithGallery.gallery_items = galleryItems;
+        profile.gallery_items = galleryItems;
         
         // Ensure we have the personal preferences data
-        if (!profileWithGallery.profile_data?.preferences?.personal && !profileWithGallery.memoir_data?.preferences?.personal) {
+        if (!profile.profile_data?.preferences?.personal && !profile.memoir_data?.preferences?.personal) {
           console.log('Fetching personal preferences during refresh');
-          try {
-            const personalPrefs = await MemoirIntegrations.getPersonalPreferences(user.id, memoriaProfileId || undefined);
-            if (personalPrefs) {
-              if (memoriaProfileId) {
-                if (!profileWithGallery.profile_data) profileWithGallery.profile_data = {};
-                if (!profileWithGallery.profile_data.preferences) profileWithGallery.profile_data.preferences = {};
-                profileWithGallery.profile_data.preferences.personal = personalPrefs;
-              } else {
-                if (!profileWithGallery.memoir_data) profileWithGallery.memoir_data = {};
-                if (!profileWithGallery.memoir_data.preferences) profileWithGallery.memoir_data.preferences = {};
-                profileWithGallery.memoir_data.preferences.personal = personalPrefs;
-              }
-              console.log('Added personal preferences during refresh:', personalPrefs);
+          const personalPrefs = await MemoirIntegrations.getPersonalPreferences(user.id, memoriaProfileId || undefined);
+          if (personalPrefs) {
+            if (memoriaProfileId) {
+              if (!profile.profile_data) profile.profile_data = {};
+              if (!profile.profile_data.preferences) profile.profile_data.preferences = {};
+              profile.profile_data.preferences.personal = personalPrefs;
+            } else {
+              if (!profile.memoir_data) profile.memoir_data = {};
+              if (!profile.memoir_data.preferences) profile.memoir_data.preferences = {};
+              profile.memoir_data.preferences.personal = personalPrefs;
             }
-          } catch (prefsError) {
-            console.error('Error loading personal preferences during refresh:', prefsError);
+            console.log('Added personal preferences during refresh:', personalPrefs);
           }
         }
         
-        setProfileData(profileWithGallery);
+        setProfileData(profile);
         setGalleryItems(galleryItems || []);
         console.log('Profile data refreshed successfully');
         
@@ -670,6 +652,7 @@ export function Profile3DSpacePage() {
             onSave={handleSaveCustomization}
             memoriaProfileId={memoriaProfileId}
             profileType={profileType}
+            itemTypes={itemTypes}
           />
         )}
       </AnimatePresence>

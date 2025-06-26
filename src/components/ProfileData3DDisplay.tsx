@@ -139,7 +139,6 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
         voiceId: profileData.elevenlabs_voice_id,
         avatarId: profileData.tavus_avatar_id,
         galleryCount: profileData.gallery_items?.length,
-        galleryItems: Array.isArray(profileData.gallery_items) ? 'Gallery is an array' : 'Gallery is not an array',
         memoriaID: profileData.id,
         isMemoria: !!profileData.profile_data,
         mediaLinks: (profileData.profile_data?.media_links?.length || 0) + 
@@ -441,9 +440,9 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
       index++;
     }
     
-    // Gallery Items - directly use the profileData.gallery_items array
+    // Gallery Items
     if (profileData?.gallery_items?.length > 0 && isItemVisible('gallery')) {
-      console.log('Displaying gallery with', profileData.gallery_items.length, 'items');
+      console.log('Displaying gallery with', profileData.gallery_items.length, 'items:', profileData.gallery_items);
       const angle = (index / itemCount) * Math.PI * 2;
       const position = getItemPosition('gallery', angle, radius, settings.verticalSpread);
       
