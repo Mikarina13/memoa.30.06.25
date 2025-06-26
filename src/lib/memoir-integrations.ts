@@ -809,7 +809,7 @@ export class MemoirIntegrations {
       if (memoriaProfileId) {
         console.log(`Filtering gallery items by Memoria profile ID ${memoriaProfileId}`);
         // Fix the query formatting for proper JSONB and array syntax
-        query = query.or(`metadata->>memoriaProfileId.eq.'${memoriaProfileId}',and(metadata->>memoriaProfileId.is.null,tags.cs.'{"memoria:${memoriaProfileId}"}')`);
+        query = query.or(`metadata->>memoriaProfileId.eq.'${memoriaProfileId}',and(metadata->>memoriaProfileId.is.null,tags.cs.{memoria:${memoriaProfileId}})`);
       }
 
       const { data, error } = await query.order('created_at', { ascending: false });
