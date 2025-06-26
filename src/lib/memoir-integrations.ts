@@ -822,6 +822,25 @@ export class MemoirIntegrations {
   // Add a profile to favorites
   static async addProfileToFavorites(userId: string, profileId: string, profileType: 'memoir' | 'memoria') {
     try {
+      // First check if this profile is already favorited
+      const { data: existingFavorite, error: checkError } = await supabase
+        .from('profile_favorites')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('profile_id', profileId)
+        .eq('profile_type', profileType)
+        .maybeSingle(); // Use maybeSingle instead of single to avoid error if not found
+      
+      // If there was a serious error (not just "not found"), throw it
+      if (checkError && checkError.code !== 'PGRST116') throw checkError;
+      
+      // If the favorite already exists, just return success
+      if (existingFavorite) {
+        console.log('Profile already favorited:', existingFavorite);
+        return true;
+      }
+      
+      // Otherwise, insert the new favorite
       const { error } = await supabase
         .from('profile_favorites')
         .insert([
