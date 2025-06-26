@@ -266,8 +266,8 @@ export class MemoirIntegrations {
       // If memoriaProfileId is provided, filter by it in metadata
       if (memoriaProfileId) {
         console.log(`Filtering gallery items by Memoria profile ID ${memoriaProfileId}`);
-        // Fix the query formatting for proper JSON syntax
-        query = query.or(`metadata->memoriaProfileId.eq.${memoriaProfileId},and(metadata->memoriaProfileId.is.null,tags.cs.{"memoria":"${memoriaProfileId}"})`);
+        // Fix the query formatting for proper JSON syntax - properly quote the UUID as a JSON string
+        query = query.or(`metadata->memoriaProfileId.eq."${memoriaProfileId}",and(metadata->memoriaProfileId.is.null,tags.cs.'["${memoriaProfileId}"]')`);
       }
 
       const { data, error } = await query.order('created_at', { ascending: false });
