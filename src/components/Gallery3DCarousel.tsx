@@ -1,12 +1,34 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useTexture, Html } from '@react-three/drei';
-import { Group, MathUtils } from 'three';
+import { Group, MathUtils, Vector3 } from 'three';
 
 interface Gallery3DCarouselProps {
   galleryItems: any[];
   onClose: () => void;
   onItemSelect?: (item: any) => void;
+}
+
+// Component that manages camera and controls specifically for the carousel
+export function CarouselCameraControls() {
+  const { camera } = useThree();
+  
+  // Set initial camera position slightly above the center
+  useEffect(() => {
+    // Position camera slightly above the carousel plane for better viewing angle
+    camera.position.set(0, 2, 0.1);
+    camera.lookAt(0, 0, 0);
+    
+    // Store original camera position for cleanup
+    const originalPosition = camera.position.clone();
+    
+    return () => {
+      // Reset camera position when component unmounts
+      camera.position.copy(originalPosition);
+    };
+  }, [camera]);
+  
+  return null;
 }
 
 export function Gallery3DCarousel({ galleryItems, onClose, onItemSelect }: Gallery3DCarouselProps) {
@@ -16,17 +38,33 @@ export function Gallery3DCarousel({ galleryItems, onClose, onItemSelect }: Galle
   const [isTransitioning, setIsTransitioning] = useState(false);
   const loadingStatesRef = useRef<Record<string, boolean>>({});
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
-  const { camera } = useThree();
+  const isDragging = useRef(false);
+  const lastMouseX = useRef(0);
+  const { camera, size } = useThree();
   
   // Calculate the angle between each item
   const angleStep = (Math.PI * 2) / Math.max(galleryItems.length, 1);
   
-  // Radius of the carousel - smaller radius to make images more visible
+  // Radius of the carousel - set a fixed radius for all images
   const radius = 10;
   
   // Animate carousel rotation
-  useFrame(() => {
+  useFrame(({ mouse }) => {
     if (carouselRef.current) {
+      if (isDragging.current) {
+        // Calculate rotation change based on mouse movement
+        const deltaX = (mouse.x - lastMouseX.current) * 5; // Amplify the effect
+        targetRotationY.current += deltaX;
+        lastMouseX.current = mouse.x;
+        
+        // Update current index based on rotation
+        const normalizedRotation = ((targetRotationY.current % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+        const newIndex = Math.round(normalizedRotation / angleStep) % galleryItems.length;
+        if (newIndex !== currentIndex) {
+          setCurrentIndex(newIndex);
+        }
+      }
+      
       // Smoothly interpolate current rotation towards target rotation
       carouselRef.current.rotation.y = MathUtils.lerp(
         carouselRef.current.rotation.y,
@@ -36,8 +74,23 @@ export function Gallery3DCarousel({ galleryItems, onClose, onItemSelect }: Galle
     }
   });
   
-  // Set up keyboard navigation
+  // Set up event handlers for mouse/touch interaction
   useEffect(() => {
+    const handleMouseDown = () => {
+      isDragging.current = true;
+    };
+    
+    const handleMouseUp = () => {
+      isDragging.current = false;
+    };
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isDragging.current) {
+        lastMouseX.current = (e.clientX / size.width) * 2 - 1;
+      }
+    };
+    
+    // Set up keyboard navigation
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') {
         navigateCarousel(-1);
@@ -48,9 +101,18 @@ export function Gallery3DCarousel({ galleryItems, onClose, onItemSelect }: Galle
       }
     };
     
+    window.addEventListener('mousedown', handleMouseDown);
+    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+    
+    return () => {
+      window.removeEventListener('mousedown', handleMouseDown);
+      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose, size.width]);
   
   // Handle manual navigation
   const navigateCarousel = (direction: number) => {
@@ -84,7 +146,7 @@ export function Gallery3DCarousel({ galleryItems, onClose, onItemSelect }: Galle
     loadingStatesRef.current[itemId] = true;
   }, []);
 
-  // Create a slider control at the bottom of the screen
+  // Handle slider change
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseFloat(e.target.value);
     const normalizedValue = value / 100;
@@ -99,6 +161,9 @@ export function Gallery3DCarousel({ galleryItems, onClose, onItemSelect }: Galle
   return (
     <>
       <group>
+        {/* Add camera controls component */}
+        <CarouselCameraControls />
+        
         {/* Carousel items */}
         <group ref={carouselRef}>
           {galleryItems.map((item, index) => {
@@ -106,7 +171,7 @@ export function Gallery3DCarousel({ galleryItems, onClose, onItemSelect }: Galle
             const angle = index * angleStep;
             const x = Math.sin(angle) * radius;
             const z = Math.cos(angle) * radius; 
-            const y = 0; // Keep all items at the same height
+            const y = 0; // Keep all items at the same height (flat circle)
             
             // Determine if this is the current/active item
             const isActive = index === currentIndex;
@@ -121,10 +186,10 @@ export function Gallery3DCarousel({ galleryItems, onClose, onItemSelect }: Galle
             
             return (
               <CarouselItem 
-                key={`${item.id}-original`}
+                key={`${item.id}-carousel`}
                 item={item}
                 position={[x, y, z]}
-                rotation={[0, -angle + Math.PI, 0]} // Rotate to face outward
+                rotation={[0, -angle + Math.PI, 0]} // Rotate to face center
                 isActive={isActive}
                 isLoaded={!!loadingStatesRef.current[item.id]}
                 onImageLoaded={() => handleImageLoaded(item.id)}
@@ -140,7 +205,7 @@ export function Gallery3DCarousel({ galleryItems, onClose, onItemSelect }: Galle
       </group>
 
       {/* Slider control - rendered as HTML overlay */}
-      <Html>
+      <Html position={[0, -5, 0]}>
         <SliderControl 
           currentIndex={currentIndex}
           totalItems={galleryItems.length}
@@ -278,6 +343,7 @@ function CarouselItem({
 }: CarouselItemProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const loadedRef = useRef(false);
+  const { camera } = useThree();
   
   // Load texture for image items
   const texture = item.media_type === 'image' 
@@ -307,24 +373,78 @@ function CarouselItem({
       meshRef.current.scale.x = MathUtils.lerp(meshRef.current.scale.x, targetScale, 0.1);
       meshRef.current.scale.y = MathUtils.lerp(meshRef.current.scale.y, targetScale, 0.1);
       meshRef.current.scale.z = MathUtils.lerp(meshRef.current.scale.z, targetScale, 0.1);
+      
+      // Ensure the item always faces the camera while maintaining its y-rotation
+      // This prevents the image from rotating with the camera's vertical movement
+      if (isActive || isHovered) {
+        // Create a vector pointing from the mesh to the camera
+        const direction = new Vector3().subVectors(camera.position, meshRef.current.getWorldPosition(new Vector3()));
+        // Project the direction onto the XZ plane to maintain the y-axis rotation
+        direction.y = 0;
+        direction.normalize();
+        
+        // Only adjust the item rotation if camera position changes significantly
+        if (direction.length() > 0.1) {
+          // Look at the camera, but only on the horizontal plane
+          meshRef.current.lookAt(
+            meshRef.current.position.x + direction.x,
+            meshRef.current.position.y,
+            meshRef.current.position.z + direction.z
+          );
+        }
+      }
     }
   });
   
   return (
     <group position={position} rotation={rotation}>
-      {/* Image plane */}
+      {/* Frame */}
       <mesh
         ref={meshRef}
         onPointerOver={onHover}
         onPointerOut={onUnhover}
         onClick={onClick}
       >
-        <planeGeometry args={[6, 4]} />
-        <meshBasicMaterial 
-          {...materialProps} 
-          transparent 
-          opacity={!!texture || item.media_type === 'video' ? 1 : 0.8} 
-        />
+        {/* Image plane with frame */}
+        <group>
+          {/* Background frame */}
+          <mesh position={[0, 0, -0.05]}>
+            <boxGeometry args={[6.4, 4.4, 0.1]} />
+            <meshBasicMaterial color={isActive ? "#333333" : "#222222"} />
+          </mesh>
+          
+          {/* Image plane */}
+          <mesh>
+            <planeGeometry args={[6, 4]} />
+            <meshBasicMaterial 
+              {...materialProps} 
+              transparent 
+              opacity={!!texture || item.media_type === 'video' ? 1 : 0.8}
+            />
+          </mesh>
+          
+          {/* Video overlay for video items */}
+          {item.media_type === 'video' && (
+            <mesh position={[0, 0, 0.01]}>
+              <planeGeometry args={[6, 4]} />
+              <meshBasicMaterial transparent opacity={0.7} color="#000000" />
+              <Html center position={[0, 0, 0.02]}>
+                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-black/80 border border-white/30">
+                  <div className="w-0 h-0 border-t-8 border-t-transparent border-l-16 border-l-white border-b-8 border-b-transparent ml-1"></div>
+                </div>
+              </Html>
+            </mesh>
+          )}
+          
+          {/* Item title */}
+          <Html center position={[0, -2.5, 0.1]}>
+            <div className={`px-3 py-1 rounded text-white text-center transition-all duration-200 ${
+              isActive || isHovered ? 'bg-black/80 text-white scale-110' : 'bg-black/50 text-white/80'
+            }`} style={{maxWidth: '200px'}}>
+              {item.title}
+            </div>
+          </Html>
+        </group>
       </mesh>
     </group>
   );

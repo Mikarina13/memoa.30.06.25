@@ -1,5 +1,5 @@
 import { useState, useEffect, Suspense, useMemo } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Environment, Html } from '@react-three/drei';
 import { motion, AnimatePresence } from 'framer-motion'; 
 import { ArrowLeft, Loader, X, RefreshCw, Settings, SlidersHorizontal as SliderHorizontal, Sparkles, ChevronDown, Cog, Image } from 'lucide-react';
@@ -13,7 +13,7 @@ import { MemoirIntegrations, MemoriaProfile } from '../lib/memoir-integrations';
 import { useRequireTermsAcceptance } from '../hooks/useRequireTermsAcceptance';
 import { TributeImageInterface } from '../components/TributeImageInterface';
 import { TributeImageDetail } from '../components/details/TributeImageDetail';
-import { Gallery3DCarousel } from '../components/Gallery3DCarousel';
+import { Gallery3DCarousel, CarouselCameraControls } from '../components/Gallery3DCarousel';
 import { CAMERA_POSITION_PROFILE_SPACE, SPACE_THEMES } from '../utils/constants';
 
 // Import detail components
@@ -48,8 +48,11 @@ const DEFAULT_SETTINGS: SpaceCustomizationSettings = {
 };
 
 // Component that uses R3F hooks - must be inside Canvas
-function ProfileSpaceControls({ settings }: { settings: SpaceCustomizationSettings }) {
-  useKeyboardControls(0.15); // Slightly slower movement for better control
+function ProfileSpaceControls({ settings, isGalleryActive }: { settings: SpaceCustomizationSettings, isGalleryActive: boolean }) {
+  // Only enable keyboard controls when gallery is not active
+  if (!isGalleryActive) {
+    useKeyboardControls(0.15); // Slightly slower movement for better control
+  }
   return null;
 }
 
@@ -560,7 +563,7 @@ export function Profile3DSpacePage() {
             </div>
           </Html>
         }>
-          <ProfileSpaceControls settings={customizationSettings} />
+          <ProfileSpaceControls settings={customizationSettings} isGalleryActive={showGalleryCarousel} />
           <EnhancedStars 
             count={starCount}
             size={customizationSettings.particleSize}
@@ -592,21 +595,25 @@ export function Profile3DSpacePage() {
             )}
           </Suspense>
           
-          <OrbitControls 
-            enablePan={true}
-            enableZoom={true}
-            enableRotate={true}
-            autoRotate={customizationSettings.autoRotate} 
-            autoRotateSpeed={customizationSettings.rotationSpeed * 50}
-            rotateSpeed={0.5}
-            zoomSpeed={0.8}
-            panSpeed={0.8}
-            target={[0, 0, 0]}
-            minDistance={5}
-            maxDistance={40}
-            maxPolarAngle={Math.PI * 0.85}
-            minPolarAngle={0.1}
-          />
+          {/* Only use OrbitControls when not viewing the gallery carousel */}
+          {!showGalleryCarousel && (
+            <OrbitControls 
+              enablePan={true}
+              enableZoom={true}
+              enableRotate={true}
+              autoRotate={customizationSettings.autoRotate} 
+              autoRotateSpeed={customizationSettings.rotationSpeed * 50}
+              rotateSpeed={0.5}
+              zoomSpeed={0.8}
+              panSpeed={0.8}
+              target={[0, 0, 0]}
+              minDistance={5}
+              maxDistance={40}
+              maxPolarAngle={Math.PI * 0.85}
+              minPolarAngle={0.1}
+            />
+          )}
+          
           <Environment preset={SPACE_THEMES[customizationSettings.colorTheme as keyof typeof SPACE_THEMES]?.environmentPreset as any || 'night'} />
           <ambientLight intensity={SPACE_THEMES[customizationSettings.colorTheme as keyof typeof SPACE_THEMES]?.ambientLightIntensity || 0.3} />
           <directionalLight 
@@ -620,7 +627,7 @@ export function Profile3DSpacePage() {
       {/* Manual Refresh Button */}
       <button 
         onClick={handleRefresh}
-        className="fixed top-20 right-20 p-3 bg-black/50 backdrop-blur-sm rounded-full border border-white/10 text-white/70 hover:text-white transition-colors z-40" 
+        className="fixed top-20 right-8 p-3 bg-black/50 backdrop-blur-sm rounded-full border border-white/10 text-white/70 hover:text-white transition-colors z-40" 
         title="Refresh Data"
       >
         <RefreshCw className="w-5 h-5" />
@@ -640,7 +647,6 @@ export function Profile3DSpacePage() {
                 item.metadata.isTribute === true ||
                 (item.metadata.type === 'tribute') ||
                 (item.tags && item.tags.includes('tribute')) ||
-                (item.folder === 'Tribute Images') ||
                 (item.title && item.title.toLowerCase().includes('tribute'));
               
               return !isTribute;
@@ -665,7 +671,6 @@ export function Profile3DSpacePage() {
             onSave={handleSaveCustomization}
             memoriaProfileId={memoriaProfileId}
             profileType={profileType}
-            itemTypes={itemTypes}
           />
         )}
       </AnimatePresence>
