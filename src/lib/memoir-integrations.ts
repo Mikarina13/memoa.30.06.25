@@ -808,7 +808,8 @@ export class MemoirIntegrations {
       // If memoriaProfileId is provided, filter by it in metadata
       if (memoriaProfileId) {
         console.log(`Filtering gallery items by Memoria profile ID ${memoriaProfileId}`);
-        query = query.or(`metadata->memoriaProfileId.eq.${memoriaProfileId},and(metadata->>memoriaProfileId.is.null,tags.cs.{\"memoria:${memoriaProfileId}\"})`);
+        // Fix the query formatting for proper JSONB and array syntax
+        query = query.or(`metadata->>memoriaProfileId.eq.'${memoriaProfileId}',and(metadata->>memoriaProfileId.is.null,tags.cs.'{"memoria:${memoriaProfileId}"}')`);
       }
 
       const { data, error } = await query.order('created_at', { ascending: false });
@@ -1308,7 +1309,7 @@ export class MemoirIntegrations {
         : [];
       
       const memoriaProfiles = memoriaIds.length > 0
-        ? await this.getMemoriaProfiles(memoriaIds)
+        ? await this.getMemoriaProfilesByIds(memoriaIds)
         : [];
       
       return {
@@ -1348,11 +1349,11 @@ export class MemoirIntegrations {
   }
 
   /**
-   * Gets Memoria profiles by IDs
+   * Gets Memoria profiles by IDs (renamed to resolve function overloading)
    * @param profileIds The profile IDs
    * @returns The profiles
    */
-  static async getMemoriaProfiles(profileIds: string[]): Promise<MemoriaProfile[]> {
+  static async getMemoriaProfilesByIds(profileIds: string[]): Promise<MemoriaProfile[]> {
     try {
       if (profileIds.length === 0) return [];
       
