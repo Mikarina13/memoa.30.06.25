@@ -59,7 +59,7 @@ export function Profile3DSpacePage() {
   const { user, loading } = useAuth();
   
   // Extract profile type from location state - must be at the top before any useState calls
-  const { profileType = 'memoir', memoriaProfileId, showProfileSelector: initialShowProfileSelector } = location.state || {};
+  const { profileType = 'memoir', memoriaProfileId, showProfileSelector: initialShowProfileSelector, userId: initialUserId } = location.state || {};
   
   // State for profile data
   const [profileData, setProfileData] = useState<any>(null);
@@ -122,24 +122,27 @@ export function Profile3DSpacePage() {
 
   // Debug log profile type and ID
   useEffect(() => {
-    console.log(`Loading 3D space for ${profileType}${memoriaProfileId ? ` with ID: ${memoriaProfileId}` : ''}`);
+    console.log(`Loading 3D space for ${profileType}${memoriaProfileId ? ` with ID: ${memoriaProfileId}` : ''}${initialUserId ? ` with userId: ${initialUserId}` : ''}`);
     document.title = profileType === 'memoir' ? 'MEMOIR 3D Space' : 'MEMORIA 3D Space';
-  }, [profileType, memoriaProfileId]);
+  }, [profileType, memoriaProfileId, initialUserId]);
   
   // Load profile data and customization settings when component mounts
   useEffect(() => {
     const loadData = async () => {
       console.log('Starting to load profile data...');
-      console.log('Profile type:', profileType, 'Memoria Profile ID:', memoriaProfileId);
+      console.log('Profile type:', profileType, 'Memoria Profile ID:', memoriaProfileId, 'User ID:', initialUserId);
       try {
         setIsLoading(true);
         setLoadError(null);
         
         if (user) {
-          console.log(`Loading profile data for ${profileType}${memoriaProfileId ? ` with ID: ${memoriaProfileId}` : ''}`);
+          console.log(`Loading profile data for ${profileType}${memoriaProfileId ? ` with ID: ${memoriaProfileId}` : ''}${initialUserId ? ` with userId: ${initialUserId}` : ''}`);
           
           // Load profile data
-          const profile = await MemoirIntegrations.getMemoirProfile(user.id, memoriaProfileId);
+          const profile = await MemoirIntegrations.getMemoirProfile(
+            initialUserId || user.id, // Use initialUserId if provided (for viewing other people's profiles)
+            memoriaProfileId
+          );
           console.log('Profile data loaded:', profile);
           
           // Set profile name for display
@@ -185,7 +188,10 @@ export function Profile3DSpacePage() {
           setProfileData(profile);
           
           // Load gallery items
-          const galleryItems = await MemoirIntegrations.getGalleryItems(user.id, memoriaProfileId);
+          const galleryItems = await MemoirIntegrations.getGalleryItems(
+            initialUserId || user.id, // Use initialUserId if provided
+            memoriaProfileId
+          );
           console.log(`Loaded ${galleryItems?.length || 0} gallery items`);
           setGalleryItems(galleryItems || []);
           
@@ -204,7 +210,7 @@ export function Profile3DSpacePage() {
             
             // Load media links if they exist
             if (!profile.memoir_data?.media_links && !profile.profile_data?.media_links) {
-              const mediaLinksData = await MemoirIntegrations.getMediaLinks(user.id, memoriaProfileId);
+              const mediaLinksData = await MemoirIntegrations.getMediaLinks(initialUserId || user.id, memoriaProfileId);
               if (mediaLinksData && mediaLinksData.length > 0) {
                 if (memoriaProfileId) {
                   // For Memoria profiles
@@ -226,7 +232,10 @@ export function Profile3DSpacePage() {
               
             if (!personalData) {
               // Try loading personal preferences directly
-              const personalPrefs = await MemoirIntegrations.getPersonalPreferences(user.id, memoriaProfileId);
+              const personalPrefs = await MemoirIntegrations.getPersonalPreferences(
+                initialUserId || user.id, 
+                memoriaProfileId
+              );
               if (personalPrefs) {
                 console.log('Loaded personal preferences:', personalPrefs);
                 if (memoriaProfileId) {
@@ -275,7 +284,7 @@ export function Profile3DSpacePage() {
     };
     
     loadData();
-  }, [user, profileType, memoriaProfileId]);
+  }, [user, profileType, memoriaProfileId, initialUserId]);
   
   // Redirect if user is not authenticated
   useEffect(() => {
@@ -362,8 +371,14 @@ export function Profile3DSpacePage() {
     console.log('Manual refresh triggered');
     try {
       // Reload all data
-      const profile = await MemoirIntegrations.getMemoirProfile(user.id, memoriaProfileId);
-      const galleryItems = await MemoirIntegrations.getGalleryItems(user.id, memoriaProfileId);
+      const profile = await MemoirIntegrations.getMemoirProfile(
+        initialUserId || user.id,
+        memoriaProfileId
+      );
+      const galleryItems = await MemoirIntegrations.getGalleryItems(
+        initialUserId || user.id,
+        memoriaProfileId
+      );
       
       // Update state
       if (profile) {
@@ -372,7 +387,10 @@ export function Profile3DSpacePage() {
         // Ensure we have the personal preferences data
         if (!profile.profile_data?.preferences?.personal && !profile.memoir_data?.preferences?.personal) {
           console.log('Fetching personal preferences during refresh');
-          const personalPrefs = await MemoirIntegrations.getPersonalPreferences(user.id, memoriaProfileId || undefined);
+          const personalPrefs = await MemoirIntegrations.getPersonalPreferences(
+            initialUserId || user.id, 
+            memoriaProfileId || undefined
+          );
           if (personalPrefs) {
             if (memoriaProfileId) {
               if (!profile.profile_data) profile.profile_data = {};
