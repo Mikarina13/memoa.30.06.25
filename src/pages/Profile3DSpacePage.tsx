@@ -325,6 +325,7 @@ export function Profile3DSpacePage() {
           item.metadata.isTribute === true ||
           (item.metadata.type === 'tribute') ||
           (item.tags && item.tags.includes('tribute')) ||
+          (item.folder === 'Tribute Images') ||
           (item.title && item.title.toLowerCase().includes('tribute'));
         
         return !isTribute;
