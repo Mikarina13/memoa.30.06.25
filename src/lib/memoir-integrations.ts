@@ -295,11 +295,8 @@ export class MemoirIntegrations {
       if (memoriaProfileId) {
         console.log(`Filtering gallery items by Memoria profile ID ${memoriaProfileId}`);
         
-        // Use JSON.stringify for the JSONB metadata field
-        const jsonProfileId = JSON.stringify(memoriaProfileId);
-        
-        // Use proper PostgreSQL array syntax for the tags column (curly braces)
-        query = query.or(`metadata->memoriaProfileId.eq.${jsonProfileId},and(metadata->memoriaProfileId.is.null,tags.cs.'{${memoriaProfileId}}')`);
+        // Use ->> operator for text extraction from JSONB and direct string comparison
+        query = query.or(`metadata->>memoriaProfileId.eq.${memoriaProfileId},and(metadata->>memoriaProfileId.is.null,tags.cs.'{${memoriaProfileId}}')`);
       }
 
       const { data, error } = await query.order('created_at', { ascending: false });
