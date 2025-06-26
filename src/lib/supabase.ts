@@ -16,13 +16,34 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
+// Validate URL format
+try {
+  new URL(supabaseUrl);
+} catch (error) {
+  console.error('❌ Invalid Supabase URL format:', supabaseUrl);
+  throw new Error('Invalid Supabase URL format');
+}
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
     storage: window.localStorage
-  }
+  },
+  global: {
+    headers: {
+      'apikey': supabaseAnonKey,
+    },
+  },
+  db: {
+    schema: 'public',
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 10,
+    },
+  },
 });
 
 // Helper function to check if a session error is due to missing/invalid session
@@ -46,19 +67,43 @@ const checkAuth = async () => {
   }
 };
 
-// Test connection function
+// Enhanced test connection function with better error handling
 export const testSupabaseConnection = async () => {
   try {
     console.log('🧪 Testing Supabase connection...');
+    console.log('🔗 URL:', supabaseUrl);
+    
+    // Test basic connection
     const { data, error } = await supabase.auth.getSession();
     if (error) {
       console.error('❌ Supabase connection error:', error);
       return false;
     }
+    
+    // Test database connection
+    const { data: testData, error: dbError } = await supabase
+      .from('profiles')
+      .select('count')
+      .limit(1);
+      
+    if (dbError) {
+      console.error('❌ Database connection error:', dbError);
+      return false;
+    }
+    
     console.log('✅ Supabase connection successful!');
     return true;
   } catch (err) {
     console.error('❌ Supabase connection failed:', err);
+    if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
+      console.error('🔧 This appears to be a network connectivity issue. Please check:');
+      console.error('   1. Your internet connection');
+      console.error('   2. That the Supabase URL is correct and accessible');
+      console.error('   3. That your development server has been restarted');
+    }
     return false;
   }
 };
+
+// Initialize connection test on module load
+testSupabaseConnection();
