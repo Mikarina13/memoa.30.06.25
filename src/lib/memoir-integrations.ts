@@ -1,11 +1,28 @@
 import { supabase } from './supabase';
-import { validatePersonalPreferences, validateMediaLinks, validateNarrativesData, validateFamilyTreeData } from './data-validation';
+import { validatePersonalPreferences, validateNarrativesData, validateFamilyTreeData, validateMediaLinks, validatePortraitsData, validateAvaturnAvatarsData, validatePersonalityTestData, validateIntegrationStatus, validateMemoirData } from './data-validation';
 
-// Environment variables for API keys (add these to your .env file)
-const ELEVENLABS_API_KEY = import.meta.env.VITE_ELEVENLABS_API_KEY;
-const TAVUS_API_KEY = import.meta.env.VITE_TAVUS_API_KEY;
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+/**
+ * Represents the status of integration with external AI services
+ */
+export interface IntegrationStatus {
+  status: 'not_started' | 'in_progress' | 'completed' | 'error';
+  last_updated: string | null;
+}
 
+/**
+ * Represents the status of all integrations for a memoir profile
+ */
+export interface MemoirIntegrationStatus {
+  elevenlabs: IntegrationStatus & { voice_cloned: boolean };
+  tavus: IntegrationStatus & { avatar_created: boolean };
+  gemini: IntegrationStatus & { narratives_processed: boolean };
+  avaturn?: IntegrationStatus & { avatar_created: boolean };
+  portrait_generation?: IntegrationStatus & { portraits_generated: boolean };
+}
+
+/**
+ * Represents a Memoria profile (a loved one's profile)
+ */
 export interface MemoriaProfile {
   id: string;
   user_id: string;
@@ -15,43 +32,18 @@ export interface MemoriaProfile {
   birth_date?: string;
   death_date?: string;
   is_celebrity?: boolean;
-  is_public?: boolean;
-  profile_data: Record<string, unknown>;
+  profile_data?: any;
   elevenlabs_voice_id?: string;
   tavus_avatar_id?: string;
-  integration_status: MemoirIntegrationStatus;
-  created_at: string;
-  updated_at: string;
+  integration_status?: MemoirIntegrationStatus;
+  is_public?: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
-export interface MemoirIntegrationStatus {
-  elevenlabs: {
-    status: 'not_started' | 'in_progress' | 'completed' | 'error';
-    voice_cloned: boolean;
-    last_updated: string | null;
-  };
-  tavus: {
-    status: 'not_started' | 'in_progress' | 'completed' | 'error';
-    avatar_created: boolean;
-    last_updated: string | null;
-  };
-  gemini: {
-    status: 'not_started' | 'in_progress' | 'completed' | 'error';
-    narratives_processed: boolean;
-    last_updated: string | null;
-  };
-  avaturn?: {
-    status: 'not_started' | 'in_progress' | 'completed' | 'error';
-    avatar_created: boolean;
-    last_updated: string | null;
-  };
-  portrait_generation?: {
-    status: 'not_started' | 'in_progress' | 'completed' | 'error';
-    portraits_generated: boolean;
-    last_updated: string | null;
-  };
-}
-
+/**
+ * Represents a game entry in a user's gaming preferences
+ */
 export interface GameEntry {
   id: string;
   name: string;
@@ -63,6 +55,9 @@ export interface GameEntry {
   timestamp: string;
 }
 
+/**
+ * Represents a digital presence entry (social media, website, etc.)
+ */
 export interface DigitalPresenceEntry {
   id: string;
   name: string;
@@ -70,151 +65,580 @@ export interface DigitalPresenceEntry {
   timestamp: string;
 }
 
-interface GeneratedPortrait {
-  id: string;
-  name: string;
-  sourceImage: string;
-  generatedImages: string[];
-  style: string;
-  timestamp: string;
-}
-
-interface PersonalPreferences {
-  favorite_songs: string[];
-  favorite_locations: string[];
-  favorite_movies: string[];
-  favorite_books: string[];
-  favorite_quotes: string[];
-  favorite_foods: string[];
-  favorite_signature_dishes?: string[];
-  digital_presence: DigitalPresenceEntry[];
-  gaming_preferences: GameEntry[];
-  last_updated?: string;
-}
-
-interface MemoirData {
-  narratives?: {
-    personal_stories?: Array<{
-      title: string;
-      content: string;
-      timestamp: string;
-      aiEnhanced?: boolean;
-    }>;
-    memories?: Array<{
-      title: string;
-      content: string;
-      timestamp: string;
-      aiEnhanced?: boolean;
-    }>;
-    values?: Array<{
-      title: string;
-      content: string;
-      timestamp: string;
-      aiEnhanced?: boolean;
-    }>;
-    wisdom?: Array<{
-      title: string;
-      content: string;
-      timestamp: string;
-      aiEnhanced?: boolean;
-    }>;
-    reflections?: Array<{
-      title: string;
-      content: string;
-      timestamp: string;
-      aiEnhanced?: boolean;
-    }>;
-    ai_insights?: {
-      personality_traits: string[];
-      core_themes: string[];
-      writing_style: string;
-      processed_at: string;
-    };
-  };
-  preferences?: {
-    music: {
-      spotify_playlist?: string;
-      youtube_playlist?: string;
-      deezer_playlist?: string;
-    };
-    places: {
-      google_maps_saved_places?: any[];
-      favorite_locations?: string[];
-    };
-    social_media: {
-      facebook_data?: any;
-      instagram_data?: any;
-    };
-    gaming?: {
-      games: GameEntry[];
-      favorite_genres?: string[];
-      gaming_platforms?: string[];
-      total_games: number;
-      last_updated: string;
-    };
-    personal?: PersonalPreferences;
-    memoria_personal?: PersonalPreferences; // Separate storage for MEMORIA personal preferences
-  };
-  family_tree?: {
-    files: Array<{
-      name: string;
-      size: number;
-      type: string;
-      uploadDate: string;
-      url: string;
-    }>;
-    lastUpdated: string;
-  };
-  portraits?: {
-    generated?: GeneratedPortrait[];
-    last_updated?: string;
-  };
-  avaturn_avatars?: {
-    avatars?: Array<{
-      id: string;
-      sourcePhoto: string;
-      avaturnUrl: string;
-      createdAt: string;
-      status: string;
-    }>;
-    last_updated?: string;
-  };
-  ai_generated?: {
-    additional_photos?: string[];
-    generated_videos?: string[];
-    synthetic_voice_samples?: string[];
-  };
-  media_links?: Array<{
-    id: string;
-    title: string;
-    url: string;
-    type: 'video' | 'podcast' | 'article';
-    source: string;
-    description?: string;
-    date: string;
-  }>;
-  space_customization?: {
-    settings?: any;
-    presets?: Array<{
-      id: string;
-      name: string;
-      settings: any;
-    }>;
-    last_updated?: string;
-  };
-  tribute_images?: Array<{
-    id: string;
-    url: string;
-    style?: string;
-    prompt?: string;
-    createdAt: string;
-  }>;
-}
-
+/**
+ * Class containing all integration methods for the MEMOIR platform
+ */
 export class MemoirIntegrations {
-  
   /**
-   * Create a new Memoria profile
+   * Gets the MIME type from a file
+   * @param file The file to get the MIME type from
+   * @returns The MIME type
+   */
+  static getMimeTypeFromFile(file: File): string {
+    // If the file has a type property, use that
+    if (file.type) {
+      return file.type;
+    }
+    
+    // Otherwise, try to determine based on file extension
+    const extension = file.name.split('.').pop()?.toLowerCase();
+    
+    if (!extension) {
+      return 'application/octet-stream';
+    }
+    
+    // Map of common extensions to MIME types
+    const mimeTypeMap: { [key: string]: string } = {
+      'pdf': 'application/pdf',
+      'doc': 'application/msword',
+      'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'xls': 'application/vnd.ms-excel',
+      'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'ppt': 'application/vnd.ms-powerpoint',
+      'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'gif': 'image/gif',
+      'webp': 'image/webp',
+      'svg': 'image/svg+xml',
+      'mp3': 'audio/mpeg',
+      'wav': 'audio/wav',
+      'ogg': 'audio/ogg',
+      'mp4': 'video/mp4',
+      'webm': 'video/webm',
+      'txt': 'text/plain',
+      'zip': 'application/zip',
+      'rar': 'application/x-rar-compressed',
+      '7z': 'application/x-7z-compressed',
+      'glb': 'model/gltf-binary',
+      'gltf': 'model/gltf+json'
+    };
+    
+    return mimeTypeMap[extension] || 'application/octet-stream';
+  }
+
+  /**
+   * Updates the integration status for a specific service
+   * @param userId The user ID
+   * @param service The service name
+   * @param status The new status
+   * @param memoriaProfileId Optional Memoria profile ID
+   * @returns The updated user profile data
+   */
+  static async updateIntegrationStatus(
+    userId: string,
+    service: 'elevenlabs' | 'tavus' | 'gemini' | 'avaturn' | 'portrait_generation',
+    status: Partial<IntegrationStatus & { voice_cloned?: boolean, avatar_created?: boolean, narratives_processed?: boolean, portraits_generated?: boolean }>,
+    memoriaProfileId?: string
+  ): Promise<any> {
+    console.log(`Updating integration status for ${service} with status:`, status);
+    
+    try {
+      // Prepare the update payload
+      let updatePayload: any = {};
+      
+      if (memoriaProfileId) {
+        // For Memoria profile
+        console.log(`Updating integration status for Memoria profile ${memoriaProfileId}`);
+        
+        // Get current integration_status for the profile
+        const { data: profile, error: getError } = await supabase
+          .from('memoria_profiles')
+          .select('integration_status')
+          .eq('id', memoriaProfileId)
+          .single();
+        
+        if (getError) {
+          console.error(`Error getting Memoria profile ${memoriaProfileId}:`, getError);
+          throw getError;
+        }
+        
+        // Update the status for the specific service
+        const integrationStatus = profile?.integration_status || {};
+        integrationStatus[service] = {
+          ...integrationStatus[service],
+          ...status,
+          last_updated: new Date().toISOString()
+        };
+        
+        updatePayload = { integration_status: integrationStatus };
+        
+        // Update the profile
+        const { data, error } = await supabase
+          .from('memoria_profiles')
+          .update(updatePayload)
+          .eq('id', memoriaProfileId)
+          .eq('user_id', userId); // Ensure the user owns this profile
+        
+        if (error) {
+          console.error(`Error updating Memoria profile ${memoriaProfileId}:`, error);
+          throw error;
+        }
+        
+        return data;
+      } else {
+        // For user profile
+        console.log(`Updating integration status for user profile ${userId}`);
+        
+        // Get current integration_status
+        const { data: profile, error: getError } = await supabase
+          .from('profiles')
+          .select('integration_status')
+          .eq('user_id', userId)
+          .single();
+        
+        if (getError) {
+          console.error(`Error getting user profile ${userId}:`, getError);
+          throw getError;
+        }
+        
+        // Update the status for the specific service
+        const integrationStatus = profile?.integration_status || {};
+        integrationStatus[service] = {
+          ...integrationStatus[service],
+          ...status,
+          last_updated: new Date().toISOString()
+        };
+        
+        updatePayload = { integration_status: integrationStatus };
+        
+        // Update the profile
+        const { data, error } = await supabase
+          .from('profiles')
+          .update(updatePayload)
+          .eq('user_id', userId);
+        
+        if (error) {
+          console.error(`Error updating user profile ${userId}:`, error);
+          throw error;
+        }
+        
+        return data;
+      }
+    } catch (error) {
+      console.error(`Error updating integration status for ${service}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Stores an ElevenLabs voice ID for a user
+   * @param userId The user ID
+   * @param voiceId The ElevenLabs voice ID
+   * @param memoriaProfileId Optional Memoria profile ID
+   * @returns The updated profile data
+   */
+  static async storeElevenLabsVoiceId(userId: string, voiceId: string, memoriaProfileId?: string): Promise<any> {
+    try {
+      console.log(`Storing ElevenLabs voice ID for ${memoriaProfileId ? 'Memoria profile' : 'user'} ${memoriaProfileId || userId}`);
+      
+      if (memoriaProfileId) {
+        // Update Memoria profile
+        const { data, error } = await supabase
+          .from('memoria_profiles')
+          .update({ 
+            elevenlabs_voice_id: voiceId,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', memoriaProfileId)
+          .eq('user_id', userId);
+          
+        if (error) {
+          throw error;
+        }
+        
+        // Also update integration status
+        await this.updateIntegrationStatus(userId, 'elevenlabs', {
+          status: 'completed',
+          voice_cloned: true
+        }, memoriaProfileId);
+        
+        return data;
+      } else {
+        // Update user profile
+        const { data, error } = await supabase
+          .from('profiles')
+          .update({ 
+            elevenlabs_voice_id: voiceId,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', userId);
+          
+        if (error) {
+          throw error;
+        }
+        
+        // Also update integration status
+        await this.updateIntegrationStatus(userId, 'elevenlabs', {
+          status: 'completed',
+          voice_cloned: true
+        });
+        
+        return data;
+      }
+    } catch (error) {
+      console.error('Error storing ElevenLabs voice ID:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Stores a Tavus avatar ID for a user
+   * @param userId The user ID
+   * @param avatarId The Tavus avatar ID
+   * @param memoriaProfileId Optional Memoria profile ID
+   * @returns The updated profile data
+   */
+  static async storeTavusAvatarId(userId: string, avatarId: string, memoriaProfileId?: string): Promise<any> {
+    try {
+      console.log(`Storing Tavus avatar ID for ${memoriaProfileId ? 'Memoria profile' : 'user'} ${memoriaProfileId || userId}`);
+      
+      if (memoriaProfileId) {
+        // Update Memoria profile
+        const { data, error } = await supabase
+          .from('memoria_profiles')
+          .update({ 
+            tavus_avatar_id: avatarId,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', memoriaProfileId)
+          .eq('user_id', userId);
+          
+        if (error) {
+          throw error;
+        }
+        
+        // Also update integration status
+        await this.updateIntegrationStatus(userId, 'tavus', {
+          status: 'completed',
+          avatar_created: true
+        }, memoriaProfileId);
+        
+        return data;
+      } else {
+        // Update user profile
+        const { data, error } = await supabase
+          .from('profiles')
+          .update({ 
+            tavus_avatar_id: avatarId,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', userId);
+          
+        if (error) {
+          throw error;
+        }
+        
+        // Also update integration status
+        await this.updateIntegrationStatus(userId, 'tavus', {
+          status: 'completed',
+          avatar_created: true
+        });
+        
+        return data;
+      }
+    } catch (error) {
+      console.error('Error storing Tavus avatar ID:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Updates memoir data (memoir_data for user profile, profile_data for Memoria profile)
+   * @param userId The user ID
+   * @param data The data to update
+   * @param memoriaProfileId Optional Memoria profile ID
+   * @returns The updated profile data
+   */
+  static async updateMemoirData(userId: string, data: any, memoriaProfileId?: string): Promise<any> {
+    try {
+      if (memoriaProfileId) {
+        // Get current profile_data for Memoria profile
+        const { data: currentProfile, error: getError } = await supabase
+          .from('memoria_profiles')
+          .select('profile_data')
+          .eq('id', memoriaProfileId)
+          .eq('user_id', userId)
+          .single();
+        
+        if (getError) {
+          console.error(`Error getting Memoria profile ${memoriaProfileId}:`, getError);
+          throw getError;
+        }
+        
+        // Merge new data with existing data
+        const mergedData = {
+          ...(currentProfile?.profile_data || {}),
+          ...data
+        };
+        
+        // Use data-validation to ensure data integrity
+        const validatedData = validateMemoirData(mergedData);
+        
+        // Update the profile
+        const { data: updatedData, error } = await supabase
+          .from('memoria_profiles')
+          .update({ 
+            profile_data: validatedData,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', memoriaProfileId)
+          .eq('user_id', userId)
+          .select();
+        
+        if (error) {
+          console.error(`Error updating Memoria profile ${memoriaProfileId}:`, error);
+          throw error;
+        }
+        
+        return updatedData[0] || null;
+      } else {
+        // Get current memoir_data for user profile
+        const { data: currentProfile, error: getError } = await supabase
+          .from('profiles')
+          .select('memoir_data')
+          .eq('user_id', userId)
+          .single();
+        
+        if (getError) {
+          console.error(`Error getting user profile ${userId}:`, getError);
+          throw getError;
+        }
+        
+        // Merge new data with existing data
+        const mergedData = {
+          ...(currentProfile?.memoir_data || {}),
+          ...data
+        };
+        
+        // Use data-validation to ensure data integrity
+        const validatedData = validateMemoirData(mergedData);
+        
+        // Update the profile
+        const { data: updatedData, error } = await supabase
+          .from('profiles')
+          .update({ 
+            memoir_data: validatedData,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', userId)
+          .select();
+        
+        if (error) {
+          console.error(`Error updating user profile ${userId}:`, error);
+          throw error;
+        }
+        
+        return updatedData[0] || null;
+      }
+    } catch (error) {
+      console.error('Error updating memoir data:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Stores gaming preferences for a user
+   * @param userId The user ID
+   * @param games The gaming preferences data
+   * @param memoriaProfileId Optional Memoria profile ID
+   * @returns The updated profile data
+   */
+  static async storeGamingPreferences(userId: string, games: any[], memoriaProfileId?: string): Promise<any> {
+    try {
+      // Get the current personal preferences (if any)
+      const preferences = await this.getPersonalPreferences(userId, memoriaProfileId);
+      
+      // Update with new gaming preferences
+      const updatedPreferences = {
+        ...preferences,
+        gaming_preferences: games
+      };
+      
+      // Store in memoir_data or profile_data
+      if (memoriaProfileId) {
+        const result = await this.updateMemoirData(
+          userId,
+          { preferences: { personal: updatedPreferences } },
+          memoriaProfileId
+        );
+        
+        return updatedPreferences;
+      } else {
+        const result = await this.updateMemoirData(
+          userId,
+          { preferences: { personal: updatedPreferences } }
+        );
+        
+        return updatedPreferences;
+      }
+    } catch (error) {
+      console.error('Error storing gaming preferences:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Stores personal preferences for a user
+   * @param userId The user ID
+   * @param preferences The personal preferences data
+   * @param memoriaProfileId Optional Memoria profile ID
+   * @returns The updated profile data
+   */
+  static async storePersonalPreferences(userId: string, preferences: any, memoriaProfileId?: string): Promise<any> {
+    try {
+      // Validate preferences data
+      const validatedPrefs = validatePersonalPreferences(preferences);
+      
+      // Store in memoir_data or profile_data
+      if (memoriaProfileId) {
+        console.log(`Storing personal preferences for Memoria profile ${memoriaProfileId}`);
+        const result = await this.updateMemoirData(
+          userId,
+          { preferences: { personal: validatedPrefs } },
+          memoriaProfileId
+        );
+        
+        return validatedPrefs;
+      } else {
+        console.log(`Storing personal preferences for user ${userId}`);
+        const result = await this.updateMemoirData(
+          userId,
+          { preferences: { personal: validatedPrefs } }
+        );
+        
+        return validatedPrefs;
+      }
+    } catch (error) {
+      console.error('Error storing personal preferences:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Gets personal preferences for a user
+   * @param userId The user ID
+   * @param memoriaProfileId Optional Memoria profile ID
+   * @returns The personal preferences data
+   */
+  static async getPersonalPreferences(userId: string, memoriaProfileId?: string): Promise<any> {
+    try {
+      if (memoriaProfileId) {
+        // Get Memoria profile
+        const { data, error } = await supabase
+          .from('memoria_profiles')
+          .select('profile_data')
+          .eq('id', memoriaProfileId)
+          .eq('user_id', userId)
+          .single();
+        
+        if (error) {
+          console.error(`Error getting Memoria profile ${memoriaProfileId}:`, error);
+          throw error;
+        }
+        
+        return data?.profile_data?.preferences?.personal || null;
+      } else {
+        // Get user profile
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('memoir_data')
+          .eq('user_id', userId)
+          .single();
+        
+        if (error) {
+          console.error(`Error getting user profile ${userId}:`, error);
+          throw error;
+        }
+        
+        return data?.memoir_data?.preferences?.personal || null;
+      }
+    } catch (error) {
+      console.error('Error getting personal preferences:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Gets a user's memoir profile
+   * @param userId The user ID
+   * @param memoriaProfileId Optional Memoria profile ID
+   * @returns The memoir profile data
+   */
+  static async getMemoirProfile(userId: string, memoriaProfileId?: string): Promise<any> {
+    try {
+      if (memoriaProfileId) {
+        // Get Memoria profile
+        const { data, error } = await supabase
+          .from('memoria_profiles')
+          .select('*')
+          .eq('id', memoriaProfileId)
+          .eq('user_id', userId)
+          .single();
+        
+        if (error) {
+          console.error(`Error getting Memoria profile ${memoriaProfileId}:`, error);
+          throw error;
+        }
+        
+        return data;
+      } else {
+        // Get user profile
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', userId)
+          .single();
+        
+        if (error) {
+          console.error(`Error getting user profile ${userId}:`, error);
+          throw error;
+        }
+        
+        return data;
+      }
+    } catch (error) {
+      console.error('Error getting memoir profile:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Gets Memoria profiles for a user
+   * @param userId The user ID
+   * @returns The Memoria profiles
+   */
+  static async getMemoriaProfiles(userId: string): Promise<MemoriaProfile[]> {
+    try {
+      const { data, error } = await supabase
+        .from('memoria_profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error(`Error getting Memoria profiles for user ${userId}:`, error);
+        throw error;
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error('Error getting Memoria profiles:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Creates a new Memoria profile
+   * @param userId The user ID
+   * @param name The profile name
+   * @param relationship Optional relationship
+   * @param description Optional description
+   * @param birthDate Optional birth date
+   * @param deathDate Optional death date
+   * @param isCelebrity Optional is celebrity flag
+   * @returns The created Memoria profile
    */
   static async createMemoriaProfile(
     userId: string,
@@ -223,33 +647,38 @@ export class MemoirIntegrations {
     description?: string,
     birthDate?: string,
     deathDate?: string,
-    isCelebrity: boolean = false
+    isCelebrity?: boolean
   ): Promise<MemoriaProfile> {
     try {
-      console.log(`Creating Memoria profile: ${name} for user: ${userId}`);
-      
       const { data, error } = await supabase
         .from('memoria_profiles')
-        .insert([{
-          user_id: userId,
-          name,
-          relationship,
-          description,
-          birth_date: birthDate,
-          death_date: deathDate,
-          is_celebrity: isCelebrity,
-          profile_data: {}
-        }])
-        .select()
-        .single();
-
+        .insert([
+          {
+            user_id: userId,
+            name,
+            relationship,
+            description,
+            birth_date: birthDate,
+            death_date: deathDate,
+            is_celebrity: isCelebrity || false,
+            profile_data: {},
+            integration_status: {
+              elevenlabs: { status: 'not_started', voice_cloned: false, last_updated: null },
+              tavus: { status: 'not_started', avatar_created: false, last_updated: null },
+              gemini: { status: 'not_started', narratives_processed: false, last_updated: null },
+              avaturn: { status: 'not_started', avatar_created: false, last_updated: null },
+              portrait_generation: { status: 'not_started', portraits_generated: false, last_updated: null }
+            }
+          }
+        ])
+        .select();
+      
       if (error) {
-        console.error('Error creating Memoria profile:', error);
+        console.error(`Error creating Memoria profile for user ${userId}:`, error);
         throw error;
       }
       
-      console.log('Successfully created Memoria profile:', data);
-      return data;
+      return data[0] as MemoriaProfile;
     } catch (error) {
       console.error('Error creating Memoria profile:', error);
       throw error;
@@ -257,98 +686,31 @@ export class MemoirIntegrations {
   }
 
   /**
-   * Get all Memoria profiles for a user
-   */
-  static async getMemoriaProfiles(userId: string): Promise<MemoriaProfile[]> {
-    try {
-      console.log(`Fetching Memoria profiles for user: ${userId}`);
-      
-      const { data, error } = await supabase
-        .from('memoria_profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching Memoria profiles:', error);
-        throw error;
-      }
-      
-      console.log(`Successfully fetched ${data?.length || 0} Memoria profiles`);
-      return data || [];
-    } catch (error) {
-      console.error('Error fetching Memoria profiles:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get a specific Memoria profile
-   */
-  static async getMemoirProfile(userId: string, profileId?: string): Promise<any> {
-    try {
-      if (profileId) {
-        console.log(`Fetching Memoria profile: ${profileId}`);
-        
-        const { data, error } = await supabase
-          .from('memoria_profiles')
-          .select('*')
-          .eq('id', profileId)
-          .single();
-  
-        if (error) {
-          console.error('Error fetching Memoria profile:', error);
-          throw error;
-        }
-        
-        console.log('Successfully fetched Memoria profile');
-        return data;
-      } else {
-        // Get user's profile data
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('user_id', userId)
-          .single();
-  
-        if (error) {
-          console.error(`Failed to fetch user profile ${userId}:`, error);
-          throw error;
-        }
-        
-        console.log('Successfully fetched user profile');
-        return data;
-      }
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Update a Memoria profile
+   * Updates a Memoria profile
+   * @param profileId The profile ID
+   * @param updateData The data to update
+   * @returns The updated Memoria profile
    */
   static async updateMemoriaProfile(
     profileId: string,
-    updates: Partial<MemoriaProfile>
+    updateData: Partial<MemoriaProfile>
   ): Promise<MemoriaProfile> {
     try {
-      console.log(`Updating Memoria profile: ${profileId}`);
-      
       const { data, error } = await supabase
         .from('memoria_profiles')
-        .update(updates)
+        .update({
+          ...updateData,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', profileId)
-        .select()
-        .single();
-
+        .select();
+      
       if (error) {
-        console.error('Error updating Memoria profile:', error);
+        console.error(`Error updating Memoria profile ${profileId}:`, error);
         throw error;
       }
       
-      console.log('Successfully updated Memoria profile');
-      return data;
+      return data[0] as MemoriaProfile;
     } catch (error) {
       console.error('Error updating Memoria profile:', error);
       throw error;
@@ -356,62 +718,71 @@ export class MemoirIntegrations {
   }
 
   /**
-   * Delete a Memoria profile
+   * Deletes a Memoria profile
+   * @param profileId The profile ID
+   * @returns True if successful
    */
-  static async deleteMemoriaProfile(profileId: string): Promise<void> {
+  static async deleteMemoriaProfile(profileId: string): Promise<boolean> {
     try {
-      console.log(`Deleting Memoria profile: ${profileId}`);
-      
       const { error } = await supabase
         .from('memoria_profiles')
         .delete()
         .eq('id', profileId);
-
+      
       if (error) {
-        console.error('Error deleting Memoria profile:', error);
+        console.error(`Error deleting Memoria profile ${profileId}:`, error);
         throw error;
       }
       
-      console.log('Successfully deleted Memoria profile');
+      return true;
     } catch (error) {
       console.error('Error deleting Memoria profile:', error);
       throw error;
     }
   }
-  
+
   /**
-   * Set profile visibility (public/private)
+   * Sets the visibility of a profile (public or private)
+   * @param userId The user ID
+   * @param isPublic Whether the profile should be public
+   * @param memoriaProfileId Optional Memoria profile ID
+   * @returns The updated profile
    */
-  static async setProfileVisibility(userId: string, isPublic: boolean, memoriaProfileId?: string): Promise<void> {
+  static async setProfileVisibility(userId: string, isPublic: boolean, memoriaProfileId?: string): Promise<any> {
     try {
       if (memoriaProfileId) {
-        console.log(`Setting Memoria profile visibility to ${isPublic ? 'public' : 'private'}`);
-        
-        const { error } = await supabase
+        // Update Memoria profile
+        const { data, error } = await supabase
           .from('memoria_profiles')
-          .update({ is_public: isPublic })
-          .eq('id', memoriaProfileId);
-        
+          .update({ 
+            is_public: isPublic,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', memoriaProfileId)
+          .eq('user_id', userId)
+          .select();
+          
         if (error) {
-          console.error('Error updating Memoria profile visibility:', error);
           throw error;
         }
         
-        console.log(`Successfully set Memoria profile visibility to ${isPublic ? 'public' : 'private'}`);
+        return data[0];
       } else {
-        console.log(`Setting Memoir profile visibility to ${isPublic ? 'public' : 'private'}`);
-        
-        const { error } = await supabase
+        // Update user profile
+        const { data, error } = await supabase
           .from('profiles')
-          .update({ is_public: isPublic })
-          .eq('user_id', userId);
-        
+          .update({ 
+            is_public: isPublic,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', userId)
+          .select();
+          
         if (error) {
-          console.error('Error updating Memoir profile visibility:', error);
           throw error;
         }
         
-        console.log(`Successfully set Memoir profile visibility to ${isPublic ? 'public' : 'private'}`);
+        return data[0];
       }
     } catch (error) {
       console.error('Error setting profile visibility:', error);
@@ -420,80 +791,616 @@ export class MemoirIntegrations {
   }
 
   /**
-   * Get public Memoir profiles
+   * Gets gallery items for a user
+   * @param userId The user ID
+   * @param memoriaProfileId Optional Memoria profile ID
+   * @returns The gallery items
    */
-  static async getPublicMemoirProfiles(): Promise<any[]> {
+  static async getGalleryItems(userId: string, memoriaProfileId?: string): Promise<any[]> {
     try {
-      console.log('Fetching public Memoir profiles');
+      console.log(`Getting gallery items for user ${userId}${memoriaProfileId ? ` with Memoria profile ID ${memoriaProfileId}` : ''}`);
       
-      const { data, error } = await supabase
-        .from('profiles')
+      let query = supabase
+        .from('gallery_items')
         .select('*')
-        .eq('is_public', true)
-        .order('updated_at', { ascending: false })
-        .limit(20);
+        .eq('user_id', userId);
+      
+      // If memoriaProfileId is provided, filter by it in metadata
+      if (memoriaProfileId) {
+        console.log(`Filtering gallery items by Memoria profile ID ${memoriaProfileId}`);
+        query = query.or(`metadata->memoriaProfileId.eq.${memoriaProfileId},and(metadata->>memoriaProfileId.is.null,tags.cs.{\"memoria:${memoriaProfileId}\"})`);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
       
       if (error) {
-        console.error('Error fetching public Memoir profiles:', error);
+        console.error(`Error getting gallery items for user ${userId}:`, error);
         throw error;
       }
+
+      console.log(`Retrieved ${data?.length || 0} gallery items`);
       
-      console.log(`Successfully fetched ${data?.length || 0} public Memoir profiles`);
       return data || [];
     } catch (error) {
-      console.error('Error fetching public Memoir profiles:', error);
+      console.error('Error getting gallery items:', error);
       throw error;
     }
   }
 
   /**
-   * Get public Memoria profiles
+   * Creates a gallery item
+   * @param itemData The gallery item data
+   * @param memoriaProfileId Optional Memoria profile ID (for logging only)
+   * @returns The created gallery item
+   */
+  static async createGalleryItem(itemData: any, memoriaProfileId?: string): Promise<any> {
+    try {
+      console.log(`Creating gallery item${memoriaProfileId ? ` for Memoria profile ${memoriaProfileId}` : ''}`);
+      
+      const { data, error } = await supabase
+        .from('gallery_items')
+        .insert([itemData])
+        .select();
+      
+      if (error) {
+        console.error('Error creating gallery item:', error);
+        throw error;
+      }
+      
+      console.log('Gallery item created successfully:', data[0].id);
+      
+      return data[0];
+    } catch (error) {
+      console.error('Error creating gallery item:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Deletes a gallery item
+   * @param itemId The gallery item ID
+   * @returns True if successful
+   */
+  static async deleteGalleryItem(itemId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('gallery_items')
+        .delete()
+        .eq('id', itemId);
+      
+      if (error) {
+        console.error(`Error deleting gallery item ${itemId}:`, error);
+        throw error;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error deleting gallery item:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Uploads a file to the gallery bucket
+   * @param userId The user ID
+   * @param file The file to upload
+   * @param memoriaProfileId Optional Memoria profile ID
+   * @returns The file path
+   */
+  static async uploadGalleryFile(userId: string, file: File, memoriaProfileId?: string): Promise<string> {
+    try {
+      console.log(`Uploading gallery file for user ${userId}${memoriaProfileId ? ` and Memoria profile ${memoriaProfileId}` : ''}`);
+      
+      // Create a unique file name to avoid collisions
+      const timestamp = Date.now();
+      const randomString = Math.random().toString(36).substring(2, 10);
+      const fileExtension = file.name.split('.').pop();
+      
+      // Create a storage path - if memoriaProfileId is provided, include it in the path
+      const storagePath = memoriaProfileId
+        ? `${userId}/${memoriaProfileId}/${timestamp}-${randomString}.${fileExtension}`
+        : `${userId}/${timestamp}-${randomString}.${fileExtension}`;
+      
+      const { data, error } = await supabase.storage
+        .from('gallery')
+        .upload(storagePath, file, {
+          cacheControl: '3600',
+          upsert: false,
+          contentType: file.type || this.getMimeTypeFromFile(file)
+        });
+      
+      if (error) {
+        console.error('Error uploading gallery file:', error);
+        throw error;
+      }
+      
+      // Get the public URL
+      const { data: urlData } = supabase.storage
+        .from('gallery')
+        .getPublicUrl(data.path);
+      
+      console.log('Gallery file uploaded successfully:', urlData.publicUrl);
+      
+      return urlData.publicUrl;
+    } catch (error) {
+      console.error('Error uploading gallery file:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Uploads a document file
+   * @param userId The user ID
+   * @param file The file to upload
+   * @param memoriaProfileId Optional Memoria profile ID
+   * @returns The file path
+   */
+  static async uploadDocumentFile(userId: string, file: File, memoriaProfileId?: string): Promise<string> {
+    try {
+      console.log(`Uploading document file for user ${userId}${memoriaProfileId ? ` and Memoria profile ${memoriaProfileId}` : ''}`);
+      
+      // Create a unique file name to avoid collisions
+      const timestamp = Date.now();
+      const randomString = Math.random().toString(36).substring(2, 10);
+      const fileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_'); // Sanitize filename
+      
+      // Create a storage path - if memoriaProfileId is provided, include it in the path
+      const storagePath = memoriaProfileId
+        ? `${userId}/${memoriaProfileId}/${timestamp}-${randomString}-${fileName}`
+        : `${userId}/${timestamp}-${randomString}-${fileName}`;
+      
+      console.log('Uploading document to path:', storagePath);
+      console.log('File details:', {
+        name: file.name,
+        type: file.type || this.getMimeTypeFromFile(file),
+        size: file.size
+      });
+      
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .upload(storagePath, file, {
+          cacheControl: '3600',
+          upsert: false,
+          contentType: file.type || this.getMimeTypeFromFile(file)
+        });
+      
+      if (error) {
+        console.error('Error uploading document file:', error);
+        throw error;
+      }
+      
+      // Get the public URL
+      const { data: urlData } = supabase.storage
+        .from('documents')
+        .getPublicUrl(data.path);
+      
+      console.log('Document file uploaded successfully:', urlData.publicUrl);
+      
+      return urlData.publicUrl;
+    } catch (error) {
+      console.error('Error uploading document file:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Uploads a 3D model file
+   * @param userId The user ID
+   * @param file The file to upload
+   * @param memoriaProfileId Optional Memoria profile ID
+   * @returns The file path
+   */
+  static async upload3DModelFile(userId: string, file: File, memoriaProfileId?: string): Promise<string> {
+    try {
+      console.log(`Uploading 3D model file for user ${userId}${memoriaProfileId ? ` and Memoria profile ${memoriaProfileId}` : ''}`);
+      
+      // Create a unique file name to avoid collisions
+      const timestamp = Date.now();
+      const randomString = Math.random().toString(36).substring(2, 10);
+      const fileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_'); // Sanitize filename
+      
+      // Create a storage path - if memoriaProfileId is provided, include it in the path
+      const storagePath = memoriaProfileId
+        ? `${userId}/${memoriaProfileId}/${timestamp}-${randomString}-${fileName}`
+        : `${userId}/${timestamp}-${randomString}-${fileName}`;
+      
+      console.log('Uploading 3D model to path:', storagePath);
+      console.log('File details:', {
+        name: file.name,
+        type: file.type || this.getMimeTypeFromFile(file),
+        size: file.size
+      });
+      
+      const { data, error } = await supabase.storage
+        .from('models')
+        .upload(storagePath, file, {
+          cacheControl: '3600',
+          upsert: false,
+          contentType: file.type || this.getMimeTypeFromFile(file)
+        });
+      
+      if (error) {
+        console.error('Error uploading 3D model file:', error);
+        throw error;
+      }
+      
+      // Get the public URL
+      const { data: urlData } = supabase.storage
+        .from('models')
+        .getPublicUrl(data.path);
+      
+      console.log('3D model file uploaded successfully:', urlData.publicUrl);
+      
+      return urlData.publicUrl;
+    } catch (error) {
+      console.error('Error uploading 3D model file:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Stores narratives data for a user
+   * @param userId The user ID
+   * @param narratives The narratives data
+   * @param memoriaProfileId Optional Memoria profile ID
+   * @returns The updated profile data
+   */
+  static async storeNarratives(userId: string, narratives: any, memoriaProfileId?: string): Promise<any> {
+    try {
+      // Validate narratives data
+      const validatedNarratives = validateNarrativesData(narratives);
+      
+      // Store in memoir_data or profile_data
+      if (memoriaProfileId) {
+        const result = await this.updateMemoirData(
+          userId,
+          { narratives: validatedNarratives },
+          memoriaProfileId
+        );
+        
+        return validatedNarratives;
+      } else {
+        const result = await this.updateMemoirData(
+          userId,
+          { narratives: validatedNarratives }
+        );
+        
+        return validatedNarratives;
+      }
+    } catch (error) {
+      console.error('Error storing narratives:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Stores family tree data for a user
+   * @param userId The user ID
+   * @param familyTreeData The family tree data
+   * @param memoriaProfileId Optional Memoria profile ID
+   * @returns The updated profile data
+   */
+  static async storeFamilyTreeData(userId: string, familyTreeData: any, memoriaProfileId?: string): Promise<any> {
+    try {
+      // Validate family tree data
+      const validatedData = validateFamilyTreeData(familyTreeData);
+      
+      // Store in memoir_data or profile_data
+      if (memoriaProfileId) {
+        const result = await this.updateMemoirData(
+          userId,
+          { family_tree: validatedData },
+          memoriaProfileId
+        );
+        
+        return validatedData;
+      } else {
+        const result = await this.updateMemoirData(
+          userId,
+          { family_tree: validatedData }
+        );
+        
+        return validatedData;
+      }
+    } catch (error) {
+      console.error('Error storing family tree data:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Gets media links for a user
+   * @param userId The user ID
+   * @param memoriaProfileId Optional Memoria profile ID
+   * @returns The media links
+   */
+  static async getMediaLinks(userId: string, memoriaProfileId?: string): Promise<any[]> {
+    try {
+      // Try to get from memoir_data or profile_data
+      if (memoriaProfileId) {
+        // Get Memoria profile
+        const { data, error } = await supabase
+          .from('memoria_profiles')
+          .select('profile_data')
+          .eq('id', memoriaProfileId)
+          .eq('user_id', userId)
+          .single();
+        
+        if (error) {
+          console.error(`Error getting Memoria profile ${memoriaProfileId}:`, error);
+          throw error;
+        }
+        
+        return data?.profile_data?.media_links || [];
+      } else {
+        // Get user profile
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('memoir_data')
+          .eq('user_id', userId)
+          .single();
+        
+        if (error) {
+          console.error(`Error getting user profile ${userId}:`, error);
+          throw error;
+        }
+        
+        return data?.memoir_data?.media_links || [];
+      }
+    } catch (error) {
+      console.error('Error getting media links:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Stores media links for a user
+   * @param userId The user ID
+   * @param mediaLinks The media links data
+   * @param memoriaProfileId Optional Memoria profile ID
+   * @returns The updated profile data
+   */
+  static async storeMediaLinks(userId: string, mediaLinks: any[], memoriaProfileId?: string): Promise<any> {
+    try {
+      // Validate media links data
+      const validatedMediaLinks = validateMediaLinks(mediaLinks);
+      
+      // Store in memoir_data or profile_data
+      if (memoriaProfileId) {
+        const result = await this.updateMemoirData(
+          userId,
+          { media_links: validatedMediaLinks },
+          memoriaProfileId
+        );
+        
+        return validatedMediaLinks;
+      } else {
+        const result = await this.updateMemoirData(
+          userId,
+          { media_links: validatedMediaLinks }
+        );
+        
+        return validatedMediaLinks;
+      }
+    } catch (error) {
+      console.error('Error storing media links:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Stores personality test results for a user
+   * @param userId The user ID
+   * @param testData The personality test data
+   * @param memoriaProfileId Optional Memoria profile ID
+   * @returns The updated profile data
+   */
+  static async storePersonalityTestResults(userId: string, testData: any, memoriaProfileId?: string): Promise<any> {
+    try {
+      // Validate test data
+      const validatedTestData = validatePersonalityTestData(testData);
+      
+      // Store in memoir_data or profile_data
+      if (memoriaProfileId) {
+        const result = await this.updateMemoirData(
+          userId,
+          { personality_test: validatedTestData },
+          memoriaProfileId
+        );
+        
+        return validatedTestData;
+      } else {
+        const result = await this.updateMemoirData(
+          userId,
+          { personality_test: validatedTestData }
+        );
+        
+        return validatedTestData;
+      }
+    } catch (error) {
+      console.error('Error storing personality test results:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Gets public Memoria profiles
+   * @returns Public Memoria profiles
    */
   static async getPublicMemoriaProfiles(): Promise<MemoriaProfile[]> {
     try {
-      console.log('Fetching public Memoria profiles');
-      
       const { data, error } = await supabase
         .from('memoria_profiles')
         .select('*')
         .eq('is_public', true)
-        .order('updated_at', { ascending: false })
-        .limit(20);
+        .order('created_at', { ascending: false });
       
       if (error) {
-        console.error('Error fetching public Memoria profiles:', error);
+        console.error('Error getting public Memoria profiles:', error);
         throw error;
       }
       
-      console.log(`Successfully fetched ${data?.length || 0} public Memoria profiles`);
       return data || [];
     } catch (error) {
-      console.error('Error fetching public Memoria profiles:', error);
+      console.error('Error getting public Memoria profiles:', error);
       throw error;
     }
   }
 
   /**
-   * Add profile to favorites
+   * Gets public Memoir profiles
+   * @returns Public Memoir profiles
    */
-  static async addProfileToFavorites(userId: string, profileId: string, profileType: 'memoir' | 'memoria'): Promise<void> {
+  static async getPublicMemoirProfiles(): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('is_public', true)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error getting public Memoir profiles:', error);
+        throw error;
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error('Error getting public Memoir profiles:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Gets user's favorite profiles
+   * @param userId The user ID
+   * @returns Favorite profiles
+   */
+  static async getFavoriteProfiles(userId: string): Promise<{memoir: any[], memoria: MemoriaProfile[]}> {
+    try {
+      console.log(`Getting favorite profiles for user ${userId}`);
+      
+      // Get all favorites for this user
+      const { data: favoriteData, error: favoriteError } = await supabase
+        .from('profile_favorites')
+        .select('profile_id, profile_type')
+        .eq('user_id', userId);
+      
+      if (favoriteError) {
+        console.error(`Error getting favorites for user ${userId}:`, favoriteError);
+        throw favoriteError;
+      }
+      
+      // Separate IDs by type
+      const memoirIds = favoriteData
+        .filter(fav => fav.profile_type === 'memoir')
+        .map(fav => fav.profile_id);
+      
+      const memoriaIds = favoriteData
+        .filter(fav => fav.profile_type === 'memoria')
+        .map(fav => fav.profile_id);
+      
+      console.log(`Found ${memoirIds.length} memoir favorites and ${memoriaIds.length} memoria favorites`);
+      
+      // Get actual profile data
+      const memoirProfiles = memoirIds.length > 0
+        ? await this.getMemoirProfiles(memoirIds)
+        : [];
+      
+      const memoriaProfiles = memoriaIds.length > 0
+        ? await this.getMemoriaProfiles(memoriaIds)
+        : [];
+      
+      return {
+        memoir: memoirProfiles,
+        memoria: memoriaProfiles
+      };
+    } catch (error) {
+      console.error('Error getting favorite profiles:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Gets Memoir profiles by IDs
+   * @param profileIds The profile IDs
+   * @returns The profiles
+   */
+  static async getMemoirProfiles(profileIds: string[]): Promise<any[]> {
+    try {
+      if (profileIds.length === 0) return [];
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', profileIds);
+      
+      if (error) {
+        console.error('Error getting Memoir profiles:', error);
+        throw error;
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error('Error getting Memoir profiles:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Gets Memoria profiles by IDs
+   * @param profileIds The profile IDs
+   * @returns The profiles
+   */
+  static async getMemoriaProfiles(profileIds: string[]): Promise<MemoriaProfile[]> {
+    try {
+      if (profileIds.length === 0) return [];
+      
+      const { data, error } = await supabase
+        .from('memoria_profiles')
+        .select('*')
+        .in('id', profileIds);
+      
+      if (error) {
+        console.error('Error getting Memoria profiles:', error);
+        throw error;
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error('Error getting Memoria profiles:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Adds a profile to favorites
+   * @param userId The user ID
+   * @param profileId The profile ID to add
+   * @param profileType The profile type ('memoir' or 'memoria')
+   * @returns The created favorite
+   */
+  static async addProfileToFavorites(userId: string, profileId: string, profileType: 'memoir' | 'memoria'): Promise<any> {
     try {
       console.log(`Adding ${profileType} profile ${profileId} to favorites for user ${userId}`);
       
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('profile_favorites')
-        .insert({
-          user_id: userId,
-          profile_id: profileId,
-          profile_type: profileType
-        });
+        .insert([
+          {
+            user_id: userId,
+            profile_id: profileId,
+            profile_type: profileType
+          }
+        ])
+        .select();
       
       if (error) {
         console.error('Error adding profile to favorites:', error);
         throw error;
       }
       
-      console.log('Successfully added profile to favorites');
+      return data[0];
     } catch (error) {
       console.error('Error adding profile to favorites:', error);
       throw error;
@@ -501,9 +1408,13 @@ export class MemoirIntegrations {
   }
 
   /**
-   * Remove profile from favorites
+   * Removes a profile from favorites
+   * @param userId The user ID
+   * @param profileId The profile ID to remove
+   * @param profileType The profile type ('memoir' or 'memoria')
+   * @returns True if successful
    */
-  static async removeProfileFromFavorites(userId: string, profileId: string, profileType: 'memoir' | 'memoria'): Promise<void> {
+  static async removeProfileFromFavorites(userId: string, profileId: string, profileType: 'memoir' | 'memoria'): Promise<boolean> {
     try {
       console.log(`Removing ${profileType} profile ${profileId} from favorites for user ${userId}`);
       
@@ -519,7 +1430,7 @@ export class MemoirIntegrations {
         throw error;
       }
       
-      console.log('Successfully removed profile from favorites');
+      return true;
     } catch (error) {
       console.error('Error removing profile from favorites:', error);
       throw error;
@@ -527,1220 +1438,46 @@ export class MemoirIntegrations {
   }
 
   /**
-   * Get favorite profiles
+   * Attempts to recover data from a failed request
+   * This is a fallback method that tries to extract data from error responses
+   * @param userId The user ID
+   * @param dataType The type of data to recover
+   * @param memoriaProfileId Optional Memoria profile ID
+   * @returns The recovered data, if any
    */
-  static async getFavoriteProfiles(userId: string): Promise<{memoir: any[], memoria: MemoriaProfile[]}> {
+  static async recoverData(userId: string, dataType: string, memoriaProfileId?: string): Promise<any> {
+    console.log(`Attempting to recover ${dataType} for user ${userId}${memoriaProfileId ? ` and Memoria profile ${memoriaProfileId}` : ''}`);
+    
     try {
-      console.log(`Fetching favorite profiles for user ${userId}`);
+      // Get the full profile
+      const profile = await this.getMemoirProfile(userId, memoriaProfileId);
       
-      // Get favorite profile IDs
-      const { data: favorites, error } = await supabase
-        .from('profile_favorites')
-        .select('*')
-        .eq('user_id', userId);
+      // Figure out which data structure to use
+      const dataObject = memoriaProfileId ? profile?.profile_data : profile?.memoir_data;
       
-      if (error) {
-        console.error('Error fetching favorite profiles:', error);
-        throw error;
+      if (!dataObject) {
+        console.log('No data object found, cannot recover data');
+        return null;
       }
       
-      // Group by profile type
-      const memoirIds = favorites?.filter(f => f.profile_type === 'memoir').map(f => f.profile_id) || [];
-      const memoriaIds = favorites?.filter(f => f.profile_type === 'memoria').map(f => f.profile_id) || [];
+      // Parse the dataType path (e.g., 'preferences.personal' -> ['preferences', 'personal'])
+      const pathParts = dataType.split('.');
       
-      // Fetch the actual profiles
-      let memoirProfiles: any[] = [];
-      if (memoirIds.length > 0) {
-        const { data: memoirData, error: memoirError } = await supabase
-          .from('profiles')
-          .select('*')
-          .in('id', memoirIds);
-        
-        if (memoirError) {
-          console.error('Error fetching memoir profiles:', memoirError);
-        } else {
-          memoirProfiles = memoirData || [];
+      // Navigate through the object to get the data
+      let data = dataObject;
+      for (const part of pathParts) {
+        if (!data[part]) {
+          console.log(`No data found at path ${part}`);
+          return null;
         }
-      }
-        
-      let memoriaProfiles: MemoriaProfile[] = [];
-      if (memoriaIds.length > 0) {
-        const { data: memoriaData, error: memoriaError } = await supabase
-          .from('memoria_profiles')
-          .select('*')
-          .in('id', memoriaIds);
-        
-        if (memoriaError) {
-          console.error('Error fetching memoria profiles:', memoriaError);
-        } else {
-          memoriaProfiles = memoriaData || [];
-        }
+        data = data[part];
       }
       
-      console.log(`Fetched ${memoirProfiles.length} memoir and ${memoriaProfiles.length} memoria favorites`);
-      
-      return {
-        memoir: memoirProfiles,
-        memoria: memoriaProfiles
-      };
-    } catch (error) {
-      console.error('Error fetching favorite profiles:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Update user's memoir integration status
-   */
-  static async updateIntegrationStatus(
-    userId: string, 
-    integration: keyof MemoirIntegrationStatus, 
-    updates: Partial<MemoirIntegrationStatus[keyof MemoirIntegrationStatus]>,
-    memoriaProfileId?: string
-  ) {
-    try {
-      console.log(`Updating integration status for ${integration}${memoriaProfileId ? ` (Memoria: ${memoriaProfileId})` : ''}`);
-      
-      if (memoriaProfileId) {
-        // Update integration status for a Memoria profile
-        const { data: profile, error: fetchError } = await supabase
-          .from('memoria_profiles')
-          .select('integration_status')
-          .eq('id', memoriaProfileId)
-          .single();
-
-        if (fetchError) {
-          console.error('Error fetching integration status for Memoria profile:', fetchError);
-          throw fetchError;
-        }
-
-        const currentStatus = profile.integration_status as MemoirIntegrationStatus;
-        const updatedStatus = {
-          ...currentStatus,
-          [integration]: {
-            ...currentStatus[integration],
-            ...updates,
-            last_updated: new Date().toISOString()
-          }
-        };
-
-        const { error } = await supabase
-          .from('memoria_profiles')
-          .update({ integration_status: updatedStatus })
-          .eq('id', memoriaProfileId);
-
-        if (error) {
-          console.error('Error updating integration status for Memoria profile:', error);
-          throw error;
-        }
-        
-        console.log('Successfully updated integration status for Memoria profile');
-        return updatedStatus;
-      } else {
-        // Update integration status for the user's profile
-        const { data: profile, error: fetchError } = await supabase
-          .from('profiles')
-          .select('integration_status')
-          .eq('user_id', userId)
-          .single();
-
-        if (fetchError) {
-          console.error('Error fetching integration status for user profile:', fetchError);
-          throw fetchError;
-        }
-
-        const currentStatus = profile.integration_status as MemoirIntegrationStatus;
-        const updatedStatus = {
-          ...currentStatus,
-          [integration]: {
-            ...currentStatus[integration],
-            ...updates,
-            last_updated: new Date().toISOString()
-          }
-        };
-
-        const { error } = await supabase
-          .from('profiles')
-          .update({ integration_status: updatedStatus })
-          .eq('user_id', userId);
-
-        if (error) {
-          console.error('Error updating integration status for user profile:', error);
-          throw error;
-        }
-        
-        console.log('Successfully updated integration status for user profile');
-        return updatedStatus;
-      }
-    } catch (error) {
-      console.error('Error updating integration status:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Update user's memoir data
-   */
-  static async updateMemoirData(userId: string, data: Partial<MemoirData>, memoriaProfileId?: string) {
-    try {
-      console.log(`Updating memoir data${memoriaProfileId ? ` for Memoria profile: ${memoriaProfileId}` : ''}`);
-      
-      if (memoriaProfileId) {
-        // Update memoir data for a Memoria profile
-        const { data: profile, error: fetchError } = await supabase
-          .from('memoria_profiles')
-          .select('profile_data')
-          .eq('id', memoriaProfileId)
-          .single();
-
-        if (fetchError) {
-          console.error('Error fetching profile_data for Memoria profile:', fetchError);
-          throw fetchError;
-        }
-
-        const currentData = (profile.profile_data as MemoirData) || {};
-        
-        // Deep merge the data, especially for nested objects like preferences
-        const updatedData = {
-          ...currentData,
-          ...data,
-          preferences: {
-            ...currentData.preferences,
-            ...data.preferences
-          }
-        };
-
-        const { error } = await supabase
-          .from('memoria_profiles')
-          .update({ profile_data: updatedData })
-          .eq('id', memoriaProfileId);
-
-        if (error) {
-          console.error('Error updating profile_data for Memoria profile:', error);
-          throw error;
-        }
-        
-        console.log(`Successfully updated profile_data for Memoria profile ${memoriaProfileId}`);
-        return updatedData;
-      } else {
-        // Update memoir data for the user's profile
-        const { data: profile, error: fetchError } = await supabase
-          .from('profiles')
-          .select('memoir_data')
-          .eq('user_id', userId)
-          .single();
-
-        if (fetchError) {
-          console.error('Error fetching memoir_data for user profile:', fetchError);
-          throw fetchError;
-        }
-
-        const currentData = (profile.memoir_data as MemoirData) || {};
-        
-        // Deep merge the data, especially for nested objects like preferences
-        const updatedData = {
-          ...currentData,
-          ...data,
-          preferences: {
-            ...currentData.preferences,
-            ...data.preferences
-          }
-        };
-
-        const { error } = await supabase
-          .from('profiles')
-          .update({ memoir_data: updatedData })
-          .eq('user_id', userId);
-
-        if (error) {
-          console.error('Error updating memoir_data for user profile:', error);
-          throw error;
-        }
-        
-        console.log(`Successfully updated memoir_data for user profile ${userId}`);
-        return updatedData;
-      }
-    } catch (error) {
-      console.error('Error updating memoir data:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Upload a file to a specified storage bucket
-   */
-  static async uploadFileToStorage(userId: string, file: File, bucketName: string, memoriaProfileId?: string): Promise<string> {
-    try {
-      console.log(`Uploading file to ${bucketName}: ${file.name} (${file.type}), ${file.size} bytes`);
-      
-      let fileExt = '';
-      const fileNameParts = file.name.split('.');
-      if (fileNameParts.length > 1) {
-        fileExt = '.' + fileNameParts.pop();
-      }
-      
-      // Keep original filename for documents and add timestamp to prevent collisions
-      const fileName = bucketName === 'documents'
-        ? `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-_]/g, '_')}` // Sanitize filename
-        : `${Date.now()}${fileExt}`;
-      
-      const filePath = memoriaProfileId 
-        ? `${userId}/memoria/${memoriaProfileId}/${fileName}` 
-        : `${userId}/${fileName}`;
-      
-      console.log(`Uploading file to ${bucketName} bucket: ${filePath}`);
-
-      const { error: uploadError, data } = await supabase.storage
-        .from(bucketName)
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
-
-      if (uploadError) {
-        console.error(`Error uploading file to ${bucketName}:`, uploadError);
-        throw new Error(`Upload failed: ${uploadError.message}`);
-      } else {
-        console.log(`File uploaded successfully to ${bucketName} bucket`);
-      }
-
-      const { data: urlData } = supabase.storage
-        .from(bucketName)
-        .getPublicUrl(filePath);
-
-      console.log(`Public URL generated: ${urlData.publicUrl}`);
-      return urlData.publicUrl;
-    } catch (error) {
-      console.error(`Error uploading file to ${bucketName}:`, error);
-      
-      // More detailed error logging
-      if (error instanceof Error) {
-        console.error('Error stack:', error.stack);
-        
-        // Check for specific error types
-        if (error.message.includes('row-level security')) {
-          console.error('RLS policy violation. Check bucket permissions.');
-        } else if (error.message.includes('mime type')) {
-          console.error('MIME type not allowed. Check bucket allowed_mime_types.');
-        } else if (error.message.includes('size limit')) {
-          console.error('File size exceeds limit. Check bucket file_size_limit.');
-        }
-      }
-      
-      throw error;
-    }
-  }
-
-  /**
-   * Upload a document file (PDF, etc.) to the documents storage bucket
-   */
-  static async uploadDocumentFile(userId: string, file: File, memoriaProfileId?: string, customContentType?: string): Promise<string> {
-    try {
-      console.log(`Uploading document file: ${file.name}, type: ${file.type}, size: ${file.size}`);
-      
-      // For PDF files, ensure the content type is set correctly
-      let fileToUpload = file;
-      if (file.name.toLowerCase().endsWith('.pdf') && (!file.type || file.type === '')) {
-        fileToUpload = new File([file], file.name, { type: 'application/pdf' });
-        console.log(`Set application/pdf content type for file: ${file.name}`);
-      }
-      
-      // Create a new File object with explicit content type if needed
-      if (customContentType && file.type === '') {
-        fileToUpload = new File([file], file.name, { type: customContentType }); 
-        console.log(`Set custom content type: ${customContentType} for file: ${file.name}`);
-      } else if (file.name.toLowerCase().endsWith('.png') && (!file.type || file.type === '')) {
-        // Force PNG mime type for files with .png extension but no mime type
-        fileToUpload = new File([file], file.name, { type: 'image/png' });
-        console.log(`Set image/png content type for file: ${file.name}`);
-      } else if (file.name.toLowerCase().endsWith('.jpg') || file.name.toLowerCase().endsWith('.jpeg')) {
-        // Force JPEG mime type for files with .jpg/.jpeg extension but no mime type
-        fileToUpload = new File([file], file.name, { type: 'image/jpeg' });
-        console.log(`Set image/jpeg content type for file: ${file.name}`);
-      }
-      
-      // Upload the file directly without trying to create the bucket
-      const url = await this.uploadFileToStorage(userId, fileToUpload, 'documents', memoriaProfileId); 
-      console.log(`Document uploaded successfully: ${url}`);
-      return url;
-    } catch (error) {
-      console.error(`Error uploading document file:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Upload a 3D model file to the models storage bucket
-   */
-  static async upload3DModelFile(userId: string, file: File | null, memoriaProfileId?: string, externalUrl?: string): Promise<string> {
-    try {
-      console.log(`Uploading 3D model${file ? ` file: ${file.name}` : ' from external URL'}`);
-      
-      // If an external URL is provided, return it directly
-      if (externalUrl) {
-        console.log('Using external URL:', externalUrl);
-        return externalUrl;
-      }
-      
-      // Otherwise upload the file to storage
-      if (file) {
-        const url = await this.uploadFileToStorage(userId, file, 'models', memoriaProfileId);
-        console.log('3D model uploaded successfully:', url);
-        return url;
-      }
-      
-      throw new Error('Either a file or external URL must be provided');
-    } catch (error) {
-      console.error('Error uploading 3D model file:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Upload a file to the gallery storage bucket
-   */
-  static async uploadGalleryFile(userId: string, file: File, memoriaProfileId?: string): Promise<string> {
-    try {
-      console.log(`Uploading gallery file: ${file.name} (${file.type}), ${file.size} bytes${memoriaProfileId ? ` for Memoria profile: ${memoriaProfileId}` : ''}`);
-      
-      // Ensure the file has a proper content type
-      let fileToUpload = file;
-      if (!file.type || file.type === '') {
-        // Try to determine content type from extension
-        if (file.name.toLowerCase().endsWith('.jpg') || file.name.toLowerCase().endsWith('.jpeg')) {
-          fileToUpload = new File([file], file.name, { type: 'image/jpeg' });
-        } else if (file.name.toLowerCase().endsWith('.png')) {
-          fileToUpload = new File([file], file.name, { type: 'image/png' });
-        } else if (file.name.toLowerCase().endsWith('.gif')) {
-          fileToUpload = new File([file], file.name, { type: 'image/gif' });
-        } else if (file.name.toLowerCase().endsWith('.webp')) {
-          fileToUpload = new File([file], file.name, { type: 'image/webp' });
-        } else {
-          // Default to octet-stream if can't determine
-          fileToUpload = new File([file], file.name, { type: 'application/octet-stream' });
-        }
-        console.log(`Set content type to ${fileToUpload.type} for file: ${file.name}`);
-      }
-      
-      // Use the uploadFileToStorage method with proper parameters
-      const url = await this.uploadFileToStorage(userId, fileToUpload, 'gallery', memoriaProfileId);
-      console.log('Gallery file uploaded successfully:', url);
-      return url;
-    } catch (error) {
-      console.error('Error uploading gallery file:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Create a gallery item record
-   */
-  static async createGalleryItem(itemData: any, memoriaProfileId?: string) {
-    try {
-      console.log(`Creating gallery item${memoriaProfileId ? ` for Memoria profile: ${memoriaProfileId}` : ''}`);
-      console.log('Gallery item data:', itemData);
-      
-      // Ensure folder is set
-      if (!itemData.folder) {
-        itemData.folder = 'Uncategorized';
-      }
-      
-      // If this is for a Memoria profile, add a tag to identify it
-      if (memoriaProfileId) {
-        itemData.tags = [...(itemData.tags || []), `memoria:${memoriaProfileId}`];
-        itemData.metadata = {
-          ...itemData.metadata,
-          memoria_profile_id: memoriaProfileId
-        };
-        
-        console.log(`Adding memoria:${memoriaProfileId} tag to gallery item`);
-      }
-      
-      const { data, error } = await supabase
-        .from('gallery_items')
-        .insert([itemData])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error creating gallery item:', error);
-        throw error;
-      }
-      
-      console.log(`Gallery item created successfully:`, data);
+      console.log(`Recovered data for ${dataType}:`, data);
       return data;
     } catch (error) {
-      console.error('Error creating gallery item:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get gallery items for a user
-   */
-  static async getGalleryItems(userId: string, memoriaProfileId?: string, folder?: string) {
-    try {
-      console.log(`Fetching gallery items for user: ${userId}, memoria profile: ${memoriaProfileId || 'none'}`);
-      
-      let query = supabase
-        .from('gallery_items')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-      
-      if (memoriaProfileId) {
-        // Get gallery items for a specific Memoria profile
-        query = query.contains('tags', [`memoria:${memoriaProfileId}`]);
-        console.log(`Filtering by memoria tag: memoria:${memoriaProfileId}`);
-      } else {
-        // Get gallery items for the user's profile (excluding Memoria items)
-        query = query.not('tags', 'cs', '{memoria:}');
-        console.log(`Excluding items with memoria: tags`);
-      }
-      
-      // Filter by folder if specified
-      if (folder) {
-        query = query.eq('folder', folder);
-        console.log(`Filtering by folder: ${folder}`);
-      }
-      
-      // Order by creation date
-      query = query.order('created_at', { ascending: false });
-      
-      const { data, error } = await query;
-      
-      if (error) {
-        console.error('Error fetching gallery items:', error);
-        throw error;
-      }
-      
-      // Filter out tribute images at the data source level
-      const filteredData = data.filter(item => {
-        // Skip items without metadata
-        if (!item.metadata) return true;
-        
-        // Check for tribute indicators in metadata
-        const isTribute = 
-          item.metadata.tribute === true || 
-          item.metadata.isTribute === true ||
-          item.metadata.type === 'tribute';
-          
-        // Check for tribute in tags
-        const hasTributeTag = item.tags && 
-          (item.tags.includes('tribute') || item.tags.includes('ai-generated'));
-          
-        // Check folder name
-        const isTributeFolder = item.folder === 'Tribute Images';
-        
-        // Check title
-        const hasTributeTitle = item.title && 
-          item.title.toLowerCase().includes('tribute');
-          
-        return !(isTribute || hasTributeTag || isTributeFolder || hasTributeTitle);
-      });
-      
-      console.log(`Filtered ${data.length - filteredData.length} tribute images from gallery items`);
-      
-      return filteredData;
-      return data || [];
-    } catch (error) {
-      console.error('Error fetching gallery items:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get media links for a user
-   */
-  static async getMediaLinks(userId: string, memoriaProfileId?: string) {
-    try {
-      console.log(`Fetching media links${memoriaProfileId ? ` for Memoria profile: ${memoriaProfileId}` : ''}`);
-      
-      if (memoriaProfileId) {
-        // Get media links for a specific Memoria profile
-        const profile = await this.getMemoirProfile(userId, memoriaProfileId);
-        console.log('Media links in Memoria profile:', profile?.profile_data?.media_links?.length || 0);
-        return profile?.profile_data?.media_links || [];
-      } else {
-        // Get media links for the user's profile
-        const profile = await this.getMemoirProfile(userId);
-        console.log('Media links in user profile:', profile?.memoir_data?.media_links?.length || 0);
-        return profile?.memoir_data?.media_links || [];
-      }
-    } catch (error) {
-      console.error('Error fetching media links:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Store media links
-   */
-  static async storeMediaLinks(userId: string, mediaLinks: any[], memoriaProfileId?: string) {
-    try {
-      console.log(`Storing ${mediaLinks.length} media links${memoriaProfileId ? ` for Memoria profile: ${memoriaProfileId}` : ''}`);
-      
-      // Validate and normalize media links
-      const validatedLinks = validateMediaLinks(mediaLinks);
-      
-      if (memoriaProfileId) {
-        // Store media links for Memoria profile
-        await this.updateMemoirData(userId, {
-          media_links: validatedLinks
-        }, memoriaProfileId);
-        
-        console.log('Successfully stored media links for Memoria profile');
-      } else {
-        // Store media links for user profile
-        await this.updateMemoirData(userId, {
-          media_links: validatedLinks
-        });
-        
-        console.log('Successfully stored media links for user profile');
-      }
-
-      return validatedLinks;
-    } catch (error) {
-      console.error('Error storing media links:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Delete a gallery item
-   */
-  static async deleteGalleryItem(itemId: string) {
-    try {
-      console.log(`Deleting gallery item: ${itemId}`);
-      
-      // First get the item to check if we need to delete the file
-      const { data: item, error: fetchError } = await supabase
-        .from('gallery_items')
-        .select('file_path')
-        .eq('id', itemId)
-        .single();
-      
-      if (fetchError) {
-        console.error('Error fetching gallery item before deletion:', fetchError);
-        throw fetchError;
-      }
-      
-      // Delete the database record
-      const { error: deleteError } = await supabase
-        .from('gallery_items')
-        .delete()
-        .eq('id', itemId);
-
-      if (deleteError) {
-        console.error('Error deleting gallery item from database:', deleteError);
-        throw deleteError;
-      }
-      
-      console.log('Gallery item deleted successfully');
-      
-      // Note: We don't delete the actual file from storage to prevent
-      // accidental deletion of files that might be used elsewhere
-      // In a production app, you might want to implement file reference counting
-      
-      return true;
-    } catch (error) {
-      console.error('Error deleting gallery item:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Store personality test results
-   */
-  static async storePersonalityTestResults(userId: string, testResults: any, memoriaProfileId?: string) {
-    try {
-      console.log(`Storing personality test results${memoriaProfileId ? ` for Memoria profile: ${memoriaProfileId}` : ''}`);
-      
-      if (memoriaProfileId) {
-        // Store personality test results for Memoria profile
-        await this.updateMemoirData(userId, {
-          personality_test: testResults
-        }, memoriaProfileId);
-        
-        console.log('Successfully stored personality test results for Memoria profile');
-      } else {
-        // Store personality test results for user profile
-        await this.updateMemoirData(userId, {
-          personality_test: testResults
-        });
-        
-        console.log('Successfully stored personality test results for user profile');
-      }
-
-      return testResults;
-    } catch (error) {
-      console.error('Error storing personality test results:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Store personal preferences with context (memoir vs memoria)
-   */
-  static async storePersonalPreferences(
-    userId: string, 
-    preferences: PersonalPreferences,
-    memoriaProfileId?: string
-  ) {
-    try {
-      const context = memoriaProfileId ? 'Memoria' : 'MEMOIR';
-      console.log(`Storing personal preferences for ${context} user:`, userId, memoriaProfileId ? `(Memoria profile: ${memoriaProfileId})` : '(MEMOIR)');
-      
-      // Validate and normalize the personal preferences data
-      const validatedPreferences = validatePersonalPreferences(preferences);
-      const personalData = {
-        ...validatedPreferences,
-        last_updated: new Date().toISOString()
-      };
-
-      if (memoriaProfileId) {
-        // Store personal preferences for Memoria profile
-        const { data: currentProfile } = await supabase
-          .from('memoria_profiles')
-          .select('profile_data')
-          .eq('id', memoriaProfileId)
-          .single();
-
-        const currentProfileData = currentProfile?.profile_data || {};
-        const currentPreferences = currentProfileData.preferences || {};
-
-        const updatedProfileData = {
-          ...currentProfileData,
-          preferences: {
-            ...currentPreferences,
-            personal: personalData
-          }
-        };
-
-        const { error, data } = await supabase
-          .from('memoria_profiles')
-          .update({ profile_data: updatedProfileData })
-          .eq('id', memoriaProfileId)
-          .select();
-
-        if (error) {
-          console.error('Supabase error:', error);
-          throw error;
-        }
-
-        console.log(`Successfully stored personal preferences for Memoria profile:`, data);
-        return personalData;
-      } else {
-        // Store personal preferences for user profile
-        const { data: currentProfile } = await supabase
-          .from('profiles')
-          .select('memoir_data')
-          .eq('user_id', userId)
-          .single();
-
-        const currentMemoirData = currentProfile?.memoir_data || {};
-        const currentPreferences = currentMemoirData.preferences || {};
-
-        const updatedMemoirData = {
-          ...currentMemoirData,
-          preferences: {
-            ...currentPreferences,
-            personal: personalData
-          }
-        };
-
-        const { error, data } = await supabase
-          .from('profiles')
-          .update({ memoir_data: updatedMemoirData })
-          .eq('user_id', userId)
-          .select();
-
-        if (error) {
-          console.error('Supabase error:', error);
-          throw error;
-        }
-
-        console.log(`Successfully stored personal preferences for MEMOIR:`, data);
-        return personalData;
-      }
-    } catch (error) {
-      console.error(`Error storing personal preferences:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get personal preferences with context (memoir vs memoria)
-   */
-  static async getPersonalPreferences(userId: string, memoriaProfileId?: string) {
-    try {
-      console.log(`Loading personal preferences for user:`, userId, memoriaProfileId ? `(Memoria profile: ${memoriaProfileId})` : '(MEMOIR)');
-      
-      if (memoriaProfileId) {
-        // Get personal preferences for Memoria profile
-        const { data, error } = await supabase
-          .from('memoria_profiles')
-          .select('profile_data')
-          .eq('id', memoriaProfileId)
-          .single();
-
-        if (error) {
-          console.error('Error fetching Memoria profile preferences:', error);
-          throw error;
-        }
-
-        const personalData = data?.profile_data?.preferences?.personal || null;
-        
-        console.log(`Loaded Memoria profile preferences:`, personalData);
-        return personalData;
-      } else {
-        // Get personal preferences for user profile
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('memoir_data')
-          .eq('user_id', userId)
-          .single();
-
-        if (error) {
-          console.error('Error fetching preferences:', error);
-          throw error;
-        }
-
-        const personalData = data?.memoir_data?.preferences?.personal || null;
-        
-        console.log(`Loaded MEMOIR preferences:`, personalData);
-        return personalData;
-      }
-      
-    } catch (error) {
-      console.error(`Error fetching personal preferences:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Store gaming preferences
-   */
-  static async storeGamingPreferences(userId: string, games: GameEntry[], memoriaProfileId?: string) {
-    try {
-      console.log(`Storing gaming preferences${memoriaProfileId ? ` for Memoria profile: ${memoriaProfileId}` : ''}`);
-      
-      const gamingData = {
-        games: games,
-        favorite_genres: [...new Set(games.filter(g => g.favorite).map(g => g.platform))],
-        gaming_platforms: [...new Set(games.map(g => g.platform))],
-        total_games: games.length,
-        last_updated: new Date().toISOString()
-      };
-
-      if (memoriaProfileId) {
-        // Update memoir data with gaming preferences for Memoria profile
-        await this.updateMemoirData(userId, {
-          preferences: {
-            gaming: gamingData
-          }
-        }, memoriaProfileId);
-        
-        console.log('Successfully stored gaming preferences for Memoria profile');
-      } else {
-        // Update memoir data with gaming preferences for user profile
-        await this.updateMemoirData(userId, {
-          preferences: {
-            gaming: gamingData
-          }
-        });
-        
-        console.log('Successfully stored gaming preferences for user profile');
-      }
-
-      return gamingData;
-    } catch (error) {
-      console.error('Error storing gaming preferences:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get gaming preferences for a user
-   */
-  static async getGamingPreferences(userId: string, memoriaProfileId?: string) {
-    try {
-      console.log(`Getting gaming preferences${memoriaProfileId ? ` for Memoria profile: ${memoriaProfileId}` : ''}`);
-      
-      if (memoriaProfileId) {
-        const profile = await this.getMemoirProfile(userId, memoriaProfileId);
-        return profile?.profile_data?.preferences?.gaming || null;
-      } else {
-        const profile = await this.getMemoirProfile(userId);
-        return profile?.memoir_data?.preferences?.gaming || null;
-      }
-    } catch (error) {
-      console.error('Error fetching gaming preferences:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Store ElevenLabs voice ID with enhanced error handling
-   */
-  static async storeElevenLabsVoiceId(userId: string, voiceId: string, memoriaProfileId?: string) {
-    try {
-      console.log('Storing ElevenLabs voice ID:', { userId, voiceId, memoriaProfileId });
-
-      // Validate voice ID format
-      if (!voiceId || typeof voiceId !== 'string' || voiceId.length < 10) {
-        throw new Error('Invalid voice ID format');
-      }
-
-      if (memoriaProfileId) {
-        // Update integration status for Memoria profile
-        await this.updateIntegrationStatus(userId, 'elevenlabs', {
-          status: 'completed',
-          voice_cloned: true
-        }, memoriaProfileId);
-
-        // Store the voice ID in the Memoria profile
-        const { error } = await supabase
-          .from('memoria_profiles')
-          .update({ 
-            elevenlabs_voice_id: voiceId.trim(),
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', memoriaProfileId);
-
-        if (error) {
-          console.error('Database error storing voice ID for Memoria profile:', error);
-          throw error;
-        }
-        
-        console.log('Successfully stored ElevenLabs voice ID for Memoria profile');
-      } else {
-        // Update integration status for user profile
-        await this.updateIntegrationStatus(userId, 'elevenlabs', {
-          status: 'completed',
-          voice_cloned: true
-        });
-
-        // Store the voice ID in the user profile
-        const { error } = await supabase
-          .from('profiles')
-          .update({ 
-            elevenlabs_voice_id: voiceId.trim(),
-            updated_at: new Date().toISOString()
-          })
-          .eq('user_id', userId);
-
-        if (error) {
-          console.error('Database error storing voice ID:', error);
-          throw error;
-        }
-        
-        console.log('Successfully stored ElevenLabs voice ID for user profile');
-      }
-
-      return voiceId;
-    } catch (error) {
-      console.error('Error storing ElevenLabs voice ID:', error);
-      
-      if (memoriaProfileId) {
-        // Update integration status to error for Memoria profile
-        try {
-          await this.updateIntegrationStatus(userId, 'elevenlabs', {
-            status: 'error',
-            voice_cloned: false
-          }, memoriaProfileId);
-        } catch (statusError) {
-          console.error('Error updating Memoria profile integration status to error:', statusError);
-        }
-      } else {
-        // Update integration status to error for user profile
-        try {
-          await this.updateIntegrationStatus(userId, 'elevenlabs', {
-            status: 'error',
-            voice_cloned: false
-          });
-        } catch (statusError) {
-          console.error('Error updating integration status to error:', statusError);
-        }
-      }
-      
-      throw error;
-    }
-  }
-
-  /**
-   * Store Tavus avatar ID
-   */
-  static async storeTavusAvatarId(userId: string, avatarId: string, memoriaProfileId?: string) {
-    try {
-      console.log(`Storing Tavus avatar ID: ${avatarId}${memoriaProfileId ? ` for Memoria profile: ${memoriaProfileId}` : ''}`);
-      
-      if (memoriaProfileId) {
-        // Update integration status for Memoria profile
-        await this.updateIntegrationStatus(userId, 'tavus', {
-          status: 'completed',
-          avatar_created: true
-        }, memoriaProfileId);
-
-        // Store the avatar ID in the Memoria profile
-        const { error } = await supabase
-          .from('memoria_profiles')
-          .update({ tavus_avatar_id: avatarId })
-          .eq('id', memoriaProfileId);
-
-        if (error) {
-          console.error('Error storing Tavus avatar ID for Memoria profile:', error);
-          throw error;
-        }
-        
-        console.log('Successfully stored Tavus avatar ID for Memoria profile');
-      } else {
-        // Update integration status for user profile
-        await this.updateIntegrationStatus(userId, 'tavus', {
-          status: 'completed',
-          avatar_created: true
-        });
-
-        // Store the avatar ID in the user profile
-        const { error } = await supabase
-          .from('profiles')
-          .update({ tavus_avatar_id: avatarId })
-          .eq('user_id', userId);
-
-        if (error) {
-          console.error('Error storing Tavus avatar ID for user profile:', error);
-          throw error;
-        }
-        
-        console.log('Successfully stored Tavus avatar ID for user profile');
-      }
-      
-      return avatarId;
-    } catch (error) {
-      console.error('Error storing Tavus avatar ID:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Store family tree data
-   */
-  static async storeFamilyTreeData(userId: string, treeData: any, memoriaProfileId?: string) {
-    try {
-      console.log(`Storing family tree data${memoriaProfileId ? ` for Memoria profile: ${memoriaProfileId}` : ''}`);
-      
-      // Validate and normalize family tree data
-      const validatedTreeData = validateFamilyTreeData(treeData);
-      
-      if (memoriaProfileId) {
-        // Store family tree data for Memoria profile
-        await this.updateMemoirData(userId, {
-          family_tree: validatedTreeData
-        }, memoriaProfileId);
-        
-        console.log('Successfully stored family tree data for Memoria profile');
-      } else {
-        // Store family tree data for user profile
-        await this.updateMemoirData(userId, {
-          family_tree: validatedTreeData
-        });
-        
-        console.log('Successfully stored family tree data for user profile');
-      }
-
-      return validatedTreeData;
-    } catch (error) {
-      console.error('Error storing family tree data:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get family tree data
-   */
-  static async getFamilyTreeData(userId: string, memoriaProfileId?: string) {
-    try {
-      console.log(`Getting family tree data${memoriaProfileId ? ` for Memoria profile: ${memoriaProfileId}` : ''}`);
-      
-      if (memoriaProfileId) {
-        const profile = await this.getMemoirProfile(userId, memoriaProfileId);
-        return profile?.profile_data?.family_tree || null;
-      } else {
-        const profile = await this.getMemoirProfile(userId);
-        return profile?.memoir_data?.family_tree || null;
-      }
-    } catch (error) {
-      console.error('Error fetching family tree data:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Determine MIME type from file extension
-   */
-  static getMimeTypeFromFile(file: File): string {
-    // First check if the file already has a valid type
-    if (file.type && file.type !== 'application/octet-stream') {
-      return file.type;
-    }
-    
-    // If not, try to determine from extension
-    const extension = file.name.split('.').pop()?.toLowerCase();
-    
-    switch (extension) {
-      // Images
-      case 'jpg':
-      case 'jpeg':
-        return 'image/jpeg';
-      case 'png':
-        return 'image/png';
-      case 'gif':
-        return 'image/gif';
-      case 'webp':
-        return 'image/webp';
-      case 'svg':
-        return 'image/svg+xml';
-        
-      // Documents
-      case 'pdf':
-        return 'application/pdf';
-      case 'doc':
-        return 'application/msword';
-      case 'docx':
-        return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-      case 'txt':
-        return 'text/plain';
-      case 'rtf':
-        return 'application/rtf';
-        
-      // 3D Models
-      case 'glb':
-        return 'model/gltf-binary';
-      case 'gltf':
-        return 'model/gltf+json';
-        
-      // Audio
-      case 'mp3':
-        return 'audio/mpeg';
-      case 'wav':
-        return 'audio/wav';
-      case 'ogg':
-        return 'audio/ogg';
-        
-      // Video
-      case 'mp4':
-        return 'video/mp4';
-      case 'webm':
-        return 'video/webm';
-      case 'mov':
-        return 'video/quicktime';
-        
-      // Default
-      default:
-        return 'application/octet-stream';
-    }
-  }
-  
-  /**
-   * Recover data for a specific path within memoir_data or profile_data
-   * This is a utility method to help recover data when the main methods fail
-   */
-  static async recoverData(userId: string, dataPath: string, memoriaProfileId?: string): Promise<any> {
-    try {
-      console.log(`Attempting to recover data for path: ${dataPath}${memoriaProfileId ? `, memoria profile: ${memoriaProfileId}` : ''}`);
-      
-      if (memoriaProfileId) {
-        // Get the full profile_data for the Memoria profile
-        const { data, error } = await supabase
-          .from('memoria_profiles')
-          .select('profile_data')
-          .eq('id', memoriaProfileId)
-          .single();
-        
-        if (error) {
-          console.error('Error recovering data for Memoria profile:', error);
-          return null;
-        }
-        
-        // Extract the requested data using the path
-        const pathParts = dataPath.split('.');
-        let result = data.profile_data;
-        
-        for (const part of pathParts) {
-          if (result && result[part] !== undefined) {
-            result = result[part];
-          } else {
-            console.log(`Path ${dataPath} not found in profile_data`);
-            return null;
-          }
-        }
-        
-        console.log(`Successfully recovered data for path: ${dataPath}`);
-        return result;
-      } else {
-        // Get the full memoir_data for the user
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('memoir_data')
-          .eq('user_id', userId)
-          .single();
-        
-        if (error) {
-          console.error('Error recovering data for user profile:', error);
-          return null;
-        }
-        
-        // Extract the requested data using the path
-        const pathParts = dataPath.split('.');
-        let result = data.memoir_data;
-        
-        for (const part of pathParts) {
-          if (result && result[part] !== undefined) {
-            result = result[part];
-          } else {
-            console.log(`Path ${dataPath} not found in memoir_data`);
-            return null;
-          }
-        }
-        
-        console.log(`Successfully recovered data for path: ${dataPath}`);
-        return result;
-      }
-    } catch (error) {
-      console.error(`Error recovering data:`, error);
+      console.error(`Error recovering ${dataType}:`, error);
       return null;
     }
-  }
-
-  /**
-   * Check if API keys are configured
-   */
-  static checkAPIKeys() {
-    return {
-      elevenlabs: !!ELEVENLABS_API_KEY,
-      tavus: !!TAVUS_API_KEY,
-      gemini: !!GEMINI_API_KEY
-    };
-  }
-
-  /**
-   * Get API configuration status
-   */
-  static getAPIStatus() {
-    const keys = this.checkAPIKeys();
-    return {
-      elevenlabs: {
-        configured: keys.elevenlabs,
-        url: 'https://elevenlabs.io/app/subscription?ref=memoa&code=WORLDSLARGESTHACKATHON-0bb0fa21'
-      },
-      tavus: {
-        configured: keys.tavus,
-        url: 'https://tavus.io/?ref=memoa'
-      },
-      gemini: {
-        configured: keys.gemini,
-        url: 'https://makersuite.google.com/app/apikey'
-      }
-    };
   }
 }

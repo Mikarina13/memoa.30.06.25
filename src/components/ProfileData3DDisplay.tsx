@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useMemo } from 'react';
+import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { useFrame, useThree, ThreeEvent } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import { Vector3, Group, Color } from 'three'; 
@@ -464,6 +464,9 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
         />
       );
       index++;
+    } else {
+      console.log('Not displaying gallery item. Gallery count:', profileData?.gallery_items?.length, 
+                  'Is visible:', isItemVisible('gallery'));
     }
     
     // Personality Test - check both paths
@@ -721,7 +724,15 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
     if (narratives && isItemVisible('narratives')) count++;
     
     // Gallery Items
-    if (profileData?.gallery_items?.length > 0 && isItemVisible('gallery')) count++;
+    if (profileData?.gallery_items?.length > 0 && isItemVisible('gallery')) {
+      count++;
+      console.log('Counting gallery items:', profileData.gallery_items.length);
+    } else {
+      console.log('Not counting gallery items:', {
+        galleryItemCount: profileData?.gallery_items?.length || 0,
+        isVisible: isItemVisible('gallery')
+      });
+    }
     
     // Personality Test
     const personalityTest = profileData?.profile_data?.personality_test || 
