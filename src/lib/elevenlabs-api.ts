@@ -246,13 +246,6 @@ export class ElevenLabsAPI {
   }
 
   /**
-   * Get affiliate link for ElevenLabs with hackathon code
-   */
-  static getAffiliateLink(referralCode: string = 'memoa', promoCode: string = 'WORLDSLARGESTHACKATHON-0bb0fa21'): string {
-    return `https://elevenlabs.io/app/subscription?ref=${referralCode}&code=${promoCode}`;
-  }
-
-  /**
    * Check if API key is valid
    */
   async validateApiKey(): Promise<boolean> {
@@ -273,6 +266,13 @@ export class ElevenLabsAPI {
       console.error('ElevenLabs API key validation failed:', error);
       return false;
     }
+  }
+  
+  /**
+   * Get affiliate link for ElevenLabs with hackathon code
+   */
+  static getAffiliateLink(referralCode: string = 'memoa', promoCode: string = 'WORLDSLARGESTHACKATHON-0bb0fa21'): string {
+    return `https://elevenlabs.io/app/subscription?ref=${referralCode}&code=${promoCode}`;
   }
 }
 

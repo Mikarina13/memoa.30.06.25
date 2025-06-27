@@ -161,7 +161,7 @@ export function VoiceDetail({ data }: VoiceDetailProps) {
             <button
               onClick={generateAndPlaySpeech}
               disabled={generationStatus === 'generating' || !textToSpeak.trim()}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2"
             >
               {generationStatus === 'generating' ? (
                 <>
@@ -180,7 +180,7 @@ export function VoiceDetail({ data }: VoiceDetailProps) {
               <button
                 type="button"
                 onClick={togglePlayback}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg transition-colors"
+                className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg transition-colors flex items-center gap-2"
               >
                 {isPlaying ? (
                   <Pause className="w-5 h-5 text-white" />
@@ -189,9 +189,6 @@ export function VoiceDetail({ data }: VoiceDetailProps) {
                 )}
               </button>
             )}
-                type="button"
-                type="button"
-                type="button"
             
             <a
               href="https://elevenlabs.io/app/voice-lab"
