@@ -7,13 +7,14 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { EnhancedStars } from '../components/EnhancedStars';
 import { ProfileData3DDisplay } from '../components/ProfileData3DDisplay';
 import { SpaceCustomizer, SpaceCustomizationSettings } from '../components/SpaceCustomizer'; 
+import { Gallery3DCarousel, CarouselCameraControls } from '../components/Gallery3DCarousel';
+import { GalleryNavigationFooter } from '../components/GalleryNavigationFooter';
 import { useKeyboardControls } from '../hooks/useKeyboardControls';
 import { useAuth } from '../hooks/useAuth';
 import { MemoirIntegrations, MemoriaProfile } from '../lib/memoir-integrations';
 import { useRequireTermsAcceptance } from '../hooks/useRequireTermsAcceptance';
 import { TributeImageInterface } from '../components/TributeImageInterface';
 import { TributeImageDetail } from '../components/details/TributeImageDetail';
-import { Gallery3DCarousel, CarouselCameraControls } from '../components/Gallery3DCarousel';
 import { CAMERA_POSITION_PROFILE_SPACE, SPACE_THEMES } from '../utils/constants';
 
 // Import detail components
@@ -78,6 +79,7 @@ export function Profile3DSpacePage() {
   const [showTributeImageInterface, setShowTributeImageInterface] = useState(false);
   const [showGalleryCarousel, setShowGalleryCarousel] = useState(false);
   const [selectedGalleryItems, setSelectedGalleryItems] = useState<any[]>([]);
+  const [galleryCurrentIndex, setGalleryCurrentIndex] = useState(0);
   
   // State for customization
   const [memoriaProfiles, setMemoriaProfiles] = useState<MemoriaProfile[]>([]);
@@ -330,6 +332,7 @@ export function Profile3DSpacePage() {
       });
       
       setSelectedGalleryItems(filteredItems);
+      setGalleryCurrentIndex(0); // Reset index to first item
       setShowGalleryCarousel(true);
       return;
     }
@@ -364,6 +367,27 @@ export function Profile3DSpacePage() {
   const handleSaveCustomization = () => {
     console.log('Saved customization settings');
     // The actual save is handled in the SpaceCustomizer component
+  };
+
+  // Handle gallery navigation
+  const handleGalleryPrev = () => {
+    setGalleryCurrentIndex(prev => 
+      prev === 0 ? selectedGalleryItems.length - 1 : prev - 1
+    );
+  };
+
+  const handleGalleryNext = () => {
+    setGalleryCurrentIndex(prev => 
+      prev === selectedGalleryItems.length - 1 ? 0 : prev + 1
+    );
+  };
+
+  const handleGallerySliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseFloat(e.target.value);
+    const normalizedValue = value / 100;
+    const targetIndex = Math.floor(normalizedValue * selectedGalleryItems.length);
+    const adjustedIndex = Math.min(Math.max(0, targetIndex), selectedGalleryItems.length - 1);
+    setGalleryCurrentIndex(adjustedIndex);
   };
 
   // Handle manual refresh
@@ -579,6 +603,8 @@ export function Profile3DSpacePage() {
                 setShowDetailModal(true);
                 setShowGalleryCarousel(false);
               }}
+              currentIndex={galleryCurrentIndex}
+              onIndexChange={setGalleryCurrentIndex}
             />
           )}
           
@@ -651,6 +677,7 @@ export function Profile3DSpacePage() {
             });
             
             setSelectedGalleryItems(filteredItems);
+            setGalleryCurrentIndex(0); // Reset to first image
             setShowGalleryCarousel(true);
           }}
           className="fixed top-36 right-8 p-3 bg-black/50 backdrop-blur-sm rounded-full border border-white/10 text-white/70 hover:text-white transition-colors z-40" 
@@ -692,6 +719,17 @@ export function Profile3DSpacePage() {
           <Sparkles className="w-5 h-5" />
           <span className="text-sm font-medium">AI Tributes</span>
         </button>
+      )}
+      
+      {/* Gallery Navigation Footer - Only shown when gallery carousel is active */}
+      {showGalleryCarousel && selectedGalleryItems.length > 0 && (
+        <GalleryNavigationFooter
+          currentIndex={galleryCurrentIndex}
+          totalItems={selectedGalleryItems.length}
+          onPrev={handleGalleryPrev}
+          onNext={handleGalleryNext}
+          onSliderChange={handleGallerySliderChange}
+        />
       )}
       
       {/* Detail Modal */}

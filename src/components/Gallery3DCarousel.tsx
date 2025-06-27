@@ -7,6 +7,8 @@ interface Gallery3DCarouselProps {
   galleryItems: any[];
   onClose: () => void;
   onItemSelect?: (item: any) => void;
+  currentIndex?: number;
+  onIndexChange?: (index: number) => void;
 }
 
 // Component that manages camera controls specifically for the carousel
@@ -28,10 +30,16 @@ export function CarouselCameraControls() {
   return null;
 }
 
-export function Gallery3DCarousel({ galleryItems, onClose, onItemSelect }: Gallery3DCarouselProps) {
+export function Gallery3DCarousel({ 
+  galleryItems, 
+  onClose, 
+  onItemSelect,
+  currentIndex: externalCurrentIndex,
+  onIndexChange
+}: Gallery3DCarouselProps) {
   const carouselRef = useRef<Group>(null);
   const targetRotation = useRef(0);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(externalCurrentIndex || 0);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const loadingStatesRef = useRef<Record<string, boolean>>({});
   const { camera } = useThree();
@@ -80,7 +88,7 @@ export function Gallery3DCarousel({ galleryItems, onClose, onItemSelect }: Galle
   }, [onClose]);
   
   // Handle manual navigation
-  const navigateCarousel = (direction: number) => {
+  const navigateCarousel = useCallback((direction: number) => {
     if (isTransitioning) return;
     
     // Update target rotation
@@ -92,11 +100,27 @@ export function Gallery3DCarousel({ galleryItems, onClose, onItemSelect }: Galle
     setIsTransitioning(true);
     setCurrentIndex(newIndex);
     
+    // Notify parent if callback provided
+    if (onIndexChange) {
+      onIndexChange(newIndex);
+    }
+    
     // Reset transitioning state after animation completes
     setTimeout(() => {
       setIsTransitioning(false);
     }, 300);
-  };
+  }, [angleStep, currentIndex, galleryItems.length, isTransitioning, onIndexChange]);
+  
+  // Update index if controlled externally
+  useEffect(() => {
+    if (externalCurrentIndex !== undefined && externalCurrentIndex !== currentIndex) {
+      setCurrentIndex(externalCurrentIndex);
+      
+      // Calculate the angle difference to rotate
+      const angleDiff = (currentIndex - externalCurrentIndex) * angleStep;
+      targetRotation.current += angleDiff;
+    }
+  }, [externalCurrentIndex, currentIndex, angleStep]);
   
   // Handle item selection
   const handleItemSelect = (item: any) => {
@@ -109,19 +133,6 @@ export function Gallery3DCarousel({ galleryItems, onClose, onItemSelect }: Galle
   const handleImageLoaded = useCallback((itemId: string) => {
     loadingStatesRef.current[itemId] = true;
   }, []);
-
-  // Handle slider change
-  const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseFloat(e.target.value);
-    const normalizedValue = value / 100;
-    const targetIndex = Math.floor(normalizedValue * galleryItems.length);
-    const adjustedIndex = Math.min(Math.max(0, targetIndex), galleryItems.length - 1);
-    
-    // Calculate the angle to this index
-    const angle = -adjustedIndex * angleStep;
-    targetRotation.current = angle;
-    setCurrentIndex(adjustedIndex);
-  };
   
   return (
     <>
@@ -156,42 +167,7 @@ export function Gallery3DCarousel({ galleryItems, onClose, onItemSelect }: Galle
         })}
       </group>
       
-      {/* Footer navigation controls - fixed at the bottom of the screen */}
-      <Html fullscreen>
-        <div className="fixed bottom-0 left-0 right-0 w-full py-4 bg-black/70 backdrop-blur-sm border-t border-white/10 z-50">
-          <div className="container mx-auto px-6 max-w-3xl">
-            <div className="flex items-center justify-between gap-4">
-              <button
-                onClick={() => navigateCarousel(1)}
-                className="w-10 h-10 flex items-center justify-center bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors text-xl"
-              >
-                ←
-              </button>
-              
-              <div className="flex-1">
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={(currentIndex / (galleryItems.length - 1 || 1)) * 100}
-                  onChange={handleSliderChange}
-                  className="w-full h-2 bg-white/20 rounded appearance-none cursor-pointer accent-blue-500"
-                />
-                <div className="text-center text-white/80 text-sm mt-2">
-                  Use Arrow Keys or A/D to Navigate • {currentIndex + 1} of {galleryItems.length}
-                </div>
-              </div>
-              
-              <button
-                onClick={() => navigateCarousel(-1)}
-                className="w-10 h-10 flex items-center justify-center bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors text-xl"
-              >
-                →
-              </button>
-            </div>
-          </div>
-        </div>
-      </Html>
+      <CarouselCameraControls />
     </>
   );
 }
