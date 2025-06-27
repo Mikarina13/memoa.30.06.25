@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Environment, useGLTF, Html, PerspectiveCamera, Stage, useProgress } from '@react-three/drei';
-import { User, Download, Share2, Cuboid, ExternalLink, RefreshCw, AlertCircle } from 'lucide-react';
+import { User, Download, Share2, Cuboid, ExternalLink, RefreshCw, AlertCircle, Info } from 'lucide-react';
 import { Suspense } from 'react';
 
 interface AvaturnAvatarDetailProps {
@@ -73,18 +73,55 @@ function ErrorBoundary({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function Model({ url, onLoadingComplete }: { url: string, onLoadingComplete?: () => void }) {
+function Model({ url, onLoadingComplete, onError }: { 
+  url: string, 
+  onLoadingComplete?: () => void,
+  onError?: (error: string) => void 
+}) {
   const [error, setError] = useState<string | null>(null);
+  const [textureErrors, setTextureErrors] = useState<string[]>([]);
+  const [modelLoaded, setModelLoaded] = useState(false);
   
-  // Always call useGLTF and let it handle loading with suspense and error callback
+  // Add texture error handler
+  useEffect(() => {
+    const handleTextureError = (event: any) => {
+      if (event.error && event.error.message && event.error.message.includes('Couldn\'t load texture')) {
+        const textureName = event.error.message.split('Couldn\'t load texture')[1]?.trim();
+        if (textureName) {
+          setTextureErrors(prev => [...prev, textureName]);
+        }
+      }
+    };
+
+    window.addEventListener('error', handleTextureError);
+    return () => window.removeEventListener('error', handleTextureError);
+  }, []);
+  
+  // Load the GLTF model with error handling
   const { scene } = useGLTF(url, true, undefined, (loadError) => {
     console.error('Error loading model:', loadError);
-    setError('Failed to load 3D model. The model file or its textures may be missing or inaccessible.');
+    const errorMessage = loadError.message || 'Failed to load 3D model';
+    
+    if (errorMessage.includes('Failed to load buffer')) {
+      setError('Missing model data files. The 3D model is incomplete - some binary data files (.bin) are missing from storage.');
+    } else if (errorMessage.includes('NetworkError') || errorMessage.includes('404')) {
+      setError('Model file not found. The 3D model file may have been deleted or moved.');
+    } else {
+      setError('Failed to load 3D model. The model file may be corrupted or incompatible.');
+    }
+    
+    onError?.(errorMessage);
   });
   
   useEffect(() => {
-    if (scene && !error && onLoadingComplete) {
-      const timer = setTimeout(onLoadingComplete, 100);
+    if (scene && !error) {
+      setModelLoaded(true);
+      
+      // Give textures a moment to load
+      const timer = setTimeout(() => {
+        onLoadingComplete?.();
+      }, 500);
+      
       return () => clearTimeout(timer);
     }
   }, [scene, error, onLoadingComplete]);
@@ -92,15 +129,15 @@ function Model({ url, onLoadingComplete }: { url: string, onLoadingComplete?: ()
   if (error) {
     return (
       <Html center>
-        <div className="bg-black/80 p-6 rounded-lg text-white text-center max-w-sm">
+        <div className="bg-black/90 p-6 rounded-lg text-white text-center max-w-md">
           <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
           <p className="font-medium text-red-400 mb-2">Failed to Load 3D Model</p>
-          <p className="text-sm text-white/70 mb-4">
-            The model file or its textures could not be loaded. This typically occurs when files are missing from storage or there are network connectivity issues.
-          </p>
-          <p className="text-xs text-white/50">
-            Please verify that all model files and textures are properly uploaded and accessible.
-          </p>
+          <p className="text-sm text-white/70 mb-4">{error}</p>
+          <div className="text-xs text-white/50 space-y-1">
+            <p>• Ensure all model files (.glb/.gltf) and textures are uploaded</p>
+            <p>• Check that files haven't been deleted from storage</p>
+            <p>• Try re-uploading the complete model package</p>
+          </div>
         </div>
       </Html>
     );
@@ -122,6 +159,19 @@ function Model({ url, onLoadingComplete }: { url: string, onLoadingComplete?: ()
           rotation={[0, 0, 0]} 
         />
       </Stage>
+      
+      {/* Show texture warning if there are missing textures but model loaded */}
+      {modelLoaded && textureErrors.length > 0 && (
+        <Html position={[0, 2, 0]}>
+          <div className="bg-yellow-500/20 border border-yellow-500/40 rounded-lg p-3 text-yellow-300 text-xs max-w-xs">
+            <div className="flex items-center gap-2 mb-1">
+              <Info className="w-4 h-4" />
+              <span className="font-medium">Missing Textures</span>
+            </div>
+            <p>Some texture files are missing. The model will appear with default materials.</p>
+          </div>
+        </Html>
+      )}
     </ErrorBoundary>
   );
 }
@@ -149,8 +199,9 @@ function FallbackScene() {
 export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
   const [selectedAvatar, setSelectedAvatar] = useState(data[0]?.id || null);
   const [modelLoaded, setModelLoaded] = useState(false);
-  const [modelError, setModelError] = useState(false);
+  const [modelError, setModelError] = useState<string | null>(null);
   const [reloadTrigger, setReloadTrigger] = useState(0);
+  const [showModelIssues, setShowModelIssues] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
   // Get the URL for the avatar (model or avaturn) - moved before usage
@@ -171,12 +222,19 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
   // Handle model loading complete
   const handleModelLoadingComplete = useCallback(() => {
     setModelLoaded(true);
+    setModelError(null);
+  }, []);
+
+  // Handle model loading error
+  const handleModelError = useCallback((error: string) => {
+    setModelError(error);
+    setModelLoaded(false);
   }, []);
 
   // Function to force reload the model
   const handleReloadModel = useCallback(() => {
     setModelLoaded(false);
-    setModelError(false);
+    setModelError(null);
     setReloadTrigger(prev => prev + 1);
   }, []);
 
@@ -229,6 +287,7 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                 onClick={() => {
                   setSelectedAvatar(avatar.id);
                   setModelLoaded(false);
+                  setModelError(null);
                 }}
               >
                 {avatar.sourcePhoto ? (
@@ -292,7 +351,11 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                       
                       {modelUrl ? (
                         <Suspense fallback={<LoadingIndicator />}>
-                          <Model url={modelUrl} onLoadingComplete={handleModelLoadingComplete} />
+                          <Model 
+                            url={modelUrl} 
+                            onLoadingComplete={handleModelLoadingComplete}
+                            onError={handleModelError}
+                          />
                         </Suspense>
                       ) : (
                         <FallbackScene />
@@ -302,7 +365,7 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                         enablePan={true}
                         enableZoom={true}
                         enableRotate={true} 
-                        autoRotate={!modelLoaded} 
+                        autoRotate={!modelLoaded && !modelError} 
                         autoRotateSpeed={1}
                         minDistance={2}
                         maxDistance={10}
@@ -340,12 +403,17 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                       : '3D Avatar'}
                   </h3>
                   <p className="text-white/60 text-sm">
-                    {hasValidModel ? 'Interactive 3D Model' : 'No model available'}
+                    {modelError ? 'Model failed to load' : hasValidModel ? 'Interactive 3D Model' : 'No model available'}
                   </p>
+                  {modelError && (
+                    <p className="text-red-400 text-xs mt-1">
+                      Missing files - try re-uploading the complete model
+                    </p>
+                  )}
                 </div>
                 
                 <div className="flex gap-2">
-                  {modelUrl && !modelLoaded && (
+                  {modelUrl && !modelLoaded && !modelError && (
                     <button
                       onClick={handleReloadModel}
                       className="p-2 rounded-full bg-orange-500/20 hover:bg-orange-500/30 transition-colors"
@@ -355,7 +423,17 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                     </button>
                   )}
                   
-                  {hasValidModel && (
+                  {modelError && (
+                    <button
+                      onClick={() => setShowModelIssues(!showModelIssues)}
+                      className="p-2 rounded-full bg-red-500/20 hover:bg-red-500/30 transition-colors"
+                      title="Show error details"
+                    >
+                      <Info className="w-5 h-5 text-red-400" />
+                    </button>
+                  )}
+                  
+                  {hasValidModel && !modelError && (
                     <button 
                       onClick={() => {
                         if (navigator.share && selectedAvatarData) {
@@ -372,7 +450,7 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                     </button>
                   )}
                   
-                  {hasValidModel && (
+                  {hasValidModel && !modelError && (
                     <button 
                       onClick={() => openExternalModel(selectedAvatarData)}
                       className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
@@ -385,6 +463,33 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
               </div>
             </div>
           </div>
+          
+          {/* Error Details Panel */}
+          {showModelIssues && modelError && (
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+              <h4 className="text-red-400 font-medium mb-2 flex items-center gap-2">
+                <AlertCircle className="w-5 h-5" />
+                Model Loading Issues
+              </h4>
+              <div className="text-white/70 text-sm space-y-2">
+                <p className="text-red-300">{modelError}</p>
+                <div className="mt-3">
+                  <p className="font-medium text-white/80 mb-1">Common causes and solutions:</p>
+                  <ul className="space-y-1 text-xs">
+                    <li>• <strong>Missing texture files:</strong> Upload all .jpg, .png files with the model</li>
+                    <li>• <strong>Missing buffer files:</strong> Ensure .bin files are included with .gltf models</li>
+                    <li>• <strong>File path issues:</strong> Use .glb format for self-contained models</li>
+                    <li>• <strong>Storage issues:</strong> Check Supabase storage bucket permissions</li>
+                    <li>• <strong>File corruption:</strong> Re-export the model from your 3D software</li>
+                  </ul>
+                </div>
+                <div className="mt-3 p-2 bg-black/30 rounded">
+                  <p className="font-medium text-orange-400 text-xs">Recommendation:</p>
+                  <p className="text-xs">Re-upload using .glb format which embeds all textures and data in a single file.</p>
+                </div>
+              </div>
+            </div>
+          )}
           
           {/* Instructions */}
           <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4 mt-4">
@@ -399,16 +504,27 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
             </ul>
           </div>
           
-          {/* Error Troubleshooting */}
-          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mt-4">
-            <h4 className="text-red-400 font-medium mb-2">Troubleshooting Model Loading Issues:</h4>
-            <ul className="text-white/70 text-sm space-y-1">
-              <li>• Models may fail to load if files are missing from storage</li>
-              <li>• Texture files (like .jpg, .png) must be in the same location as the model</li>
-              <li>• Check that all model files were uploaded successfully</li>
-              <li>• Try refreshing the page or using the reload button</li>
-              <li>• Contact support if models consistently fail to load</li>
-            </ul>
+          {/* File Format Guidance */}
+          <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mt-4">
+            <h4 className="text-blue-400 font-medium mb-2">3D Model Format Guidelines:</h4>
+            <div className="text-white/70 text-sm space-y-2">
+              <div>
+                <p className="font-medium text-white/80">Recommended: GLB Format</p>
+                <ul className="text-xs space-y-1 mt-1">
+                  <li>• Self-contained: includes textures and geometry in one file</li>
+                  <li>• No missing file issues</li>
+                  <li>• Smaller file size and faster loading</li>
+                </ul>
+              </div>
+              <div>
+                <p className="font-medium text-white/80">GLTF Format Requirements:</p>
+                <ul className="text-xs space-y-1 mt-1">
+                  <li>• Must upload ALL referenced files (.bin, .jpg, .png, etc.)</li>
+                  <li>• Keep original file names and structure</li>
+                  <li>• Files must be in the same directory</li>
+                </ul>
+              </div>
+            </div>
           </div>
           
           {/* External Resources */}
