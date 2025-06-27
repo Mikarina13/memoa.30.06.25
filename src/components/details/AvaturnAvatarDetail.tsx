@@ -75,73 +75,35 @@ function ErrorBoundary({ children }: { children: React.ReactNode }) {
 
 function Model({ url, onLoadingComplete }: { url: string, onLoadingComplete?: () => void }) {
   const [error, setError] = useState<string | null>(null);
-  const mountedRef = useRef(true);
   
-  // Validate URL before attempting to load
-  const isValidUrl = url && (url.startsWith('http') || url.startsWith('blob:')) && url.includes('.');
-  
-  useEffect(() => {
-    // Cleanup function to set mounted ref to false when unmounting
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
+  // Always call useGLTF and let it handle loading with suspense and error callback
+  const { scene } = useGLTF(url, true, undefined, (loadError) => {
+    console.error('Error loading model:', loadError);
+    setError('Failed to load 3D model. The model file or its textures may be missing or inaccessible.');
+  });
   
   useEffect(() => {
-    // Reset error state when URL changes
-    setError(null);
-    
-    // If URL is invalid, set error immediately
-    if (!isValidUrl) {
-      setError('Invalid model URL provided');
-    } else if (onLoadingComplete) {
-      // Small delay to allow model to actually render before marking as complete
-      const timer = setTimeout(() => {
-        if (mountedRef.current) onLoadingComplete();
-      }, 500);
+    if (scene && !error && onLoadingComplete) {
+      const timer = setTimeout(onLoadingComplete, 100);
       return () => clearTimeout(timer);
     }
-  }, [url, isValidUrl, onLoadingComplete]);
+  }, [scene, error, onLoadingComplete]);
   
-  // Only call useGLTF if we have a valid URL
-  let scene;
-  try {
-    if (!isValidUrl) throw new Error('Invalid model URL provided');
-    
-    const { scene: loadedScene } = useGLTF(url, true, undefined, (e) => {
-      console.error('Error loading model:', e);
-      if (mountedRef.current) {
-        setError('Failed to load 3D model. Please check the URL and network connection.');
-      }
-    });
-    
-    scene = loadedScene;
-  } catch (e) {
-    console.error('GLTF loading error:', e);
-    if (!error && mountedRef.current) {
-      setError('Failed to initialize 3D model loader');
-    }
-  }
-  
-  if (error || !isValidUrl) {
+  if (error) {
     return (
       <Html center>
         <div className="bg-black/80 p-6 rounded-lg text-white text-center max-w-sm">
           <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
-          <p className="font-medium text-red-400 mb-2">Unable to Load 3D Model</p>
+          <p className="font-medium text-red-400 mb-2">Failed to Load 3D Model</p>
           <p className="text-sm text-white/70 mb-4">
-            {error || 'No valid model URL provided'}
+            The model file or its textures could not be loaded. This typically occurs when files are missing from storage or there are network connectivity issues.
           </p>
           <p className="text-xs text-white/50">
-            Please provide a valid .glb or .gltf model URL
+            Please verify that all model files and textures are properly uploaded and accessible.
           </p>
         </div>
       </Html>
     );
-  }
-  
-  if (!scene) {
-    return <LoadingIndicator />;
   }
   
   return (
@@ -434,6 +396,18 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
               <li>• Double-click to reset the view</li>
               <li>• Click the refresh button if the model doesn't load properly</li>
               <li>• External models open in a new tab when clicked</li>
+            </ul>
+          </div>
+          
+          {/* Error Troubleshooting */}
+          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mt-4">
+            <h4 className="text-red-400 font-medium mb-2">Troubleshooting Model Loading Issues:</h4>
+            <ul className="text-white/70 text-sm space-y-1">
+              <li>• Models may fail to load if files are missing from storage</li>
+              <li>• Texture files (like .jpg, .png) must be in the same location as the model</li>
+              <li>• Check that all model files were uploaded successfully</li>
+              <li>• Try refreshing the page or using the reload button</li>
+              <li>• Contact support if models consistently fail to load</li>
             </ul>
           </div>
           
