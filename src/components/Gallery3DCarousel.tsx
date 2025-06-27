@@ -156,7 +156,7 @@ export function Gallery3DCarousel({ galleryItems, onClose, onItemSelect }: Galle
         })}
       </group>
       
-      {/* Footer navigation controls - this gets injected into the DOM */}
+      {/* Footer navigation controls - fixed at the bottom of the screen */}
       <Html fullscreen>
         <div className="fixed bottom-0 left-0 right-0 w-full py-4 bg-black/70 backdrop-blur-sm border-t border-white/10 z-50">
           <div className="container mx-auto px-6 max-w-3xl">
