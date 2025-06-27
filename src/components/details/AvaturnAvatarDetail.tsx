@@ -4,6 +4,7 @@ import { OrbitControls, Environment, useGLTF, Html, PerspectiveCamera, Stage, us
 import { User, Download, Share2, Cuboid, ExternalLink, RefreshCw, AlertCircle, Info } from 'lucide-react';
 import { Suspense } from 'react';
 import * as THREE from 'three';
+import { ErrorBoundary } from 'react-error-boundary';
 
 interface AvaturnAvatarDetailProps {
   data: Array<{
@@ -43,33 +44,62 @@ function ExternalModelEmbed({ embedCode }: { embedCode: string }) {
   );
 }
 
-// Simplified Model component that only handles rendering
-function Model({ url, onLoadingComplete, onError }: { 
+// Error boundary fallback component
+function ModelErrorFallback({ error, resetErrorBoundary }: { error: Error, resetErrorBoundary: () => void }) {
+  let displayError = error.message || 'Unknown error occurred';
+  let solution = '';
+  
+  if (error.message.includes('Failed to load buffer') || error.message.includes('.bin')) {
+    displayError = 'Missing binary data files (.bin)';
+    solution = 'GLTF models require all referenced .bin files to be uploaded to the same storage location.';
+  } else if (error.message.includes('Couldn\'t load texture')) {
+    displayError = 'Missing texture files';
+    solution = 'Upload all texture files (.jpg, .png) referenced by the model.';
+  } else if (error.message.includes('404') || error.message.includes('not found')) {
+    displayError = 'Model file not found';
+    solution = 'The 3D model file may have been deleted or the URL is incorrect.';
+  } else if (error.message.includes('CORS') || error.message.includes('Cross-Origin')) {
+    displayError = 'Access denied';
+    solution = 'The model file cannot be loaded due to CORS restrictions.';
+  }
+  
+  return (
+    <Html center>
+      <div className="bg-black/90 p-6 rounded-lg text-white text-center max-w-md">
+        <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+        <p className="font-medium text-red-400 mb-2">Failed to Load 3D Model</p>
+        <p className="text-sm text-white/70 mb-4">{displayError}</p>
+        {solution && (
+          <p className="text-xs text-white/50 mb-4">{solution}</p>
+        )}
+        <button
+          onClick={resetErrorBoundary}
+          className="px-3 py-1.5 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded text-sm transition-colors"
+        >
+          Try Again
+        </button>
+        <div className="text-xs text-white/50 space-y-1 mt-4">
+          <p><strong>Common solutions:</strong></p>
+          <p>• Convert to GLB format (self-contained)</p>
+          <p>• Upload all GLTF dependencies (.bin, textures)</p>
+          <p>• Verify file permissions in Supabase</p>
+          <p>• Check model file integrity</p>
+        </div>
+      </div>
+    </Html>
+  );
+}
+
+// Improved Model component with proper error handling
+function Model({ url, onLoadingComplete }: { 
   url: string, 
-  onLoadingComplete?: () => void,
-  onError?: (error: string) => void 
+  onLoadingComplete?: () => void
 }) {
   const modelRef = useRef<any>(null);
   
-  // Simplified GLTF loading with basic error handling
-  let gltfResult;
-  let scene;
-  
-  try {
-    // Load GLTF with error callback
-    gltfResult = useGLTF(url, true, undefined, (loadError) => {
-      console.error('GLTF Load Error:', loadError);
-      const errorMessage = loadError?.message || 'Failed to load 3D model';
-      onError?.(errorMessage);
-    });
-    
-    scene = gltfResult?.scene;
-  } catch (loadError: any) {
-    console.error('Synchronous GLTF Load Error:', loadError);
-    const errorMessage = loadError?.message || 'Failed to load 3D model';
-    onError?.(errorMessage);
-    scene = null;
-  }
+  // Load GLTF with proper error handling through ErrorBoundary
+  const gltfResult = useGLTF(url, true);
+  const scene = gltfResult?.scene;
   
   // Notify parent when model loads successfully
   useEffect(() => {
@@ -81,9 +111,9 @@ function Model({ url, onLoadingComplete, onError }: {
     }
   }, [scene, onLoadingComplete]);
   
-  // If no scene, return null and let parent handle error state
+  // If no scene, return null and let ErrorBoundary handle it
   if (!scene) {
-    return null;
+    throw new Error('3D model scene could not be loaded');
   }
   
   return (
@@ -102,46 +132,6 @@ function Model({ url, onLoadingComplete, onError }: {
         rotation={[0, 0, 0]} 
       />
     </Stage>
-  );
-}
-
-// Error display component
-function ModelError({ error }: { error: string }) {
-  let displayError = error;
-  let solution = '';
-  
-  if (error.includes('Failed to load buffer') || error.includes('.bin')) {
-    displayError = 'Missing binary data files (.bin)';
-    solution = 'GLTF models require all referenced .bin files to be uploaded to the same storage location.';
-  } else if (error.includes('Couldn\'t load texture')) {
-    displayError = 'Missing texture files';
-    solution = 'Upload all texture files (.jpg, .png) referenced by the model.';
-  } else if (error.includes('404') || error.includes('not found')) {
-    displayError = 'Model file not found';
-    solution = 'The 3D model file may have been deleted or the URL is incorrect.';
-  } else if (error.includes('CORS') || error.includes('Cross-Origin')) {
-    displayError = 'Access denied';
-    solution = 'The model file cannot be loaded due to CORS restrictions.';
-  }
-  
-  return (
-    <Html center>
-      <div className="bg-black/90 p-6 rounded-lg text-white text-center max-w-md">
-        <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
-        <p className="font-medium text-red-400 mb-2">Failed to Load 3D Model</p>
-        <p className="text-sm text-white/70 mb-4">{displayError}</p>
-        {solution && (
-          <p className="text-xs text-white/50 mb-4">{solution}</p>
-        )}
-        <div className="text-xs text-white/50 space-y-1">
-          <p><strong>Common solutions:</strong></p>
-          <p>• Convert to GLB format (self-contained)</p>
-          <p>• Upload all GLTF dependencies (.bin, textures)</p>
-          <p>• Verify file permissions in Supabase</p>
-          <p>• Check model file integrity</p>
-        </div>
-      </div>
-    </Html>
   );
 }
 
@@ -194,20 +184,17 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
     setModelError(null);
   }, []);
 
-  // Handle model loading error
-  const handleModelError = useCallback((error: string) => {
-    setModelError(error);
-    setModelLoaded(false);
-    setShowModelIssues(true);
-  }, []);
-
   // Function to force reload the model
   const handleReloadModel = useCallback(() => {
     setModelLoaded(false);
     setModelError(null);
     setShowModelIssues(false);
     setReloadTrigger(prev => prev + 1);
-  }, []);
+    // Clear the GLTF cache for this URL
+    if (modelUrl) {
+      useGLTF.clear(modelUrl);
+    }
+  }, [modelUrl]);
 
   // Reset error state when switching avatars
   useEffect(() => {
@@ -247,6 +234,17 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
       window.open(avatar.avaturnUrl, '_blank');
     }
   }, []);
+
+  // Error boundary reset function
+  const handleErrorBoundaryReset = useCallback(() => {
+    setModelError(null);
+    setModelLoaded(false);
+    setShowModelIssues(false);
+    setReloadTrigger(prev => prev + 1);
+    if (modelUrl) {
+      useGLTF.clear(modelUrl);
+    }
+  }, [modelUrl]);
 
   return (
     <div className="space-y-6 pt-4">
@@ -342,17 +340,18 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                       <color attach="background" args={['#000000']} />
                       
                       {modelUrl ? (
-                        <Suspense fallback={<LoadingIndicator />}>
-                          {modelError ? (
-                            <ModelError error={modelError} />
-                          ) : (
+                        <ErrorBoundary
+                          FallbackComponent={ModelErrorFallback}
+                          onReset={handleErrorBoundaryReset}
+                          resetKeys={[modelUrl, reloadTrigger]}
+                        >
+                          <Suspense fallback={<LoadingIndicator />}>
                             <Model 
                               url={modelUrl} 
                               onLoadingComplete={handleModelLoadingComplete}
-                              onError={handleModelError}
                             />
-                          )}
-                        </Suspense>
+                          </Suspense>
+                        </ErrorBoundary>
                       ) : (
                         <FallbackScene />
                       )}
