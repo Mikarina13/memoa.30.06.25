@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, Upload, Image as ImageIcon, Sparkles, Download, Trash2, ExternalLink, CheckCircle, AlertCircle, Wand2, Grid3X3, X, ArrowUpRight } from 'lucide-react';
+import { Camera, Upload, Image as ImageIcon, Sparkles, Download, Trash2, ExternalLink, CheckCircle, AlertCircle, Wand2, Grid3X3, X, ArrowUpRight, Video } from 'lucide-react';
 import { MemoirIntegrations } from '../lib/memoir-integrations';
 import { useAuth } from '../hooks/useAuth';
 
