@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Settings, User, LogOut, Mic, PenTool, Image, Brain, Heart, Volume2, ExternalLink, Gamepad2, RefreshCw, Clipboard, Users, FileVideo, Newspaper, BookOpen, Upload } from 'lucide-react';
+import { ArrowLeft, Settings, User, LogOut, Mic, PenTool, Image, Brain, Heart, Volume2, ExternalLink, Gamepad2, RefreshCw, Clipboard, Users, FileVideo, Newspaper, BookOpen, Upload, Globe } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Header } from '../components/Header';
