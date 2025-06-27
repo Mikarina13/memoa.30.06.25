@@ -44,7 +44,7 @@ function ExternalModelEmbed({ embedCode }: { embedCode: string }) {
   );
 }
 
-// Error boundary fallback component with enhanced GLTF guidance
+// Error boundary fallback component with enhanced GLTF guidance - moved outside Canvas to avoid R3F hook issues
 function ModelErrorFallback({ error, resetErrorBoundary }: { error: Error, resetErrorBoundary: () => void }) {
   // Analyze the error to provide specific guidance
   let displayError = error.message || 'Unknown error occurred';
@@ -68,49 +68,47 @@ function ModelErrorFallback({ error, resetErrorBoundary }: { error: Error, reset
   }
   
   return (
-    <Html center>
-      <div className="bg-black/90 p-6 rounded-lg text-white text-center max-w-md">
-        <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
-        <p className="font-medium text-red-400 mb-2">Failed to Load 3D Model</p>
-        <p className="text-sm text-white/70 mb-4">{displayError}</p>
-        {solution && (
-          <p className="text-xs text-white/50 mb-4">{solution}</p>
-        )}
-        
-        {isGltfError && (
-          <div className="bg-yellow-500/10 border border-yellow-500/20 rounded p-3 mb-4">
-            <div className="flex items-center gap-2 mb-2">
-              <AlertTriangle className="w-4 h-4 text-yellow-400" />
-              <p className="text-yellow-400 font-medium text-sm">GLTF Dependency Issue</p>
-            </div>
-            <p className="text-xs text-white/70 mb-2">
-              This appears to be a GLTF model with missing dependencies.
-            </p>
-            <div className="text-left text-xs text-white/60 space-y-1">
-              <p><strong>Solutions:</strong></p>
-              <p>• Convert to GLB format (self-contained)</p>
-              <p>• Upload ALL .bin and texture files together</p>
-              <p>• Use <a href="https://products.aspose.app/3d/conversion/gltf-to-glb" target="_blank" rel="noopener noreferrer" className="text-yellow-400 underline">GLTF to GLB converter</a></p>
-            </div>
+    <div className="w-full h-full bg-black/90 p-6 rounded-lg text-white text-center max-w-md mx-auto flex flex-col items-center justify-center">
+      <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+      <p className="font-medium text-red-400 mb-2">Failed to Load 3D Model</p>
+      <p className="text-sm text-white/70 mb-4">{displayError}</p>
+      {solution && (
+        <p className="text-xs text-white/50 mb-4">{solution}</p>
+      )}
+      
+      {isGltfError && (
+        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded p-3 mb-4 w-full">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle className="w-4 h-4 text-yellow-400" />
+            <p className="text-yellow-400 font-medium text-sm">GLTF Dependency Issue</p>
           </div>
-        )}
-        
-        <button
-          onClick={resetErrorBoundary}
-          className="px-3 py-1.5 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded text-sm transition-colors"
-        >
-          Try Again
-        </button>
-        
-        <div className="text-xs text-white/50 space-y-1 mt-4">
-          <p><strong>Common solutions:</strong></p>
-          <p>• Convert to GLB format (self-contained)</p>
-          <p>• Upload all GLTF dependencies (.bin, textures)</p>
-          <p>• Verify file permissions in Supabase</p>
-          <p>• Check model file integrity</p>
+          <p className="text-xs text-white/70 mb-2">
+            This appears to be a GLTF model with missing dependencies.
+          </p>
+          <div className="text-left text-xs text-white/60 space-y-1">
+            <p><strong>Solutions:</strong></p>
+            <p>• Convert to GLB format (self-contained)</p>
+            <p>• Upload ALL .bin and texture files together</p>
+            <p>• Use <a href="https://products.aspose.app/3d/conversion/gltf-to-glb" target="_blank" rel="noopener noreferrer" className="text-yellow-400 underline">GLTF to GLB converter</a></p>
+          </div>
         </div>
+      )}
+      
+      <button
+        onClick={resetErrorBoundary}
+        className="px-3 py-1.5 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded text-sm transition-colors"
+      >
+        Try Again
+      </button>
+      
+      <div className="text-xs text-white/50 space-y-1 mt-4 w-full">
+        <p><strong>Common solutions:</strong></p>
+        <p>• Convert to GLB format (self-contained)</p>
+        <p>• Upload all GLTF dependencies (.bin, textures)</p>
+        <p>• Verify file permissions in Supabase</p>
+        <p>• Check model file integrity</p>
       </div>
-    </Html>
+    </div>
   );
 }
 
@@ -211,6 +209,7 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
   const [modelLoaded, setModelLoaded] = useState(false);
   const [reloadTrigger, setReloadTrigger] = useState(0);
   const [showModelIssues, setShowModelIssues] = useState(false);
+  const [modelError, setModelError] = useState<Error | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
   // Get the URL for the avatar (model or avaturn)
@@ -232,12 +231,14 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
   // Handle model loading complete
   const handleModelLoadingComplete = useCallback(() => {
     setModelLoaded(true);
+    setModelError(null);
   }, []);
 
   // Function to force reload the model
   const handleReloadModel = useCallback(() => {
     setModelLoaded(false);
     setShowModelIssues(false);
+    setModelError(null);
     setReloadTrigger(prev => prev + 1);
     // Clear the GLTF cache for this URL
     if (modelUrl) {
@@ -249,6 +250,7 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
   useEffect(() => {
     setModelLoaded(false);
     setShowModelIssues(false);
+    setModelError(null);
   }, [selectedAvatar]);
 
   // Handle view in external site
@@ -287,11 +289,19 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
   const handleErrorBoundaryReset = useCallback(() => {
     setModelLoaded(false);
     setShowModelIssues(false);
+    setModelError(null);
     setReloadTrigger(prev => prev + 1);
     if (modelUrl) {
       useGLTF.clear(modelUrl);
     }
   }, [modelUrl]);
+
+  // Handle errors from the error boundary
+  const handleModelError = useCallback((error: Error) => {
+    console.error('3D Model error:', error);
+    setModelError(error);
+    setModelLoaded(false);
+  }, []);
 
   return (
     <div className="space-y-6 pt-4">
@@ -311,6 +321,7 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                   setSelectedAvatar(avatar.id);
                   setModelLoaded(false);
                   setShowModelIssues(false);
+                  setModelError(null);
                 }}
               >
                 {avatar.sourcePhoto ? (
@@ -391,13 +402,24 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
               {isExternalEmbed ? (
                 // Render external embed (like p3d.in iframe)
                 <ExternalModelEmbed embedCode={selectedAvatarData.embedCode} />
+              ) : modelError ? (
+                // Show error fallback outside Canvas to avoid R3F hook issues
+                <ModelErrorFallback 
+                  error={modelError} 
+                  resetErrorBoundary={handleErrorBoundaryReset}
+                />
               ) : (
                 <div className="w-full h-full relative">
                   {/* Canvas container with key for remounting */}
                   <div className="w-full h-full" key={`model-canvas-${selectedAvatar}-${reloadTrigger}`}>
                     <ErrorBoundary
-                      FallbackComponent={ModelErrorFallback}
-                      onReset={handleErrorBoundaryReset}
+                      FallbackComponent={({ error }) => (
+                        <ModelErrorFallback 
+                          error={error} 
+                          resetErrorBoundary={handleErrorBoundaryReset}
+                        />
+                      )}
+                      onError={handleModelError}
                       resetKeys={[selectedAvatar, reloadTrigger]}
                     >
                       <Canvas
@@ -416,6 +438,7 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                           state.gl.domElement.addEventListener('webglcontextlost', (event) => {
                             event.preventDefault();
                             console.error('WebGL context lost');
+                            setModelError(new Error('WebGL context lost - please refresh'));
                           });
                         }}
                       >
@@ -487,12 +510,12 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                     )}
                   </h3>
                   <p className="text-white/60 text-sm">
-                    {hasValidModel ? (modelLoaded ? 'Interactive 3D Model' : 'Loading model...') : 'No model available'}
+                    {hasValidModel ? (modelLoaded && !modelError ? 'Interactive 3D Model' : 'Loading model...') : 'No model available'}
                   </p>
                 </div>
                 
                 <div className="flex gap-2">
-                  {modelUrl && !modelLoaded && (
+                  {modelUrl && (!modelLoaded || modelError) && (
                     <button
                       onClick={handleReloadModel}
                       className="p-2 rounded-full bg-orange-500/20 hover:bg-orange-500/30 transition-colors"
@@ -502,7 +525,7 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                     </button>
                   )}
                   
-                  {!modelLoaded && (
+                  {(!modelLoaded || modelError) && (
                     <button
                       onClick={() => setShowModelIssues(!showModelIssues)}
                       className="p-2 rounded-full bg-blue-500/20 hover:bg-blue-500/30 transition-colors"

@@ -619,24 +619,23 @@ export function Profile3DSpacePage() {
             )}
           </Suspense>
           
-          {/* Only use OrbitControls when not viewing the gallery carousel */}
-          {!showGalleryCarousel && (
-            <OrbitControls 
-              enablePan={true}
-              enableZoom={true}
-              enableRotate={true}
-              autoRotate={customizationSettings.autoRotate} 
-              autoRotateSpeed={customizationSettings.rotationSpeed * 50}
-              rotateSpeed={0.5}
-              zoomSpeed={0.8}
-              panSpeed={0.8}
-              target={[0, 0, 0]}
-              minDistance={5}
-              maxDistance={40}
-              maxPolarAngle={Math.PI * 0.85}
-              minPolarAngle={0.1}
-            />
-          )}
+          {/* Always render OrbitControls but disable when gallery carousel is active */}
+          <OrbitControls 
+            enabled={!showGalleryCarousel}
+            enablePan={!showGalleryCarousel}
+            enableZoom={!showGalleryCarousel}
+            enableRotate={!showGalleryCarousel}
+            autoRotate={customizationSettings.autoRotate && !showGalleryCarousel} 
+            autoRotateSpeed={customizationSettings.rotationSpeed * 50}
+            rotateSpeed={0.5}
+            zoomSpeed={0.8}
+            panSpeed={0.8}
+            target={[0, 0, 0]}
+            minDistance={5}
+            maxDistance={40}
+            maxPolarAngle={Math.PI * 0.85}
+            minPolarAngle={0.1}
+          />
           
           <Environment preset={SPACE_THEMES[customizationSettings.colorTheme as keyof typeof SPACE_THEMES]?.environmentPreset as any || 'night'} />
           <ambientLight intensity={SPACE_THEMES[customizationSettings.colorTheme as keyof typeof SPACE_THEMES]?.ambientLightIntensity || 0.3} />
