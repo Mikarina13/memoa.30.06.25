@@ -155,85 +155,41 @@ export function Gallery3DCarousel({ galleryItems, onClose, onItemSelect }: Galle
           );
         })}
       </group>
-
-      {/* Fixed navigation UI */}
-      <Html position={[0, -6, 0]} center>
-        <div style={{
-          width: '700px',
-          padding: '15px 25px',
-          background: 'rgba(0, 0, 0, 0.7)',
-          backdropFilter: 'blur(10px)',
-          borderRadius: '10px',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '15px',
-          fontFamily: 'sans-serif'
-        }}>
-          <button
-            onClick={() => navigateCarousel(1)}
-            style={{
-              background: 'rgba(255, 255, 255, 0.2)',
-              border: 'none',
-              color: 'white',
-              borderRadius: '5px',
-              width: '50px',
-              height: '40px',
-              fontSize: '22px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
-            ←
-          </button>
-          
-          <div style={{ flex: 1 }}>
-            <input 
-              type="range"
-              min="0"
-              max="100"
-              value={(currentIndex / (galleryItems.length - 1 || 1)) * 100}
-              onChange={handleSliderChange}
-              style={{
-                width: '100%',
-                height: '5px',
-                background: 'rgba(255, 255, 255, 0.2)',
-                borderRadius: '5px',
-                outline: 'none',
-                WebkitAppearance: 'none',
-              }}
-            />
-            <div style={{ 
-              textAlign: 'center', 
-              color: 'rgba(255, 255, 255, 0.8)', 
-              fontSize: '14px',
-              marginTop: '8px'
-            }}>
-              Use Arrow Keys or A/D to Navigate • {currentIndex + 1} of {galleryItems.length}
+      
+      {/* Footer navigation controls - this gets injected into the DOM */}
+      <Html fullscreen>
+        <div className="fixed bottom-0 left-0 right-0 w-full py-4 bg-black/70 backdrop-blur-sm border-t border-white/10 z-50">
+          <div className="container mx-auto px-6 max-w-3xl">
+            <div className="flex items-center justify-between gap-4">
+              <button
+                onClick={() => navigateCarousel(1)}
+                className="w-10 h-10 flex items-center justify-center bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors text-xl"
+              >
+                ←
+              </button>
+              
+              <div className="flex-1 flex flex-col">
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={(currentIndex / (galleryItems.length - 1 || 1)) * 100}
+                  onChange={handleSliderChange}
+                  className="w-full h-2 bg-white/20 rounded appearance-none cursor-pointer accent-blue-500"
+                />
+                <div className="text-center text-white/80 text-sm mt-2">
+                  Use Arrow Keys or A/D to Navigate • {currentIndex + 1} of {galleryItems.length}
+                </div>
+              </div>
+              
+              <button
+                onClick={() => navigateCarousel(-1)}
+                className="w-10 h-10 flex items-center justify-center bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors text-xl"
+              >
+                →
+              </button>
             </div>
           </div>
-          
-          <button
-            onClick={() => navigateCarousel(-1)}
-            style={{
-              background: 'rgba(255, 255, 255, 0.2)',
-              border: 'none',
-              color: 'white',
-              borderRadius: '5px',
-              width: '50px',
-              height: '40px',
-              fontSize: '22px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
-            →
-          </button>
         </div>
       </Html>
     </>
@@ -300,30 +256,15 @@ function CarouselItem({
         <planeGeometry args={[6, 4]} />
         <meshBasicMaterial 
           {...materialProps} 
-          transparent={true}
+          transparent
           opacity={1}
         />
         
         {/* Video indicator for video items */}
         {item.media_type === 'video' && (
           <Html center position={[0, 0, 0.1]}>
-            <div style={{
-              width: '60px',
-              height: '60px',
-              background: 'rgba(0,0,0,0.5)',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <div style={{
-                width: '0',
-                height: '0',
-                borderTop: '15px solid transparent',
-                borderBottom: '15px solid transparent',
-                borderLeft: '25px solid white',
-                marginLeft: '5px'
-              }}></div>
+            <div className="w-16 h-16 bg-black/50 rounded-full flex items-center justify-center">
+              <div className="w-0 h-0 border-t-[15px] border-t-transparent border-b-[15px] border-b-transparent border-l-[25px] border-l-white ml-1"></div>
             </div>
           </Html>
         )}
