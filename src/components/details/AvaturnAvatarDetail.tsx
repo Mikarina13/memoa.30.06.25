@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Environment, useGLTF, Html, PerspectiveCamera, Stage, useProgress } from '@react-three/drei';
-import { User, Download, Share2, Cuboid, ExternalLink, RefreshCw, AlertCircle, Info, AlertTriangle } from 'lucide-react';
+import { OrbitControls, Environment, useGLTF, Html, PerspectiveCamera, Stage } from '@react-three/drei';
+import { User, Download, Share2, Cuboid, ExternalLink, RefreshCw, AlertCircle, Info, AlertTriangle, Link } from 'lucide-react';
 import { Suspense } from 'react';
 import * as THREE from 'three';
 import { ErrorBoundary } from 'react-error-boundary';
@@ -24,12 +24,11 @@ interface AvaturnAvatarDetailProps {
 
 // Loading indicator component
 function LoadingIndicator() {
-  const { progress, active } = useProgress();
   return (
     <Html center>
       <div className="flex flex-col items-center justify-center bg-black/80 p-4 rounded-lg">
         <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin mb-2"></div>
-        <p className="text-white text-sm">Loading 3D model... {Math.round(progress)}%</p>
+        <p className="text-white text-sm">Loading 3D model...</p>
       </div>
     </Html>
   );
@@ -47,24 +46,25 @@ function ExternalModelEmbed({ embedCode }: { embedCode: string }) {
 
 // Error boundary fallback component with enhanced GLTF guidance
 function ModelErrorFallback({ error, resetErrorBoundary }: { error: Error, resetErrorBoundary: () => void }) {
+  // Analyze the error to provide specific guidance
   let displayError = error.message || 'Unknown error occurred';
   let solution = '';
   let isGltfError = false;
   
-  if (error.message.includes('Failed to load buffer') || error.message.includes('.bin')) {
+  if (displayError.includes('Failed to load buffer') || displayError.includes('.bin')) {
     displayError = 'Missing binary data files (.bin)';
     solution = 'GLTF models require all referenced .bin files to be uploaded to the same storage location.';
     isGltfError = true;
-  } else if (error.message.includes('Couldn\'t load texture')) {
+  } else if (displayError.includes('Couldn\'t load texture')) {
     displayError = 'Missing texture files';
-    solution = 'Upload all texture files (.jpg, .png) referenced by the model.';
+    solution = 'Upload all texture files (.jpg, .png) referenced by the model to the same storage location.';
     isGltfError = true;
-  } else if (error.message.includes('404') || error.message.includes('not found')) {
+  } else if (displayError.includes('404') || displayError.includes('not found')) {
     displayError = 'Model file not found';
     solution = 'The 3D model file may have been deleted or the URL is incorrect.';
-  } else if (error.message.includes('CORS') || error.message.includes('Cross-Origin')) {
+  } else if (displayError.includes('CORS') || displayError.includes('Cross-Origin')) {
     displayError = 'Access denied';
-    solution = 'The model file cannot be loaded due to CORS restrictions.';
+    solution = 'The model file cannot be loaded due to CORS restrictions. Make sure the storage bucket allows public access.';
   }
   
   return (
@@ -119,44 +119,71 @@ function Model({ url, onLoadingComplete }: {
   url: string, 
   onLoadingComplete?: () => void
 }) {
-  const modelRef = useRef<any>(null);
+  const [error, setError] = useState<string | null>(null);
+  const mountedRef = useRef(true);
   
-  // Load GLTF with proper error handling through ErrorBoundary
-  const gltfResult = useGLTF(url, true);
-  const scene = gltfResult?.scene;
+  // Validate URL before attempting to load
+  const isValidUrl = url && (url.startsWith('http') || url.startsWith('blob:')) && url.includes('.');
   
-  // Notify parent when model loads successfully
   useEffect(() => {
-    if (scene && onLoadingComplete) {
+    // Cleanup function to set mounted ref to false when unmounting
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+  
+  useEffect(() => {
+    // Reset error state when URL changes
+    setError(null);
+    
+    // If URL is invalid, set error immediately
+    if (!isValidUrl) {
+      setError('Invalid model URL provided');
+    } else if (onLoadingComplete && mountedRef.current) {
+      // Small delay to allow model to actually render before marking as complete
       const timer = setTimeout(() => {
         onLoadingComplete();
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [scene, onLoadingComplete]);
+  }, [url, isValidUrl, onLoadingComplete]);
   
-  // If no scene, return null and let ErrorBoundary handle it
-  if (!scene) {
-    throw new Error('3D model scene could not be loaded');
+  try {
+    // Only call useGLTF if we have a valid URL
+    if (!isValidUrl) {
+      throw new Error('Invalid model URL provided');
+    }
+    
+    const { scene } = useGLTF(url);
+    
+    if (!scene) {
+      throw new Error('Model scene could not be loaded');
+    }
+    
+    return (
+      <Stage
+        shadows
+        environment="city"
+        intensity={0.5}
+        adjustCamera={false}
+        preset="rembrandt"
+      >
+        <primitive 
+          object={scene} 
+          scale={1.8} 
+          position={[0, -1.8, 0]} 
+          rotation={[0, 0, 0]} 
+        />
+      </Stage>
+    );
+  } catch (e) {
+    // Re-throw for ErrorBoundary to catch
+    if (e instanceof Error) {
+      throw e;
+    }
+    // Handle non-Error throws
+    throw new Error('Failed to load 3D model');
   }
-  
-  return (
-    <Stage
-      shadows
-      environment="city"
-      intensity={0.5}
-      adjustCamera={false}
-      preset="rembrandt"
-    >
-      <primitive 
-        ref={modelRef}
-        object={scene} 
-        scale={1.8} 
-        position={[0, -1.8, 0]} 
-        rotation={[0, 0, 0]} 
-      />
-    </Stage>
-  );
 }
 
 // Fallback 3D scene when no model is available
@@ -182,12 +209,11 @@ function FallbackScene() {
 export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
   const [selectedAvatar, setSelectedAvatar] = useState(data[0]?.id || null);
   const [modelLoaded, setModelLoaded] = useState(false);
-  const [modelError, setModelError] = useState<string | null>(null);
   const [reloadTrigger, setReloadTrigger] = useState(0);
   const [showModelIssues, setShowModelIssues] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
-  // Get the URL for the avatar (model or avaturn) - moved before usage
+  // Get the URL for the avatar (model or avaturn)
   const getAvatarUrl = useCallback((avatar: any) => {
     if (avatar.modelUrl && avatar.modelUrl.startsWith('http')) {
       return avatar.modelUrl;
@@ -201,18 +227,16 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
   const modelUrl = selectedAvatarData ? getAvatarUrl(selectedAvatarData) : null;
   const isExternalEmbed = selectedAvatarData?.isExternal && selectedAvatarData?.embedCode;
   const hasValidModel = modelUrl || isExternalEmbed;
-  const isGltfModel = selectedAvatarData?.fileFormat === 'gltf' || (modelUrl && modelUrl.includes('.gltf'));
+  const isGltfModel = selectedAvatarData?.fileFormat === 'gltf' || (modelUrl && modelUrl.toLowerCase().endsWith('.gltf'));
 
   // Handle model loading complete
   const handleModelLoadingComplete = useCallback(() => {
     setModelLoaded(true);
-    setModelError(null);
   }, []);
 
   // Function to force reload the model
   const handleReloadModel = useCallback(() => {
     setModelLoaded(false);
-    setModelError(null);
     setShowModelIssues(false);
     setReloadTrigger(prev => prev + 1);
     // Clear the GLTF cache for this URL
@@ -221,9 +245,8 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
     }
   }, [modelUrl]);
 
-  // Reset error state when switching avatars
+  // Reset state when switching avatars
   useEffect(() => {
-    setModelError(null);
     setModelLoaded(false);
     setShowModelIssues(false);
   }, [selectedAvatar]);
@@ -262,7 +285,6 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
 
   // Error boundary reset function
   const handleErrorBoundaryReset = useCallback(() => {
-    setModelError(null);
     setModelLoaded(false);
     setShowModelIssues(false);
     setReloadTrigger(prev => prev + 1);
@@ -288,7 +310,6 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                 onClick={() => {
                   setSelectedAvatar(avatar.id);
                   setModelLoaded(false);
-                  setModelError(null);
                   setShowModelIssues(false);
                 }}
               >
@@ -374,61 +395,60 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                 <div className="w-full h-full relative">
                   {/* Canvas container with key for remounting */}
                   <div className="w-full h-full" key={`model-canvas-${selectedAvatar}-${reloadTrigger}`}>
-                    <Canvas
-                      ref={canvasRef}
-                      shadows
-                      dpr={[1, 2]}
-                      gl={{ 
-                        antialias: true, 
-                        alpha: true, 
-                        preserveDrawingBuffer: true,
-                        powerPreference: 'high-performance'
-                      }}
-                      camera={{ position: [0, 0, 5], fov: 50 }}
-                      onCreated={(state) => {
-                        // Handle canvas creation errors
-                        state.gl.domElement.addEventListener('webglcontextlost', (event) => {
-                          event.preventDefault();
-                          console.error('WebGL context lost');
-                          setModelError('Graphics context lost. Please reload the page.');
-                        });
-                      }}
+                    <ErrorBoundary
+                      FallbackComponent={ModelErrorFallback}
+                      onReset={handleErrorBoundaryReset}
+                      resetKeys={[selectedAvatar, reloadTrigger]}
                     >
-                      <PerspectiveCamera makeDefault position={[0, 0, 5]} fov={50} />
-                      <color attach="background" args={['#000000']} />
-                      
-                      {modelUrl ? (
-                        <ErrorBoundary
-                          FallbackComponent={ModelErrorFallback}
-                          onReset={handleErrorBoundaryReset}
-                          resetKeys={[modelUrl, reloadTrigger]}
-                        >
+                      <Canvas
+                        ref={canvasRef}
+                        shadows
+                        dpr={[1, 1.5]} // Lower DPR for better performance
+                        gl={{ 
+                          antialias: true, 
+                          alpha: true, 
+                          preserveDrawingBuffer: true,
+                          powerPreference: 'default' // Less demanding on GPU
+                        }}
+                        camera={{ position: [0, 0, 5], fov: 50 }}
+                        onCreated={(state) => {
+                          // Handle canvas creation errors
+                          state.gl.domElement.addEventListener('webglcontextlost', (event) => {
+                            event.preventDefault();
+                            console.error('WebGL context lost');
+                          });
+                        }}
+                      >
+                        <PerspectiveCamera makeDefault position={[0, 0, 5]} fov={50} />
+                        <color attach="background" args={['#000000']} />
+                        
+                        {modelUrl ? (
                           <Suspense fallback={<LoadingIndicator />}>
                             <Model 
                               url={modelUrl} 
                               onLoadingComplete={handleModelLoadingComplete}
                             />
                           </Suspense>
-                        </ErrorBoundary>
-                      ) : (
-                        <FallbackScene />
-                      )}
-                      
-                      <OrbitControls 
-                        enablePan={true}
-                        enableZoom={true}
-                        enableRotate={true} 
-                        autoRotate={!modelLoaded && !modelError} 
-                        autoRotateSpeed={1}
-                        minDistance={2}
-                        maxDistance={10}
-                        target={[0, 0, 0]}
-                      />
-                      <Environment preset="city" />
-                      <ambientLight intensity={0.5} />
-                      <directionalLight position={[10, 10, 5]} intensity={1} castShadow />
-                      <directionalLight position={[-10, -10, -5]} intensity={0.5} />
-                    </Canvas>
+                        ) : (
+                          <FallbackScene />
+                        )}
+                        
+                        <OrbitControls 
+                          enablePan={true}
+                          enableZoom={true}
+                          enableRotate={true} 
+                          autoRotate={!modelLoaded} 
+                          autoRotateSpeed={1}
+                          minDistance={2}
+                          maxDistance={10}
+                          target={[0, 0, 0]}
+                        />
+                        <Environment preset="city" />
+                        <ambientLight intensity={0.5} />
+                        <directionalLight position={[10, 10, 5]} intensity={1} />
+                        <directionalLight position={[-10, -10, -5]} intensity={0.5} />
+                      </Canvas>
+                    </ErrorBoundary>
                     
                     {/* Reload button overlay */}
                     {modelUrl && (
@@ -467,17 +487,12 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                     )}
                   </h3>
                   <p className="text-white/60 text-sm">
-                    {modelError ? 'Model failed to load' : hasValidModel ? 'Interactive 3D Model' : 'No model available'}
+                    {hasValidModel ? (modelLoaded ? 'Interactive 3D Model' : 'Loading model...') : 'No model available'}
                   </p>
-                  {modelError && (
-                    <p className="text-red-400 text-xs mt-1">
-                      Click the info button below for troubleshooting
-                    </p>
-                  )}
                 </div>
                 
                 <div className="flex gap-2">
-                  {modelUrl && !modelLoaded && !modelError && (
+                  {modelUrl && !modelLoaded && (
                     <button
                       onClick={handleReloadModel}
                       className="p-2 rounded-full bg-orange-500/20 hover:bg-orange-500/30 transition-colors"
@@ -487,17 +502,17 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                     </button>
                   )}
                   
-                  {(modelError || !hasValidModel) && (
+                  {!modelLoaded && (
                     <button
                       onClick={() => setShowModelIssues(!showModelIssues)}
-                      className="p-2 rounded-full bg-red-500/20 hover:bg-red-500/30 transition-colors"
+                      className="p-2 rounded-full bg-blue-500/20 hover:bg-blue-500/30 transition-colors"
                       title="Show troubleshooting info"
                     >
-                      <Info className="w-5 h-5 text-red-400" />
+                      <Info className="w-5 h-5 text-blue-400" />
                     </button>
                   )}
                   
-                  {hasValidModel && !modelError && (
+                  {hasValidModel && (
                     <button 
                       onClick={() => {
                         if (navigator.share && selectedAvatarData) {
@@ -514,7 +529,7 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                     </button>
                   )}
                   
-                  {hasValidModel && !modelError && (
+                  {hasValidModel && (
                     <button 
                       onClick={() => openExternalModel(selectedAvatarData)}
                       className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
@@ -529,19 +544,22 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
           </div>
           
           {/* Error Details Panel */}
-          {showModelIssues && (modelError || !hasValidModel) && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
-              <h4 className="text-red-400 font-medium mb-2 flex items-center gap-2">
-                <AlertCircle className="w-5 h-5" />
-                3D Model Issues & Solutions
+          {showModelIssues && (
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+              <h4 className="text-blue-400 font-medium mb-2 flex items-center gap-2">
+                <Info className="w-5 h-5" />
+                3D Model Troubleshooting Guide
               </h4>
               <div className="text-white/70 text-sm space-y-3">
-                {modelError && (
-                  <div className="p-3 bg-red-500/10 rounded border border-red-500/20">
-                    <p className="text-red-300 font-medium mb-1">Current Error:</p>
-                    <p className="text-red-200 text-xs">{modelError}</p>
+                {isGltfModel ? (
+                  <div className="p-3 bg-yellow-500/10 rounded border border-yellow-500/20">
+                    <p className="text-yellow-400 font-medium mb-1">⚠️ GLTF Format Detected</p>
+                    <p className="text-white/70 text-xs">
+                      GLTF files require all associated texture and binary files to be present in the same location. 
+                      The upload process only uploads the .gltf file itself, not its dependencies.
+                    </p>
                   </div>
-                )}
+                ) : null}
                 
                 <div>
                   <p className="font-medium text-white/80 mb-2">Common Issues & Solutions:</p>
@@ -564,17 +582,28 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                 </div>
                 
                 <div className="mt-4 p-3 bg-green-500/10 border border-green-500/20 rounded">
-                  <p className="font-medium text-green-400 text-xs mb-1">Recommended Solution:</p>
-                  <p className="text-xs">Convert your model to GLB format using Blender or online converters. GLB files are self-contained and include all textures and geometry in a single file, preventing dependency issues.</p>
-                  <a 
-                    href="https://products.aspose.app/3d/conversion/gltf-to-glb" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 mt-2 text-xs text-green-400 hover:text-green-300 underline"
-                  >
-                    <ExternalLink className="w-3 h-3" />
-                    GLTF to GLB Converter
-                  </a>
+                  <p className="font-medium text-green-400 text-xs mb-1">✅ Recommended Solution:</p>
+                  <p className="text-xs mb-2">Convert your model to GLB format using Blender or an online converter. GLB files are self-contained and include all textures and geometry in a single file, preventing dependency issues.</p>
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    <a 
+                      href="https://products.aspose.app/3d/conversion/gltf-to-glb" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-green-400 hover:text-green-300 bg-green-500/10 px-2 py-1 rounded"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      Aspose GLTF to GLB
+                    </a>
+                    <a 
+                      href="https://anyconv.com/gltf-to-glb-converter/" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-green-400 hover:text-green-300 bg-green-500/10 px-2 py-1 rounded"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      AnyConv Converter
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>
@@ -595,33 +624,43 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
           
           {/* Enhanced File Format Guidance */}
           <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mt-4">
-            <h4 className="text-blue-400 font-medium mb-2">3D Model Format Guidelines:</h4>
+            <h4 className="text-blue-400 font-medium mb-2 flex items-center gap-2">
+              <Info className="w-5 h-5" />
+              3D Model Format Guidelines
+            </h4>
             <div className="text-white/70 text-sm space-y-2">
-              <div>
-                <p className="font-medium text-green-400">✅ Recommended: GLB Format</p>
-                <ul className="text-xs space-y-1 mt-1 ml-4">
-                  <li>• Self-contained: includes textures and geometry in one file</li>
-                  <li>• No missing file issues</li>
-                  <li>• Smaller file size and faster loading</li>
-                  <li>• Best compatibility with web viewers</li>
-                  <li>• Works reliably across all devices</li>
-                </ul>
-              </div>
-              <div>
-                <p className="font-medium text-yellow-400">⚠️ GLTF Format Issues</p>
-                <ul className="text-xs space-y-1 mt-1 ml-4">
-                  <li>• Requires ALL referenced files (.bin, .jpg, .png, etc.)</li>
-                  <li>• Must upload all files to the SAME storage directory</li>
-                  <li>• Keep original file names and structure</li>
-                  <li>• Prone to loading errors if dependencies are missing</li>
-                  <li>• Not recommended for web-based 3D viewers</li>
-                </ul>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-green-500/10 border border-green-500/20 rounded p-3">
+                  <p className="font-medium text-green-400">✅ Recommended: GLB Format</p>
+                  <ul className="text-xs space-y-1 mt-1">
+                    <li>• Self-contained file (includes all assets)</li>
+                    <li>• No missing file issues</li>
+                    <li>• Faster loading and smaller size</li>
+                    <li>• Best for web 3D viewers</li>
+                    <li>• Works reliably across all devices</li>
+                  </ul>
+                </div>
+                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded p-3">
+                  <p className="font-medium text-yellow-400">⚠️ GLTF Format Issues</p>
+                  <ul className="text-xs space-y-1 mt-1">
+                    <li>• Requires ALL asset files separately</li>
+                    <li>• Must upload all files to the EXACT same location</li>
+                    <li>• Original file names must be preserved</li>
+                    <li>• Prone to loading errors</li>
+                    <li>• Not recommended for web 3D viewers</li>
+                  </ul>
+                </div>
               </div>
               <div className="bg-orange-500/10 border border-orange-500/20 rounded p-2 mt-3">
-                <p className="text-orange-400 text-xs font-medium mb-1">💡 Quick Fix for GLTF Issues:</p>
-                <p className="text-xs">
-                  Use <a href="https://products.aspose.app/3d/conversion/gltf-to-glb" target="_blank" rel="noopener noreferrer" className="text-orange-400 underline hover:text-orange-300">this free converter</a> to convert GLTF to GLB format, which will bundle all dependencies into a single file.
-                </p>
+                <div className="flex items-center gap-2 mb-1">
+                  <Link className="w-4 h-4 text-orange-400" />
+                  <p className="text-orange-400 text-xs font-medium">Online 3D Model Converters:</p>
+                </div>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <a href="https://products.aspose.app/3d/conversion/gltf-to-glb" target="_blank" rel="noopener noreferrer" className="text-orange-400 underline hover:text-orange-300">Aspose Converter</a>
+                  <a href="https://anyconv.com/gltf-to-glb-converter/" target="_blank" rel="noopener noreferrer" className="text-orange-400 underline hover:text-orange-300">AnyConv</a>
+                  <a href="https://www.vectary.com/3d-modeling-tool/file-converter/" target="_blank" rel="noopener noreferrer" className="text-orange-400 underline hover:text-orange-300">Vectary</a>
+                </div>
               </div>
             </div>
           </div>
