@@ -401,16 +401,18 @@ export function MemoirDashboard() {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="font-semibold text-lg">AI Portrait Generation</h3>
-                      <a
-                        href="https://openai.com/dall-e-3"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-xs bg-amber-500/20 text-amber-400 px-2 py-1 rounded-full hover:bg-amber-500/30 transition-colors"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <ExternalLink className="w-3 h-3" />
-                        DALL-E
-                      </a>
+                      <div className="flex gap-1">
+                        <a
+                          href="https://www.midjourney.com"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-xs bg-amber-500/20 text-amber-400 px-2 py-1 rounded-full hover:bg-amber-500/30 transition-colors"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          Midjourney
+                        </a>
+                      </div>
                       {userProfile?.memoir_data?.portraits?.generated?.length > 0 && (
                         <div className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">
                           ✓ Portraits Created
@@ -432,6 +434,39 @@ export function MemoirDashboard() {
                       <Image className="w-5 h-5" />
                       Generate AI Portraits
                     </button>
+                    
+                    <div className="grid grid-cols-3 gap-2 mt-3">
+                      <a
+                        href="https://www.midjourney.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-1 px-3 py-2 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-lg transition-colors text-sm"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        Midjourney
+                      </a>
+                      <a
+                        href="https://openai.com/sora"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-1 px-3 py-2 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-lg transition-colors text-sm"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        Sora
+                      </a>
+                      <a
+                        href="https://remini.ai/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-1 px-3 py-2 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-lg transition-colors text-sm"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        Remini
+                      </a>
+                    </div>
                   </div>
                 )}
               </div>
