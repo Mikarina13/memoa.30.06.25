@@ -111,7 +111,6 @@ function Model({ url, onLoadingComplete, onError }: {
   const [error, setError] = useState<string | null>(null);
   const [textureErrors, setTextureErrors] = useState<string[]>([]);
   const [modelLoaded, setModelLoaded] = useState(false);
-  const [loadingProgress, setLoadingProgress] = useState(0);
   
   // Track texture loading errors
   useEffect(() => {
@@ -140,63 +139,51 @@ function Model({ url, onLoadingComplete, onError }: {
     };
   }, []);
   
-  // Enhanced GLTF loading with comprehensive error handling
-  let scene: THREE.Group | null = null;
-  let loadError: Error | null = null;
-  
-  try {
-    const gltfResult = useGLTF(url, true, undefined, (loadError) => {
-      console.error('GLTF Load Error:', loadError);
-      
-      const errorMessage = loadError.message || 'Failed to load 3D model';
-      
-      // Enhanced error categorization
-      if (errorMessage.includes('Failed to load buffer') || errorMessage.includes('.bin')) {
-        setError('Missing binary data files (.bin). GLTF models require all referenced .bin files to be uploaded to the same storage location.');
-      } else if (errorMessage.includes('NetworkError') || errorMessage.includes('404') || errorMessage.includes('not found')) {
-        setError('Model file not found. The 3D model file may have been deleted or the URL is incorrect.');
-      } else if (errorMessage.includes('CORS') || errorMessage.includes('Cross-Origin')) {
-        setError('Access denied. The model file cannot be loaded due to CORS restrictions.');
-      } else if (errorMessage.includes('Invalid') || errorMessage.includes('malformed')) {
-        setError('Invalid model file. The GLTF/GLB file appears to be corrupted or malformed.');
-      } else {
-        setError(`Failed to load 3D model: ${errorMessage}`);
-      }
-      
-      onError?.(errorMessage);
-    });
+  // GLTF loading with error handling via callback - NO try-catch around useGLTF
+  const gltfResult = useGLTF(url, true, undefined, (loadError) => {
+    console.error('GLTF Load Error:', loadError);
     
-    scene = gltfResult.scene;
-  } catch (loadingError: any) {
-    loadError = loadingError;
-    console.error('Model loading exception:', loadingError);
+    const errorMessage = loadError.message || 'Failed to load 3D model';
     
-    const errorMessage = loadingError.message || 'Exception during model loading';
-    setError(`Model loading failed: ${errorMessage}`);
+    // Enhanced error categorization
+    if (errorMessage.includes('Failed to load buffer') || errorMessage.includes('.bin')) {
+      setError('Missing binary data files (.bin). GLTF models require all referenced .bin files to be uploaded to the same storage location.');
+    } else if (errorMessage.includes('NetworkError') || errorMessage.includes('404') || errorMessage.includes('not found')) {
+      setError('Model file not found. The 3D model file may have been deleted or the URL is incorrect.');
+    } else if (errorMessage.includes('CORS') || errorMessage.includes('Cross-Origin')) {
+      setError('Access denied. The model file cannot be loaded due to CORS restrictions.');
+    } else if (errorMessage.includes('Invalid') || errorMessage.includes('malformed')) {
+      setError('Invalid model file. The GLTF/GLB file appears to be corrupted or malformed.');
+    } else {
+      setError(`Failed to load 3D model: ${errorMessage}`);
+    }
+    
     onError?.(errorMessage);
-  }
+  });
+  
+  const scene = gltfResult?.scene;
   
   useEffect(() => {
-    if (scene && !error && !loadError) {
+    if (scene && !error) {
       setModelLoaded(true);
       
       // Brief delay to allow textures to load
       const timer = setTimeout(() => {
         onLoadingComplete?.();
-      }, 1000); // Increased delay to allow texture loading
+      }, 1000);
       
       return () => clearTimeout(timer);
     }
-  }, [scene, error, loadError, onLoadingComplete]);
+  }, [scene, error, onLoadingComplete]);
   
   // Show error state
-  if (error || loadError) {
+  if (error) {
     return (
       <Html center>
         <div className="bg-black/90 p-6 rounded-lg text-white text-center max-w-md">
           <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
           <p className="font-medium text-red-400 mb-2">Failed to Load 3D Model</p>
-          <p className="text-sm text-white/70 mb-4">{error || loadError?.message}</p>
+          <p className="text-sm text-white/70 mb-4">{error}</p>
           <div className="text-xs text-white/50 space-y-1">
             <p><strong>Common solutions:</strong></p>
             <p>• Convert to GLB format (self-contained)</p>
@@ -221,7 +208,7 @@ function Model({ url, onLoadingComplete, onError }: {
   }
   
   return (
-    <ModelErrorBoundary onError={onError}>
+    <>
       <Stage
         shadows
         environment="city"
@@ -250,7 +237,7 @@ function Model({ url, onLoadingComplete, onError }: {
           </div>
         </Html>
       )}
-    </ModelErrorBoundary>
+    </>
   );
 }
 
@@ -452,11 +439,13 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                       
                       {modelUrl ? (
                         <Suspense fallback={<LoadingIndicator />}>
-                          <Model 
-                            url={modelUrl} 
-                            onLoadingComplete={handleModelLoadingComplete}
-                            onError={handleModelError}
-                          />
+                          <ModelErrorBoundary onError={handleModelError}>
+                            <Model 
+                              url={modelUrl} 
+                              onLoadingComplete={handleModelLoadingComplete}
+                              onError={handleModelError}
+                            />
+                          </ModelErrorBoundary>
                         </Suspense>
                       ) : (
                         <FallbackScene />
