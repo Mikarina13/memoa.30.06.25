@@ -1,5 +1,5 @@
 import { useEffect, useState, FormEvent, Suspense } from 'react';
-import { Canvas, useThree } from '@react-three/fiber';
+import { Canvas, useThree, ThreeEvent } from '@react-three/fiber';
 import { OrbitControls, Environment, Html } from '@react-three/drei';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Loader, LogOut, Compass, Heart, Globe2, Users, Star, AlertCircle, RefreshCw, User, Space } from 'lucide-react';
@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { AuthForm } from '../components/AuthForm';
 import { Header } from '../components/Header';
+import { Footer } from '../components/Footer';
 import { useAuth } from '../hooks/useAuth';
 import { useKeyboardControls } from '../hooks/useKeyboardControls';
 import { MemoirIntegrations, MemoriaProfile } from '../lib/memoir-integrations';
@@ -840,6 +841,18 @@ export function MementoPage() {
           )}
         </AnimatePresence>
         
+        <div className="fixed bottom-0 left-0 right-0 w-full py-4 bg-black/70 backdrop-blur-sm border-t border-white/10 z-40">
+          <div className="container mx-auto px-6 max-w-3xl">
+            <div className="text-center text-white/70 text-sm">
+              <div className="flex items-center justify-center space-x-4">
+                <span className="px-2 py-1 bg-white/5 rounded">Left click + drag <span className="text-blue-400">to rotate</span></span>
+                <span className="px-2 py-1 bg-white/5 rounded">Right click + drag <span className="text-purple-400">to pan</span></span>
+                <span className="px-2 py-1 bg-white/5 rounded">Scroll <span className="text-amber-400">to zoom</span></span>
+                <span className="px-2 py-1 bg-white/5 rounded">Space <span className="text-rose-400">to reset</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
       </motion.div>
     );
   }
@@ -1000,6 +1013,20 @@ export function MementoPage() {
         )}
       </AnimatePresence>
       
+      <div className="fixed bottom-0 left-0 right-0 w-full py-4 bg-black/70 backdrop-blur-sm border-t border-white/10 z-40">
+        <div className="container mx-auto px-6 max-w-3xl">
+          <div className="text-center text-white/70 text-sm">
+            <div className="flex items-center justify-center space-x-4">
+              <span className="px-2 py-1 bg-white/5 rounded">Left click + drag <span className="text-blue-400">to rotate</span></span>
+              <span className="px-2 py-1 bg-white/5 rounded">Right click + drag <span className="text-purple-400">to pan</span></span>
+              <span className="px-2 py-1 bg-white/5 rounded">Scroll <span className="text-amber-400">to zoom</span></span>
+              <span className="px-2 py-1 bg-white/5 rounded">Space <span className="text-rose-400">to reset</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <Footer />
     </motion.div>
   );
 }
