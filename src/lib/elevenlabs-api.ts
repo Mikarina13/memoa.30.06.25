@@ -272,7 +272,7 @@ export class ElevenLabsAPI {
    * Get affiliate link for ElevenLabs with hackathon code
    */
   static getAffiliateLink(referralCode: string = 'memoa', promoCode: string = 'WORLDSLARGESTHACKATHON-0bb0fa21'): string {
-    return `https://elevenlabs.io/app/subscription?ref=${referralCode}&code=${promoCode}`;
+    return `https://try.elevenlabs.io/e7shgcs7r0ae`;
   }
 }
 

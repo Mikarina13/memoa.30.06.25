@@ -36,7 +36,6 @@ export function MemoriaDashboard() {
   const [memoriaProfiles, setMemoriaProfiles] = useState<MemoriaProfile[]>([]);
   const [isCreatingProfile, setIsCreatingProfile] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [integrationStatus, setIntegrationStatus] = useState<any>(null);
   const [galleryData, setGalleryData] = useState<any>(null);
   const [personalData, setPersonalData] = useState<any>(null);
   const [familyTreeData, setFamilyTreeData] = useState<any>(null);
@@ -88,7 +87,6 @@ export function MemoriaDashboard() {
       
       // Load profile data
       const profile = await MemoirIntegrations.getMemoirProfile(user.id, profileId);
-      setIntegrationStatus(profile.integration_status);
       
       // Load personal preferences
       const personalPrefs = await MemoirIntegrations.getPersonalPreferences(user.id, profileId);
@@ -178,24 +176,6 @@ export function MemoriaDashboard() {
   const handleTributeImagesSaved = async (imageData: any) => {
     if (selectedProfile) {
       await loadProfileData(selectedProfile.id);
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed': return 'text-green-400';
-      case 'in_progress': return 'text-yellow-400';
-      case 'error': return 'text-red-400';
-      default: return 'text-gray-400';
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'completed': return 'Completed';
-      case 'in_progress': return 'In Progress';
-      case 'error': return 'Error';
-      default: return 'Not Started';
     }
   };
 
@@ -317,44 +297,6 @@ export function MemoriaDashboard() {
                 ))}
               </select>
             </div>
-            
-            {/* Integration Status Overview */}
-            {integrationStatus && (
-              <div className="bg-black/40 backdrop-blur-sm p-6 rounded-xl border border-white/10 mb-8">
-                <h2 className="text-xl font-bold mb-4 text-center text-pink-400">Integration Status</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-white/5 rounded-lg p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Volume2 className="w-5 h-5 text-blue-400" />
-                      <span className="font-medium">ElevenLabs Voice</span>
-                    </div>
-                    <div className={`text-sm ${getStatusColor(integrationStatus.elevenlabs?.status || 'not_started')}`}>
-                      {getStatusText(integrationStatus.elevenlabs?.status || 'not_started')}
-                    </div>
-                    {selectedProfile?.elevenlabs_voice_id && (
-                      <div className="text-xs text-white/60 mt-1">
-                        Voice ID: {selectedProfile.elevenlabs_voice_id.slice(0, 8)}...
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="bg-white/5 rounded-lg p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Brain className="w-5 h-5 text-emerald-400" />
-                      <span className="font-medium">Gemini AI</span>
-                    </div>
-                    <div className={`text-sm ${getStatusColor(integrationStatus.gemini?.status || 'not_started')}`}>
-                      {getStatusText(integrationStatus.gemini?.status || 'not_started')}
-                    </div>
-                    {integrationStatus.gemini?.narratives_processed && (
-                      <div className="text-xs text-white/60 mt-1">
-                        Narratives: Processed
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Main Dashboard Content */}
             <div className="space-y-8 mb-12">
@@ -373,7 +315,7 @@ export function MemoriaDashboard() {
                         <div className="flex items-center gap-3 mb-2">
                           <h3 className="font-semibold text-lg">Voice Recreation</h3>
                           <a
-                            href="https://elevenlabs.io/app/subscription?ref=memoa&code=WORLDSLARGESTHACKATHON-0bb0fa21"
+                            href="https://try.elevenlabs.io/e7shgcs7r0ae"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center gap-1 text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded-full hover:bg-blue-500/30 transition-colors"
@@ -382,7 +324,7 @@ export function MemoriaDashboard() {
                             <ExternalLink className="w-3 h-3" />
                             ElevenLabs Pro
                           </a>
-                          {integrationStatus?.elevenlabs?.voice_cloned && (
+                          {selectedProfile?.elevenlabs_voice_id && (
                             <div className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">
                               ✓ Voice Created
                             </div>
@@ -401,7 +343,7 @@ export function MemoriaDashboard() {
                           className="w-full bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
                         >
                           <Mic className="w-5 h-5" />
-                          {integrationStatus?.elevenlabs?.voice_cloned ? 'Manage Voice' : 'Create Voice Clone'}
+                          {selectedProfile?.elevenlabs_voice_id ? 'Manage Voice' : 'Create Voice Clone'}
                         </button>
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -416,13 +358,13 @@ export function MemoriaDashboard() {
                           </a>
                           
                           <a
-                            href="https://elevenlabs.io/app/subscription?ref=memoa&code=WORLDSLARGESTHACKATHON-0bb0fa21"
+                            href="https://try.elevenlabs.io/e7shgcs7r0ae"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center gap-2 px-4 py-2 bg-amber-500/20 text-amber-400 rounded-lg hover:bg-amber-500/30 transition-colors"
                           >
                             <ExternalLink className="w-4 h-4" />
-                            Get 3 Months Free
+                            Sign up
                           </a>
                         </div>
                       </div>
@@ -449,7 +391,7 @@ export function MemoriaDashboard() {
                             <ExternalLink className="w-3 h-3" />
                             Avaturn.me
                           </a>
-                          {integrationStatus?.avaturn?.avatar_created && (
+                          {selectedProfile?.profile_data?.avaturn_avatars?.avatars?.length > 0 && (
                             <div className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">
                               ✓ Avatar Ready
                             </div>
@@ -468,7 +410,7 @@ export function MemoriaDashboard() {
                           className="w-full bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
                         >
                           <User className="w-5 h-5" />
-                          {integrationStatus?.avaturn?.avatar_created ? 'Manage 3D Avatar' : 'Create 3D Avatar'}
+                          {selectedProfile?.profile_data?.avaturn_avatars?.avatars?.length > 0 ? 'Manage 3D Avatar' : 'Create 3D Avatar'}
                         </button>
                       </div>
                     )}

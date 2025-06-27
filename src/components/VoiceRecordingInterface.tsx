@@ -106,7 +106,7 @@ export function VoiceRecordingInterface({ memoriaProfileId, onVoiceCloned, onClo
   };
 
   const openElevenLabsAffiliate = () => {
-    const affiliateLink = ElevenLabsAPI.getAffiliateLink('memoa', 'WORLDSLARGESTHACKATHON-0bb0fa21');
+    const affiliateLink = "https://try.elevenlabs.io/e7shgcs7r0ae";
     window.open(affiliateLink, '_blank');
   };
 
@@ -177,7 +177,7 @@ export function VoiceRecordingInterface({ memoriaProfileId, onVoiceCloned, onClo
               <h4 className="text-blue-400 font-medium mb-2">Voice Creation Guide:</h4>
               <ol className="text-white/70 text-sm space-y-2 list-decimal pl-5">
                 <li>Click the button above to visit ElevenLabs</li>
-                <li>Sign up for an account with our exclusive hackathon code</li>
+                <li>Sign up for an account</li>
                 <li>Use Voice Lab to record or upload audio samples (30+ seconds recommended)</li>
                 <li>Create your voice clone and copy your Voice ID</li>
                 <li>Paste the Voice ID below to connect it to your MEMOĀ account</li>
@@ -266,9 +266,7 @@ export function VoiceRecordingInterface({ memoriaProfileId, onVoiceCloned, onClo
               <h4 className="text-purple-400 font-medium mb-2">Benefits of voice cloning with ElevenLabs:</h4>
               <ul className="text-white/70 text-sm space-y-1">
                 <li>• Professional-quality voice synthesis</li>
-                <li>• 3 months free with Hackathon code</li>
-                <li>• 100k monthly character credits</li>
-                <li>• High-definition 192 kbps audio</li>
+                <li>• High-definition audio</li>
                 <li>• Premium voice cloning technology</li>
               </ul>
             </div>

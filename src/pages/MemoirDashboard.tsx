@@ -35,7 +35,6 @@ export function MemoirDashboard() {
   const [showPortraitGeneration, setShowPortraitGeneration] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
-  const [integrationStatus, setIntegrationStatus] = useState<any>(null);
   const [galleryData, setGalleryData] = useState<any>(null);
   const [personalData, setPersonalData] = useState<any>(null);
   const [familyTreeData, setFamilyTreeData] = useState<any>(null);
@@ -70,7 +69,6 @@ export function MemoirDashboard() {
       // Load profile data
       const profile = await MemoirIntegrations.getMemoirProfile(user.id);
       setUserProfile(profile);
-      setIntegrationStatus(profile.integration_status);
       
       // Load personal preferences
       const personalPrefs = await MemoirIntegrations.getPersonalPreferences(user.id);
@@ -143,24 +141,6 @@ export function MemoirDashboard() {
   const handlePortraitsGenerated = async (portraitData: any) => {
     await loadUserProfile();
     setShowPortraitGeneration(false);
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed': return 'text-green-400';
-      case 'in_progress': return 'text-yellow-400';
-      case 'error': return 'text-red-400';
-      default: return 'text-gray-400';
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'completed': return 'Completed';
-      case 'in_progress': return 'In Progress';
-      case 'error': return 'Error';
-      default: return 'Not Started';
-    }
   };
 
   if (loading) {
@@ -248,59 +228,6 @@ export function MemoirDashboard() {
           </div>
         )}
 
-        {/* Integration Status Overview */}
-        {integrationStatus && (
-          <div className="bg-black/40 backdrop-blur-sm p-6 rounded-xl border border-white/10 mb-8">
-            <h2 className="text-xl font-bold mb-4 text-center text-blue-400">Integration Status</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-white/5 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Volume2 className="w-5 h-5 text-blue-400" />
-                  <span className="font-medium">ElevenLabs Voice</span>
-                </div>
-                <div className={`text-sm ${getStatusColor(integrationStatus.elevenlabs?.status || 'not_started')}`}>
-                  {getStatusText(integrationStatus.elevenlabs?.status || 'not_started')}
-                </div>
-                {userProfile?.elevenlabs_voice_id && (
-                  <div className="text-xs text-white/60 mt-1">
-                    Voice ID: {userProfile.elevenlabs_voice_id.slice(0, 8)}...
-                  </div>
-                )}
-              </div>
-              
-              <div className="bg-white/5 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <User className="w-5 h-5 text-purple-400" />
-                  <span className="font-medium">Tavus Avatar</span>
-                </div>
-                <div className={`text-sm ${getStatusColor(integrationStatus.tavus?.status || 'not_started')}`}>
-                  {getStatusText(integrationStatus.tavus?.status || 'not_started')}
-                </div>
-                {userProfile?.tavus_avatar_id && (
-                  <div className="text-xs text-white/60 mt-1">
-                    Avatar ID: {userProfile.tavus_avatar_id.slice(0, 8)}...
-                  </div>
-                )}
-              </div>
-              
-              <div className="bg-white/5 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Brain className="w-5 h-5 text-emerald-400" />
-                  <span className="font-medium">Gemini AI</span>
-                </div>
-                <div className={`text-sm ${getStatusColor(integrationStatus.gemini?.status || 'not_started')}`}>
-                  {getStatusText(integrationStatus.gemini?.status || 'not_started')}
-                </div>
-                {integrationStatus.gemini?.narratives_processed && (
-                  <div className="text-xs text-white/60 mt-1">
-                    Narratives: Processed
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Main Dashboard Content */}
         <div className="space-y-8 mb-12">
           <div className="bg-gradient-to-br from-blue-900/20 to-indigo-900/20 p-8 rounded-xl border border-blue-500/20">
@@ -318,7 +245,7 @@ export function MemoirDashboard() {
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="font-semibold text-lg">Voice Cloning</h3>
                       <a
-                        href="https://elevenlabs.io/app/subscription?ref=memoa&code=WORLDSLARGESTHACKATHON-0bb0fa21"
+                        href="https://try.elevenlabs.io/e7shgcs7r0ae"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center gap-1 text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded-full hover:bg-blue-500/30 transition-colors"
@@ -327,7 +254,7 @@ export function MemoirDashboard() {
                         <ExternalLink className="w-3 h-3" />
                         ElevenLabs Pro
                       </a>
-                      {integrationStatus?.elevenlabs?.voice_cloned && (
+                      {userProfile?.elevenlabs_voice_id && (
                         <div className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">
                           ✓ Voice Cloned
                         </div>
@@ -346,7 +273,7 @@ export function MemoirDashboard() {
                       className="w-full bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
                     >
                       <Mic className="w-5 h-5" />
-                      {integrationStatus?.elevenlabs?.voice_cloned ? 'Manage Voice Clone' : 'Clone Your Voice'}
+                      {userProfile?.elevenlabs_voice_id ? 'Manage Voice Clone' : 'Clone Your Voice'}
                     </button>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -361,13 +288,13 @@ export function MemoirDashboard() {
                       </a>
                       
                       <a
-                        href="https://elevenlabs.io/app/subscription?ref=memoa&code=WORLDSLARGESTHACKATHON-0bb0fa21"
+                        href="https://try.elevenlabs.io/e7shgcs7r0ae"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center gap-2 px-4 py-2 bg-amber-500/20 text-amber-400 rounded-lg hover:bg-amber-500/30 transition-colors"
                       >
                         <ExternalLink className="w-4 h-4" />
-                        Get 3 Months Free
+                        Sign up
                       </a>
                     </div>
                   </div>
@@ -394,7 +321,7 @@ export function MemoirDashboard() {
                         <ExternalLink className="w-3 h-3" />
                         Tavus Pro
                       </a>
-                      {integrationStatus?.tavus?.avatar_created && (
+                      {userProfile?.tavus_avatar_id && (
                         <div className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">
                           ✓ Avatar Created
                         </div>
@@ -413,7 +340,7 @@ export function MemoirDashboard() {
                       className="w-full bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
                     >
                       <User className="w-5 h-5" />
-                      {integrationStatus?.tavus?.avatar_created ? 'Manage Tavus Avatar' : 'Create Tavus Avatar'}
+                      {userProfile?.tavus_avatar_id ? 'Manage Tavus Avatar' : 'Create Tavus Avatar'}
                     </button>
                   </div>
                 )}
@@ -439,7 +366,7 @@ export function MemoirDashboard() {
                         <ExternalLink className="w-3 h-3" />
                         Avaturn.me
                       </a>
-                      {integrationStatus?.avaturn?.avatar_created && (
+                      {userProfile?.memoir_data?.avaturn_avatars?.avatars?.length > 0 && (
                         <div className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">
                           ✓ Avatar Created
                         </div>
@@ -458,7 +385,7 @@ export function MemoirDashboard() {
                       className="w-full bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
                     >
                       <User className="w-5 h-5" />
-                      {integrationStatus?.avaturn?.avatar_created ? 'Manage 3D Avatar' : 'Create 3D Avatar'}
+                      {userProfile?.memoir_data?.avaturn_avatars?.avatars?.length > 0 ? 'Manage 3D Avatar' : 'Create 3D Avatar'}
                     </button>
                   </div>
                 )}
@@ -484,7 +411,7 @@ export function MemoirDashboard() {
                         <ExternalLink className="w-3 h-3" />
                         DALL-E
                       </a>
-                      {integrationStatus?.portrait_generation?.portraits_generated && (
+                      {userProfile?.memoir_data?.portraits?.generated?.length > 0 && (
                         <div className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">
                           ✓ Portraits Created
                         </div>
