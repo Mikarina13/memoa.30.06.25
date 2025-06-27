@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Environment, useGLTF, Html, PerspectiveCamera, Stage, useProgress } from '@react-three/drei';
-import { User, Download, Share2, Cuboid, ExternalLink, RefreshCw, AlertCircle, Info } from 'lucide-react';
+import { User, Download, Share2, Cuboid, ExternalLink, RefreshCw, AlertCircle, Info, AlertTriangle } from 'lucide-react';
 import { Suspense } from 'react';
 import * as THREE from 'three';
 import { ErrorBoundary } from 'react-error-boundary';
@@ -18,6 +18,7 @@ interface AvaturnAvatarDetailProps {
     modelName?: string;
     createdAt: string;
     isCustomModel?: boolean;
+    fileFormat?: string;
   }>;
 }
 
@@ -44,17 +45,20 @@ function ExternalModelEmbed({ embedCode }: { embedCode: string }) {
   );
 }
 
-// Error boundary fallback component
+// Error boundary fallback component with enhanced GLTF guidance
 function ModelErrorFallback({ error, resetErrorBoundary }: { error: Error, resetErrorBoundary: () => void }) {
   let displayError = error.message || 'Unknown error occurred';
   let solution = '';
+  let isGltfError = false;
   
   if (error.message.includes('Failed to load buffer') || error.message.includes('.bin')) {
     displayError = 'Missing binary data files (.bin)';
     solution = 'GLTF models require all referenced .bin files to be uploaded to the same storage location.';
+    isGltfError = true;
   } else if (error.message.includes('Couldn\'t load texture')) {
     displayError = 'Missing texture files';
     solution = 'Upload all texture files (.jpg, .png) referenced by the model.';
+    isGltfError = true;
   } else if (error.message.includes('404') || error.message.includes('not found')) {
     displayError = 'Model file not found';
     solution = 'The 3D model file may have been deleted or the URL is incorrect.';
@@ -72,12 +76,32 @@ function ModelErrorFallback({ error, resetErrorBoundary }: { error: Error, reset
         {solution && (
           <p className="text-xs text-white/50 mb-4">{solution}</p>
         )}
+        
+        {isGltfError && (
+          <div className="bg-yellow-500/10 border border-yellow-500/20 rounded p-3 mb-4">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertTriangle className="w-4 h-4 text-yellow-400" />
+              <p className="text-yellow-400 font-medium text-sm">GLTF Dependency Issue</p>
+            </div>
+            <p className="text-xs text-white/70 mb-2">
+              This appears to be a GLTF model with missing dependencies.
+            </p>
+            <div className="text-left text-xs text-white/60 space-y-1">
+              <p><strong>Solutions:</strong></p>
+              <p>• Convert to GLB format (self-contained)</p>
+              <p>• Upload ALL .bin and texture files together</p>
+              <p>• Use <a href="https://products.aspose.app/3d/conversion/gltf-to-glb" target="_blank" rel="noopener noreferrer" className="text-yellow-400 underline">GLTF to GLB converter</a></p>
+            </div>
+          </div>
+        )}
+        
         <button
           onClick={resetErrorBoundary}
           className="px-3 py-1.5 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded text-sm transition-colors"
         >
           Try Again
         </button>
+        
         <div className="text-xs text-white/50 space-y-1 mt-4">
           <p><strong>Common solutions:</strong></p>
           <p>• Convert to GLB format (self-contained)</p>
@@ -177,6 +201,7 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
   const modelUrl = selectedAvatarData ? getAvatarUrl(selectedAvatarData) : null;
   const isExternalEmbed = selectedAvatarData?.isExternal && selectedAvatarData?.embedCode;
   const hasValidModel = modelUrl || isExternalEmbed;
+  const isGltfModel = selectedAvatarData?.fileFormat === 'gltf' || (modelUrl && modelUrl.includes('.gltf'));
 
   // Handle model loading complete
   const handleModelLoadingComplete = useCallback(() => {
@@ -274,11 +299,23 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                     className="w-full h-24 object-cover rounded-lg mb-2"
                   />
                 ) : (
-                  <div className="w-full h-24 bg-gradient-to-br from-orange-500/20 to-red-500/20 rounded-lg flex items-center justify-center mb-2">
+                  <div className="w-full h-24 bg-gradient-to-br from-orange-500/20 to-red-500/20 rounded-lg flex items-center justify-center mb-2 relative">
                     {avatar.isCustomModel ? (
                       <Cuboid className="w-8 h-8 text-orange-400" />
                     ) : (
                       <User className="w-8 h-8 text-orange-400" />
+                    )}
+                    
+                    {/* File format indicator */}
+                    {avatar.fileFormat === 'gltf' && (
+                      <div className="absolute -top-1 -right-1 bg-yellow-500 text-black text-xs px-1 py-0.5 rounded-full font-medium">
+                        GLTF
+                      </div>
+                    )}
+                    {avatar.fileFormat === 'glb' && (
+                      <div className="absolute -top-1 -right-1 bg-green-500 text-black text-xs px-1 py-0.5 rounded-full font-medium">
+                        GLB
+                      </div>
                     )}
                   </div>
                 )}
@@ -291,7 +328,7 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                 </p>
                 
                 {/* Status indicator */}
-                <div className="mt-1">
+                <div className="mt-1 flex items-center justify-between">
                   {getAvatarUrl(avatar) || (avatar.isExternal && avatar.embedCode) ? (
                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-green-500/20 text-green-400">
                       Ready
@@ -301,10 +338,31 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                       No Model
                     </span>
                   )}
+                  
+                  {avatar.fileFormat === 'gltf' && (
+                    <AlertTriangle className="w-3 h-3 text-yellow-400" title="GLTF format - may have dependency issues" />
+                  )}
                 </div>
               </div>
             ))}
           </div>
+          
+          {/* GLTF Warning for current selection */}
+          {isGltfModel && (
+            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 mb-4">
+              <h4 className="text-yellow-400 font-medium mb-2 flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5" />
+                GLTF Model Detected
+              </h4>
+              <p className="text-white/70 text-sm mb-2">
+                This model uses GLTF format, which requires all texture and binary files to be uploaded together. 
+                If the model fails to load, it may be missing dependencies.
+              </p>
+              <p className="text-yellow-300 text-xs">
+                💡 For best results, convert to GLB format using <a href="https://products.aspose.app/3d/conversion/gltf-to-glb" target="_blank" rel="noopener noreferrer" className="underline hover:text-yellow-200">online converters</a> or Blender.
+              </p>
+            </div>
+          )}
           
           {/* 3D Viewer */}
           <div className="bg-white/5 rounded-lg overflow-hidden border border-white/20">
@@ -393,10 +451,20 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
             <div className="p-4 bg-black/30">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-white font-medium">
+                  <h3 className="text-white font-medium flex items-center gap-2">
                     {selectedAvatarData?.isCustomModel 
                       ? (selectedAvatarData.modelName || '3D Model') 
                       : '3D Avatar'}
+                    {selectedAvatarData?.fileFormat === 'gltf' && (
+                      <span className="text-xs px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded-full">
+                        GLTF
+                      </span>
+                    )}
+                    {selectedAvatarData?.fileFormat === 'glb' && (
+                      <span className="text-xs px-2 py-1 bg-green-500/20 text-green-400 rounded-full">
+                        GLB
+                      </span>
+                    )}
                   </h3>
                   <p className="text-white/60 text-sm">
                     {modelError ? 'Model failed to load' : hasValidModel ? 'Interactive 3D Model' : 'No model available'}
@@ -498,6 +566,15 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                 <div className="mt-4 p-3 bg-green-500/10 border border-green-500/20 rounded">
                   <p className="font-medium text-green-400 text-xs mb-1">Recommended Solution:</p>
                   <p className="text-xs">Convert your model to GLB format using Blender or online converters. GLB files are self-contained and include all textures and geometry in a single file, preventing dependency issues.</p>
+                  <a 
+                    href="https://products.aspose.app/3d/conversion/gltf-to-glb" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 mt-2 text-xs text-green-400 hover:text-green-300 underline"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    GLTF to GLB Converter
+                  </a>
                 </div>
               </div>
             </div>
@@ -516,27 +593,35 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
             </ul>
           </div>
           
-          {/* File Format Guidance */}
+          {/* Enhanced File Format Guidance */}
           <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mt-4">
             <h4 className="text-blue-400 font-medium mb-2">3D Model Format Guidelines:</h4>
             <div className="text-white/70 text-sm space-y-2">
               <div>
-                <p className="font-medium text-green-400">✓ Recommended: GLB Format</p>
+                <p className="font-medium text-green-400">✅ Recommended: GLB Format</p>
                 <ul className="text-xs space-y-1 mt-1 ml-4">
                   <li>• Self-contained: includes textures and geometry in one file</li>
                   <li>• No missing file issues</li>
                   <li>• Smaller file size and faster loading</li>
                   <li>• Best compatibility with web viewers</li>
+                  <li>• Works reliably across all devices</li>
                 </ul>
               </div>
               <div>
-                <p className="font-medium text-yellow-400">⚠ GLTF Format Requirements:</p>
+                <p className="font-medium text-yellow-400">⚠️ GLTF Format Issues</p>
                 <ul className="text-xs space-y-1 mt-1 ml-4">
-                  <li>• Must upload ALL referenced files (.bin, .jpg, .png, etc.)</li>
+                  <li>• Requires ALL referenced files (.bin, .jpg, .png, etc.)</li>
+                  <li>• Must upload all files to the SAME storage directory</li>
                   <li>• Keep original file names and structure</li>
-                  <li>• Files must be in the same storage directory</li>
-                  <li>• More prone to loading errors</li>
+                  <li>• Prone to loading errors if dependencies are missing</li>
+                  <li>• Not recommended for web-based 3D viewers</li>
                 </ul>
+              </div>
+              <div className="bg-orange-500/10 border border-orange-500/20 rounded p-2 mt-3">
+                <p className="text-orange-400 text-xs font-medium mb-1">💡 Quick Fix for GLTF Issues:</p>
+                <p className="text-xs">
+                  Use <a href="https://products.aspose.app/3d/conversion/gltf-to-glb" target="_blank" rel="noopener noreferrer" className="text-orange-400 underline hover:text-orange-300">this free converter</a> to convert GLTF to GLB format, which will bundle all dependencies into a single file.
+                </p>
               </div>
             </div>
           </div>

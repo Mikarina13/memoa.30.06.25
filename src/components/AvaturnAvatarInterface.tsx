@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Upload, ExternalLink, CheckCircle, AlertCircle, Download, Share2, Eye, Cuboid as Cube, FileUp, Trash2 } from 'lucide-react';
+import { User, Upload, ExternalLink, CheckCircle, AlertCircle, Download, Share2, Eye, Cuboid as Cube, FileUp, Trash2, AlertTriangle, Info } from 'lucide-react';
 import { MemoirIntegrations } from '../lib/memoir-integrations';
 import { useAuth } from '../hooks/useAuth';
 
@@ -20,6 +20,7 @@ export function AvaturnAvatarInterface({ memoriaProfileId, onAvatarCreated, onCl
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [deletingModel, setDeletingModel] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'model' | 'gallery'>('model');
+  const [showGltfWarning, setShowGltfWarning] = useState<boolean>(false);
 
   const modelInputRef = useRef<HTMLInputElement>(null);
 
@@ -54,6 +55,13 @@ export function AvaturnAvatarInterface({ memoriaProfileId, onAvatarCreated, onCl
       const url = URL.createObjectURL(file);
       setModelPreview(url);
       setActiveTab('model');
+      
+      // Show warning if it's a GLTF file (not GLB)
+      if (file.name.endsWith('.gltf')) {
+        setShowGltfWarning(true);
+      } else {
+        setShowGltfWarning(false);
+      }
     } else {
       alert('Please select a valid 3D model file (.glb or .gltf)');
     }
@@ -147,6 +155,20 @@ export function AvaturnAvatarInterface({ memoriaProfileId, onAvatarCreated, onCl
       return;
     }
 
+    // Show additional warning for GLTF files
+    if (uploadedModel && uploadedModel.name.endsWith('.gltf')) {
+      const confirmed = window.confirm(
+        '⚠️ GLTF files require all associated files (.bin files and textures) to work properly.\n\n' +
+        'This may cause loading errors if dependencies are missing.\n\n' +
+        'For best results, convert to GLB format which is self-contained.\n\n' +
+        'Continue anyway?'
+      );
+      
+      if (!confirmed) {
+        return;
+      }
+    }
+
     setUploadStatus('uploading');
     setUploadError(null);
 
@@ -186,7 +208,8 @@ export function AvaturnAvatarInterface({ memoriaProfileId, onAvatarCreated, onCl
         embedCode: externalModelUrl && externalModelUrl.includes('p3d.in') ? generateP3dEmbedCode(externalModelUrl) : null,
         createdAt: new Date().toISOString(),
         status: 'ready',
-        isCustomModel: true
+        isCustomModel: true,
+        fileFormat: uploadedModel ? (uploadedModel.name.endsWith('.gltf') ? 'gltf' : 'glb') : 'external'
       };
 
       const avatarCollection = {
@@ -221,6 +244,7 @@ export function AvaturnAvatarInterface({ memoriaProfileId, onAvatarCreated, onCl
       setAvatarData(avatarCollection);
       setUploadStatus('success');
       setActiveTab('gallery');
+      setShowGltfWarning(false);
       onAvatarCreated?.(avatarCollection);
 
     } catch (error) {
@@ -295,6 +319,60 @@ export function AvaturnAvatarInterface({ memoriaProfileId, onAvatarCreated, onCl
         <div className="space-y-6">
           {activeTab === 'model' && (
             <div className="space-y-6">
+              {/* Important Notice About File Formats */}
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+                <h4 className="text-blue-400 font-medium mb-2 flex items-center gap-2">
+                  <Info className="w-5 h-5" />
+                  Important: Choose the Right File Format
+                </h4>
+                <div className="text-white/70 text-sm space-y-3">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="bg-green-500/10 border border-green-500/20 rounded p-3">
+                      <p className="font-medium text-green-400 mb-1">✅ Recommended: GLB Format</p>
+                      <ul className="text-xs space-y-1">
+                        <li>• Self-contained (all textures included)</li>
+                        <li>• No missing file issues</li>
+                        <li>• Faster loading and smaller size</li>
+                        <li>• Best for web display</li>
+                      </ul>
+                    </div>
+                    <div className="bg-yellow-500/10 border border-yellow-500/20 rounded p-3">
+                      <p className="font-medium text-yellow-400 mb-1">⚠️ GLTF Format Requirements</p>
+                      <ul className="text-xs space-y-1">
+                        <li>• Requires ALL associated files (.bin, textures)</li>
+                        <li>• Files must be uploaded together</li>
+                        <li>• Often causes loading errors</li>
+                        <li>• Convert to GLB if possible</li>
+                      </ul>
+                    </div>
+                  </div>
+                  <p className="text-xs text-orange-400">
+                    💡 Use <a href="https://products.aspose.app/3d/conversion/gltf-to-glb" target="_blank" rel="noopener noreferrer" className="underline hover:text-orange-300">online converters</a> or Blender to convert GLTF to GLB format.
+                  </p>
+                </div>
+              </div>
+
+              {/* GLTF Warning */}
+              {showGltfWarning && (
+                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
+                  <h4 className="text-yellow-400 font-medium mb-2 flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5" />
+                    GLTF File Detected - Dependencies Required
+                  </h4>
+                  <div className="text-white/70 text-sm space-y-2">
+                    <p>This GLTF file may require additional files that are not included:</p>
+                    <ul className="list-disc list-inside text-xs space-y-1 ml-4">
+                      <li>Binary data files (.bin)</li>
+                      <li>Texture images (.jpg, .png, .webp)</li>
+                      <li>Material definition files</li>
+                    </ul>
+                    <p className="text-yellow-300 font-medium">
+                      ⚠️ Upload may fail if these files are missing. Consider converting to GLB format instead.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* 3D Model Upload Interface */}
               <div className="bg-white/5 rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-white mb-4">Upload Your 3D Model</h3>
@@ -344,8 +422,18 @@ export function AvaturnAvatarInterface({ memoriaProfileId, onAvatarCreated, onCl
                   >
                     {uploadedModel ? (
                       <div className="space-y-4">
-                        <div className="mx-auto h-40 w-40 flex items-center justify-center bg-gradient-to-br from-orange-500/20 to-red-500/20 rounded-lg border border-orange-500/30">
+                        <div className="mx-auto h-40 w-40 flex items-center justify-center bg-gradient-to-br from-orange-500/20 to-red-500/20 rounded-lg border border-orange-500/30 relative">
                           <Cube className="w-16 h-16 text-orange-400" />
+                          {uploadedModel.name.endsWith('.gltf') && (
+                            <div className="absolute -top-2 -right-2 bg-yellow-500 text-black text-xs px-1.5 py-0.5 rounded-full font-medium">
+                              GLTF
+                            </div>
+                          )}
+                          {uploadedModel.name.endsWith('.glb') && (
+                            <div className="absolute -top-2 -right-2 bg-green-500 text-black text-xs px-1.5 py-0.5 rounded-full font-medium">
+                              GLB
+                            </div>
+                          )}
                         </div>
                         <p className="text-white">{uploadedModel.name}</p>
                         <p className="text-white/60 text-sm">
@@ -369,6 +457,7 @@ export function AvaturnAvatarInterface({ memoriaProfileId, onAvatarCreated, onCl
                             {memoriaProfileId ? "Upload a 3D model of your loved one" : "Upload your 3D model file"}
                           </p>
                           <p className="text-white/60 text-sm">Click here or drag and drop a GLB/GLTF file</p>
+                          <p className="text-orange-400 text-xs mt-2">Recommended: GLB format for best compatibility</p>
                         </div>
                       </div>
                     )}
@@ -456,14 +545,10 @@ export function AvaturnAvatarInterface({ memoriaProfileId, onAvatarCreated, onCl
                 <div className="mt-6 p-4 bg-orange-500/10 border border-orange-500/20 rounded-lg">
                   <h4 className="text-orange-400 font-medium mb-2">3D Model Guidelines:</h4>
                   <ul className="text-white/70 text-sm space-y-1">
-                    {memoriaProfileId ? (
-                      <li>• Upload models in GLB or GLTF format</li>
-                    ) : (
-                      <li>• Upload models in GLB or GLTF format</li>
-                    )}
+                    <li>• <strong>GLB files:</strong> Self-contained, recommended format</li>
+                    <li>• <strong>GLTF files:</strong> May require additional texture/binary files</li>
                     <li>• Optimized models under 50MB work best</li>
                     <li>• Models should be in T-pose for best results</li>
-                    <li>• Check that textures are properly embedded</li> 
                     <li>• For p3d.in models, use format: https://p3d.in/e/abc123</li>
                     <li className="text-orange-400">• External models will open in a new tab when clicked</li> 
                   </ul>
@@ -480,8 +565,18 @@ export function AvaturnAvatarInterface({ memoriaProfileId, onAvatarCreated, onCl
                     <div key={avatar.id} className="bg-white/5 rounded-lg p-6">
                       <div className="flex items-center justify-between mb-4">
                         <div>
-                          <h3 className="text-lg font-semibold text-white"> 
+                          <h3 className="text-lg font-semibold text-white flex items-center gap-2"> 
                             {avatar.isCustomModel ? (memoriaProfileId ? 'Memorial 3D Model' : '3D Model') : (memoriaProfileId ? 'Memorial Avatar' : '3D Avatar')}
+                            {avatar.fileFormat === 'gltf' && (
+                              <span className="text-xs px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded-full">
+                                GLTF
+                              </span>
+                            )}
+                            {avatar.fileFormat === 'glb' && (
+                              <span className="text-xs px-2 py-1 bg-green-500/20 text-green-400 rounded-full">
+                                GLB
+                              </span>
+                            )}
                           </h3>
                           <p className="text-white/60 text-sm flex items-center gap-2">
                             Created on {new Date(avatar.createdAt).toLocaleDateString()}
@@ -535,7 +630,7 @@ export function AvaturnAvatarInterface({ memoriaProfileId, onAvatarCreated, onCl
                                   </p>
                                 )}
                                 <p className="text-white/70 text-sm">
-                                  <span className="text-white/50">Type:</span> {avatar.isExternal ? 'External 3D Model' : 'Custom 3D Model'}
+                                  <span className="text-white/50">Type:</span> {avatar.isExternal ? 'External 3D Model' : `Custom 3D Model (${avatar.fileFormat?.toUpperCase() || 'Unknown'})`}
                                 </p>
                                 {avatar.externalSource && (
                                   <p className="text-white/70 text-sm">
