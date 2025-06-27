@@ -3,6 +3,7 @@ import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Environment, useGLTF, Html, PerspectiveCamera, Stage, useProgress } from '@react-three/drei';
 import { User, Download, Share2, Cuboid, ExternalLink, RefreshCw, AlertCircle, Info } from 'lucide-react';
 import { Suspense } from 'react';
+import * as THREE from 'three';
 
 interface AvaturnAvatarDetailProps {
   data: Array<{
@@ -42,29 +43,58 @@ function ExternalModelEmbed({ embedCode }: { embedCode: string }) {
   );
 }
 
-// Error boundary for Model component
-function ErrorBoundary({ children }: { children: React.ReactNode }) {
+// Enhanced error boundary for Model component
+function ModelErrorBoundary({ children, onError }: { children: React.ReactNode, onError?: (error: string) => void }) {
   const [hasError, setHasError] = useState(false);
-  
+  const [errorMessage, setErrorMessage] = useState<string>('');
+
   useEffect(() => {
     const handler = (event: ErrorEvent) => {
-      console.error('Error caught by error boundary:', event.error);
+      console.error('ModelErrorBoundary caught error:', event.error);
       setHasError(true);
+      
+      // Analyze the error message for better user feedback
+      const message = event.error?.message || event.message || 'Unknown error';
+      
+      if (message.includes('Failed to load buffer') || message.includes('.bin')) {
+        setErrorMessage('Missing binary data files (.bin). The GLTF model is incomplete.');
+      } else if (message.includes('Couldn\'t load texture')) {
+        setErrorMessage('Missing texture files. Some textures could not be loaded.');
+      } else if (message.includes('404') || message.includes('not found')) {
+        setErrorMessage('Model files not found in storage.');
+      } else if (message.includes('CORS') || message.includes('Cross-Origin')) {
+        setErrorMessage('Access denied to model files.');
+      } else {
+        setErrorMessage('Failed to load 3D model.');
+      }
+      
+      onError?.(message);
     };
 
+    // Listen for both error events and unhandled promise rejections
     window.addEventListener('error', handler);
-    return () => window.removeEventListener('error', handler);
-  }, []);
+    window.addEventListener('unhandledrejection', (event) => {
+      handler({ error: event.reason, message: event.reason?.message || 'Promise rejection' } as ErrorEvent);
+    });
+
+    return () => {
+      window.removeEventListener('error', handler);
+      window.removeEventListener('unhandledrejection', handler as any);
+    };
+  }, [onError]);
 
   if (hasError) {
     return (
       <Html center>
-        <div className="bg-black/80 p-6 rounded-lg text-white text-center max-w-sm">
+        <div className="bg-black/90 p-6 rounded-lg text-white text-center max-w-md">
           <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
-          <p className="font-medium text-red-400 mb-2">Error Loading 3D Model</p>
-          <p className="text-sm text-white/70 mb-4">
-            The 3D model could not be loaded properly. Try refreshing the viewer.
-          </p>
+          <p className="font-medium text-red-400 mb-2">3D Model Loading Failed</p>
+          <p className="text-sm text-white/70 mb-4">{errorMessage}</p>
+          <div className="text-xs text-white/50 space-y-1">
+            <p>• <strong>For GLTF:</strong> Upload all .bin and texture files</p>
+            <p>• <strong>For GLB:</strong> Use self-contained GLB format</p>
+            <p>• <strong>Solution:</strong> Re-export as GLB or upload complete GLTF package</p>
+          </div>
         </div>
       </Html>
     );
@@ -81,70 +111,117 @@ function Model({ url, onLoadingComplete, onError }: {
   const [error, setError] = useState<string | null>(null);
   const [textureErrors, setTextureErrors] = useState<string[]>([]);
   const [modelLoaded, setModelLoaded] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
   
-  // Add texture error handler
+  // Track texture loading errors
   useEffect(() => {
-    const handleTextureError = (event: any) => {
-      if (event.error && event.error.message && event.error.message.includes('Couldn\'t load texture')) {
-        const textureName = event.error.message.split('Couldn\'t load texture')[1]?.trim();
-        if (textureName) {
+    const originalConsoleError = console.error;
+    const textureErrorList: string[] = [];
+    
+    console.error = (...args) => {
+      const message = args.join(' ');
+      
+      // Capture texture loading errors
+      if (message.includes('Couldn\'t load texture') || message.includes('Failed to load texture')) {
+        const textureMatch = message.match(/Couldn't load texture\s*(.+?)$/);
+        const textureName = textureMatch?.[1]?.trim() || 'unknown texture';
+        if (!textureErrorList.includes(textureName)) {
+          textureErrorList.push(textureName);
           setTextureErrors(prev => [...prev, textureName]);
         }
       }
+      
+      // Call original console.error
+      originalConsoleError.apply(console, args);
     };
-
-    window.addEventListener('error', handleTextureError);
-    return () => window.removeEventListener('error', handleTextureError);
+    
+    return () => {
+      console.error = originalConsoleError;
+    };
   }, []);
   
-  // Load the GLTF model with error handling
-  const { scene } = useGLTF(url, true, undefined, (loadError) => {
-    console.error('Error loading model:', loadError);
-    const errorMessage = loadError.message || 'Failed to load 3D model';
+  // Enhanced GLTF loading with comprehensive error handling
+  let scene: THREE.Group | null = null;
+  let loadError: Error | null = null;
+  
+  try {
+    const gltfResult = useGLTF(url, true, undefined, (loadError) => {
+      console.error('GLTF Load Error:', loadError);
+      
+      const errorMessage = loadError.message || 'Failed to load 3D model';
+      
+      // Enhanced error categorization
+      if (errorMessage.includes('Failed to load buffer') || errorMessage.includes('.bin')) {
+        setError('Missing binary data files (.bin). GLTF models require all referenced .bin files to be uploaded to the same storage location.');
+      } else if (errorMessage.includes('NetworkError') || errorMessage.includes('404') || errorMessage.includes('not found')) {
+        setError('Model file not found. The 3D model file may have been deleted or the URL is incorrect.');
+      } else if (errorMessage.includes('CORS') || errorMessage.includes('Cross-Origin')) {
+        setError('Access denied. The model file cannot be loaded due to CORS restrictions.');
+      } else if (errorMessage.includes('Invalid') || errorMessage.includes('malformed')) {
+        setError('Invalid model file. The GLTF/GLB file appears to be corrupted or malformed.');
+      } else {
+        setError(`Failed to load 3D model: ${errorMessage}`);
+      }
+      
+      onError?.(errorMessage);
+    });
     
-    if (errorMessage.includes('Failed to load buffer')) {
-      setError('Missing model data files. The 3D model is incomplete - some binary data files (.bin) are missing from storage.');
-    } else if (errorMessage.includes('NetworkError') || errorMessage.includes('404')) {
-      setError('Model file not found. The 3D model file may have been deleted or moved.');
-    } else {
-      setError('Failed to load 3D model. The model file may be corrupted or incompatible.');
-    }
+    scene = gltfResult.scene;
+  } catch (loadingError: any) {
+    loadError = loadingError;
+    console.error('Model loading exception:', loadingError);
     
+    const errorMessage = loadingError.message || 'Exception during model loading';
+    setError(`Model loading failed: ${errorMessage}`);
     onError?.(errorMessage);
-  });
+  }
   
   useEffect(() => {
-    if (scene && !error) {
+    if (scene && !error && !loadError) {
       setModelLoaded(true);
       
-      // Give textures a moment to load
+      // Brief delay to allow textures to load
       const timer = setTimeout(() => {
         onLoadingComplete?.();
-      }, 500);
+      }, 1000); // Increased delay to allow texture loading
       
       return () => clearTimeout(timer);
     }
-  }, [scene, error, onLoadingComplete]);
+  }, [scene, error, loadError, onLoadingComplete]);
   
-  if (error) {
+  // Show error state
+  if (error || loadError) {
     return (
       <Html center>
         <div className="bg-black/90 p-6 rounded-lg text-white text-center max-w-md">
           <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
           <p className="font-medium text-red-400 mb-2">Failed to Load 3D Model</p>
-          <p className="text-sm text-white/70 mb-4">{error}</p>
+          <p className="text-sm text-white/70 mb-4">{error || loadError?.message}</p>
           <div className="text-xs text-white/50 space-y-1">
-            <p>• Ensure all model files (.glb/.gltf) and textures are uploaded</p>
-            <p>• Check that files haven't been deleted from storage</p>
-            <p>• Try re-uploading the complete model package</p>
+            <p><strong>Common solutions:</strong></p>
+            <p>• Convert to GLB format (self-contained)</p>
+            <p>• Upload all GLTF dependencies (.bin, textures)</p>
+            <p>• Verify file permissions in Supabase</p>
+            <p>• Check model file integrity</p>
           </div>
+          {textureErrors.length > 0 && (
+            <div className="mt-4 p-2 bg-yellow-500/10 rounded text-xs">
+              <p className="text-yellow-400 font-medium">Missing textures:</p>
+              <p className="text-yellow-300">{textureErrors.join(', ')}</p>
+            </div>
+          )}
         </div>
       </Html>
     );
   }
   
+  // Show loading or model
+  if (!scene) {
+    return <LoadingIndicator />;
+  }
+  
   return (
-    <ErrorBoundary>
+    <ModelErrorBoundary onError={onError}>
       <Stage
         shadows
         environment="city"
@@ -166,13 +243,14 @@ function Model({ url, onLoadingComplete, onError }: {
           <div className="bg-yellow-500/20 border border-yellow-500/40 rounded-lg p-3 text-yellow-300 text-xs max-w-xs">
             <div className="flex items-center gap-2 mb-1">
               <Info className="w-4 h-4" />
-              <span className="font-medium">Missing Textures</span>
+              <span className="font-medium">Missing Textures ({textureErrors.length})</span>
             </div>
-            <p>Some texture files are missing. The model will appear with default materials.</p>
+            <p className="mb-2">Some texture files are missing. The model will appear with default materials.</p>
+            <p className="text-xs opacity-75">Missing: {textureErrors.slice(0, 3).join(', ')}{textureErrors.length > 3 ? '...' : ''}</p>
           </div>
         </Html>
       )}
-    </ErrorBoundary>
+    </ModelErrorBoundary>
   );
 }
 
@@ -187,9 +265,9 @@ function FallbackScene() {
           Upload a 3D model (.glb or .gltf) or provide a valid model URL to view it here.
         </p>
         <div className="text-left text-sm text-white/50 space-y-1">
-          <p>• Supported formats: GLB, GLTF</p>
-          <p>• External URLs must be publicly accessible</p>
-          <p>• Models should be optimized for web viewing</p>
+          <p>• <strong>Recommended:</strong> GLB format (self-contained)</p>
+          <p>• <strong>GLTF:</strong> Upload all .bin and texture files</p>
+          <p>• <strong>External:</strong> Must be publicly accessible</p>
         </div>
       </div>
     </Html>
@@ -229,14 +307,23 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
   const handleModelError = useCallback((error: string) => {
     setModelError(error);
     setModelLoaded(false);
+    setShowModelIssues(true); // Auto-show issues panel when error occurs
   }, []);
 
   // Function to force reload the model
   const handleReloadModel = useCallback(() => {
     setModelLoaded(false);
     setModelError(null);
+    setShowModelIssues(false);
     setReloadTrigger(prev => prev + 1);
   }, []);
+
+  // Reset error state when switching avatars
+  useEffect(() => {
+    setModelError(null);
+    setModelLoaded(false);
+    setShowModelIssues(false);
+  }, [selectedAvatar]);
 
   // Handle view in external site
   const openExternalModel = useCallback((avatar: any) => {
@@ -288,6 +375,7 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                   setSelectedAvatar(avatar.id);
                   setModelLoaded(false);
                   setModelError(null);
+                  setShowModelIssues(false);
                 }}
               >
                 {avatar.sourcePhoto ? (
@@ -343,8 +431,21 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                       ref={canvasRef}
                       shadows
                       dpr={[1, 2]}
-                      gl={{ antialias: true, alpha: true, preserveDrawingBuffer: true }}
+                      gl={{ 
+                        antialias: true, 
+                        alpha: true, 
+                        preserveDrawingBuffer: true,
+                        powerPreference: 'high-performance' // Better performance for 3D rendering
+                      }}
                       camera={{ position: [0, 0, 5], fov: 50 }}
+                      onCreated={(state) => {
+                        // Handle canvas creation errors
+                        state.gl.domElement.addEventListener('webglcontextlost', (event) => {
+                          event.preventDefault();
+                          console.error('WebGL context lost');
+                          setModelError('Graphics context lost. Please reload the page.');
+                        });
+                      }}
                     >
                       <PerspectiveCamera makeDefault position={[0, 0, 5]} fov={50} />
                       <color attach="background" args={['#000000']} />
@@ -369,6 +470,7 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                         autoRotateSpeed={1}
                         minDistance={2}
                         maxDistance={10}
+                        target={[0, 0, 0]}
                       />
                       <Environment preset="city" />
                       <ambientLight intensity={0.5} />
@@ -407,7 +509,7 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                   </p>
                   {modelError && (
                     <p className="text-red-400 text-xs mt-1">
-                      Missing files - try re-uploading the complete model
+                      Click the info button below for troubleshooting
                     </p>
                   )}
                 </div>
@@ -423,11 +525,11 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                     </button>
                   )}
                   
-                  {modelError && (
+                  {(modelError || !hasValidModel) && (
                     <button
                       onClick={() => setShowModelIssues(!showModelIssues)}
                       className="p-2 rounded-full bg-red-500/20 hover:bg-red-500/30 transition-colors"
-                      title="Show error details"
+                      title="Show troubleshooting info"
                     >
                       <Info className="w-5 h-5 text-red-400" />
                     </button>
@@ -465,27 +567,43 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
           </div>
           
           {/* Error Details Panel */}
-          {showModelIssues && modelError && (
+          {showModelIssues && (modelError || !hasValidModel) && (
             <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
               <h4 className="text-red-400 font-medium mb-2 flex items-center gap-2">
                 <AlertCircle className="w-5 h-5" />
-                Model Loading Issues
+                3D Model Issues & Solutions
               </h4>
-              <div className="text-white/70 text-sm space-y-2">
-                <p className="text-red-300">{modelError}</p>
-                <div className="mt-3">
-                  <p className="font-medium text-white/80 mb-1">Common causes and solutions:</p>
-                  <ul className="space-y-1 text-xs">
-                    <li>• <strong>Missing texture files:</strong> Upload all .jpg, .png files with the model</li>
-                    <li>• <strong>Missing buffer files:</strong> Ensure .bin files are included with .gltf models</li>
-                    <li>• <strong>File path issues:</strong> Use .glb format for self-contained models</li>
-                    <li>• <strong>Storage issues:</strong> Check Supabase storage bucket permissions</li>
-                    <li>• <strong>File corruption:</strong> Re-export the model from your 3D software</li>
-                  </ul>
+              <div className="text-white/70 text-sm space-y-3">
+                {modelError && (
+                  <div className="p-3 bg-red-500/10 rounded border border-red-500/20">
+                    <p className="text-red-300 font-medium mb-1">Current Error:</p>
+                    <p className="text-red-200 text-xs">{modelError}</p>
+                  </div>
+                )}
+                
+                <div>
+                  <p className="font-medium text-white/80 mb-2">Common Issues & Solutions:</p>
+                  <div className="grid gap-3">
+                    <div className="bg-black/30 rounded p-3">
+                      <p className="font-medium text-orange-400 text-xs">Missing Binary Files (.bin)</p>
+                      <p className="text-xs mt-1">GLTF models reference external .bin files. Upload the complete GLTF package or convert to GLB format.</p>
+                    </div>
+                    
+                    <div className="bg-black/30 rounded p-3">
+                      <p className="font-medium text-yellow-400 text-xs">Missing Textures (.jpg, .png)</p>
+                      <p className="text-xs mt-1">Upload all texture files referenced by the model to the same storage location.</p>
+                    </div>
+                    
+                    <div className="bg-black/30 rounded p-3">
+                      <p className="font-medium text-blue-400 text-xs">File Not Found (404)</p>
+                      <p className="text-xs mt-1">The model file or its dependencies were deleted or moved. Re-upload the complete model package.</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="mt-3 p-2 bg-black/30 rounded">
-                  <p className="font-medium text-orange-400 text-xs">Recommendation:</p>
-                  <p className="text-xs">Re-upload using .glb format which embeds all textures and data in a single file.</p>
+                
+                <div className="mt-4 p-3 bg-green-500/10 border border-green-500/20 rounded">
+                  <p className="font-medium text-green-400 text-xs mb-1">Recommended Solution:</p>
+                  <p className="text-xs">Convert your model to GLB format using Blender or online converters. GLB files are self-contained and include all textures and geometry in a single file, preventing dependency issues.</p>
                 </div>
               </div>
             </div>
@@ -509,19 +627,21 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
             <h4 className="text-blue-400 font-medium mb-2">3D Model Format Guidelines:</h4>
             <div className="text-white/70 text-sm space-y-2">
               <div>
-                <p className="font-medium text-white/80">Recommended: GLB Format</p>
-                <ul className="text-xs space-y-1 mt-1">
+                <p className="font-medium text-green-400">✓ Recommended: GLB Format</p>
+                <ul className="text-xs space-y-1 mt-1 ml-4">
                   <li>• Self-contained: includes textures and geometry in one file</li>
                   <li>• No missing file issues</li>
                   <li>• Smaller file size and faster loading</li>
+                  <li>• Best compatibility with web viewers</li>
                 </ul>
               </div>
               <div>
-                <p className="font-medium text-white/80">GLTF Format Requirements:</p>
-                <ul className="text-xs space-y-1 mt-1">
+                <p className="font-medium text-yellow-400">⚠ GLTF Format Requirements:</p>
+                <ul className="text-xs space-y-1 mt-1 ml-4">
                   <li>• Must upload ALL referenced files (.bin, .jpg, .png, etc.)</li>
                   <li>• Keep original file names and structure</li>
-                  <li>• Files must be in the same directory</li>
+                  <li>• Files must be in the same storage directory</li>
+                  <li>• More prone to loading errors</li>
                 </ul>
               </div>
             </div>
@@ -560,15 +680,24 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                 <ExternalLink className="w-4 h-4" />
                 p3d.in Upload
               </a>
-              <div className="text-xs text-white/60 mt-2 space-y-1">
-                <p>
-                  Upload your model to p3d.in and paste the URL (e.g., https://p3d.in/Jd1Vk) 
-                  in the "External 3D Model URL" field to display it in MEMOA.
-                </p>
-                <p className="text-amber-400">
-                  Note: External 3D models will open in a new tab when you click on them.
-                </p>
-              </div>
+              <a 
+                href="https://products.aspose.app/3d/conversion/gltf-to-glb" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="flex items-center gap-2 px-3 py-1.5 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition-colors"
+              >
+                <ExternalLink className="w-4 h-4" />
+                GLTF to GLB Converter
+              </a>
+            </div>
+            <div className="text-xs text-white/60 mt-2 space-y-1">
+              <p>
+                Upload your model to p3d.in and paste the URL (e.g., https://p3d.in/Jd1Vk) 
+                in the "External 3D Model URL" field to display it in MEMOA.
+              </p>
+              <p className="text-amber-400">
+                Note: External 3D models will open in a new tab when you click on them.
+              </p>
             </div>
           </div>
         </>
