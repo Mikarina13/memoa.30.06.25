@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Upload, ExternalLink, CheckCircle, AlertCircle, Download, Share2, Eye, Cuboid as Cube, FileUp, Trash2, AlertTriangle, Info } from 'lucide-react';
+import { User, Upload, ExternalLink, CheckCircle, AlertCircle, Download, Share2, Eye, Cuboid as Cube, FileUp, Trash2, AlertTriangle, Info, Link } from 'lucide-react';
 import { MemoirIntegrations } from '../lib/memoir-integrations';
 import { useAuth } from '../hooks/useAuth';
 
@@ -472,11 +472,11 @@ export function AvaturnAvatarInterface({ memoriaProfileId, onAvatarCreated, onCl
                   />
                 </div>
 
-                {uploadedModel && (
+                {(uploadedModel || externalModelUrl) && (
                   <div className="mt-6">
                     <button
                       onClick={uploadCustomModel} 
-                      disabled={uploadStatus === 'uploading' || uploadStatus === 'processing'}
+                      disabled={uploadStatus === 'uploading' || uploadStatus === 'success'}
                       className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-gray-500 disabled:cursor-not-allowed text-white py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
                     >
                       {uploadStatus === 'uploading' ? (
@@ -497,45 +497,13 @@ export function AvaturnAvatarInterface({ memoriaProfileId, onAvatarCreated, onCl
                       ) : (
                         <>
                           <FileUp className="w-5 h-5" />
-                          Upload 3D Model
+                          {uploadedModel ? "Upload 3D Model" : "Add External Model"}
                         </>
                       )}
                     </button>
                   </div>
                 )}
                 
-                {!uploadedModel && externalModelUrl && (
-                  <div className="mt-6">
-                    <button
-                      onClick={uploadCustomModel}
-                      disabled={uploadStatus === 'uploading' || uploadStatus === 'processing'}
-                      className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-gray-500 disabled:cursor-not-allowed text-white py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
-                    >
-                      {uploadStatus === 'uploading' ? (
-                        <>
-                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          Processing URL...
-                        </>
-                      ) : uploadStatus === 'success' ? (
-                        <>
-                          <CheckCircle className="w-5 h-5" />
-                          URL Added!
-                        </>
-                      ) : uploadStatus === 'error' ? (
-                        <>
-                          <AlertCircle className="w-5 h-5" />
-                          Try Again
-                        </>
-                      ) : (
-                        <>
-                          <FileUp className="w-5 h-5" />
-                          Add External Model
-                        </>
-                      )}
-                    </button>
-                  </div>
-                )}
-
                 {uploadError && (
                   <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
                     {uploadError}
@@ -608,7 +576,7 @@ export function AvaturnAvatarInterface({ memoriaProfileId, onAvatarCreated, onCl
                           <>
                             <div>
                               <h4 className="text-white font-medium mb-2">3D Model</h4>
-                              <div className="w-full h-32 bg-gradient-to-br from-orange-500/20 to-red-500/20 rounded-lg border border-orange-500/30 flex items-center justify-center">
+                              <div className="w-full h-32 bg-gradient-to-br from-orange-500/20 to-red-500/20 rounded-lg border border-orange-500/30 flex items-center justify-center relative">
                                 <div className="text-center">
                                   <Cube className="w-8 h-8 text-orange-400 mx-auto mb-2" />
                                   <p className="text-orange-400 text-sm">{avatar.modelName}</p>
@@ -616,6 +584,16 @@ export function AvaturnAvatarInterface({ memoriaProfileId, onAvatarCreated, onCl
                                     <p className="text-xs text-orange-300 mt-1">External Model</p>
                                   )}
                                 </div>
+                                {avatar.fileFormat === 'gltf' && (
+                                  <div className="absolute -top-2 -right-2 bg-yellow-500 text-black text-xs px-1.5 py-0.5 rounded-full font-medium">
+                                    GLTF
+                                  </div>
+                                )}
+                                {avatar.fileFormat === 'glb' && (
+                                  <div className="absolute -top-2 -right-2 bg-green-500 text-black text-xs px-1.5 py-0.5 rounded-full font-medium">
+                                    GLB
+                                  </div>
+                                )}
                               </div>
                             </div>
                             <div>
