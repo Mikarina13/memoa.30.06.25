@@ -844,7 +844,7 @@ export function MementoPage() {
         <div className="fixed bottom-0 left-0 right-0 w-full py-4 z-40">
           <div className="container mx-auto px-6 max-w-3xl">
             <div className="text-center text-white/70 text-sm">
-              <div className="flex items-center justify-center space-x-4">
+              <div className="flex flex-wrap items-center justify-center gap-4">
                 <span className="px-2 py-1 bg-white/5 rounded">Left click + drag <span className="text-blue-400">to rotate</span></span>
                 <span className="px-2 py-1 bg-white/5 rounded">Right click + drag <span className="text-purple-400">to pan</span></span>
                 <span className="px-2 py-1 bg-white/5 rounded">Scroll <span className="text-amber-400">to zoom</span></span>
@@ -1016,7 +1016,7 @@ export function MementoPage() {
       <div className="fixed bottom-0 left-0 right-0 w-full py-4 z-40">
         <div className="container mx-auto px-6 max-w-3xl">
           <div className="text-center text-white/70 text-sm">
-            <div className="flex items-center justify-center space-x-4">
+            <div className="flex flex-wrap items-center justify-center gap-4">
               <span className="px-2 py-1 bg-white/5 rounded">Left click + drag <span className="text-blue-400">to rotate</span></span>
               <span className="px-2 py-1 bg-white/5 rounded">Right click + drag <span className="text-purple-400">to pan</span></span>
               <span className="px-2 py-1 bg-white/5 rounded">Scroll <span className="text-amber-400">to zoom</span></span>
