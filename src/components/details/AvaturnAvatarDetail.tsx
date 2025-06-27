@@ -43,228 +43,105 @@ function ExternalModelEmbed({ embedCode }: { embedCode: string }) {
   );
 }
 
-// Enhanced error boundary for Model component
-function ModelErrorBoundary({ children, onError }: { children: React.ReactNode, onError?: (error: string) => void }) {
-  const [hasError, setHasError] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string>('');
-
-  useEffect(() => {
-    const handler = (event: ErrorEvent) => {
-      console.error('ModelErrorBoundary caught error:', event.error);
-      setHasError(true);
-      
-      // Analyze the error message for better user feedback
-      const message = event.error?.message || event.message || 'Unknown error';
-      
-      if (message.includes('Failed to load buffer') || message.includes('.bin')) {
-        setErrorMessage('Missing binary data files (.bin). The GLTF model is incomplete.');
-      } else if (message.includes('Couldn\'t load texture')) {
-        setErrorMessage('Missing texture files. Some textures could not be loaded.');
-      } else if (message.includes('404') || message.includes('not found')) {
-        setErrorMessage('Model files not found in storage.');
-      } else if (message.includes('CORS') || message.includes('Cross-Origin')) {
-        setErrorMessage('Access denied to model files.');
-      } else {
-        setErrorMessage('Failed to load 3D model.');
-      }
-      
-      onError?.(message);
-    };
-
-    // Listen for both error events and unhandled promise rejections
-    window.addEventListener('error', handler);
-    window.addEventListener('unhandledrejection', (event) => {
-      handler({ error: event.reason, message: event.reason?.message || 'Promise rejection' } as ErrorEvent);
-      event.preventDefault(); // Prevent React error boundary from triggering
-    });
-
-    return () => {
-      window.removeEventListener('error', handler);
-      window.removeEventListener('unhandledrejection', handler as any);
-    };
-  }, [onError]);
-
-  if (hasError) {
-    return (
-      <Html center>
-        <div className="bg-black/90 p-6 rounded-lg text-white text-center max-w-md">
-          <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
-          <p className="font-medium text-red-400 mb-2">3D Model Loading Failed</p>
-          <p className="text-sm text-white/70 mb-4">{errorMessage}</p>
-          <div className="text-xs text-white/50 space-y-1">
-            <p>• <strong>For GLTF:</strong> Upload all .bin and texture files</p>
-            <p>• <strong>For GLB:</strong> Use self-contained GLB format</p>
-            <p>• <strong>Solution:</strong> Re-export as GLB or upload complete GLTF package</p>
-          </div>
-        </div>
-      </Html>
-    );
-  }
-
-  return <>{children}</>;
-}
-
+// Simplified Model component that only handles rendering
 function Model({ url, onLoadingComplete, onError }: { 
   url: string, 
   onLoadingComplete?: () => void,
   onError?: (error: string) => void 
 }) {
-  const [error, setError] = useState<string | null>(null);
-  const [textureErrors, setTextureErrors] = useState<string[]>([]);
-  const [modelLoaded, setModelLoaded] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const modelRef = useRef<any>(null);
   
-  // Track texture loading errors
-  useEffect(() => {
-    const originalConsoleError = console.error;
-    const textureErrorList: string[] = [];
-    
-    console.error = (...args) => {
-      const message = args.join(' ');
-      
-      // Capture texture loading errors but don't let them crash the component
-      if (message.includes('Couldn\'t load texture') || message.includes('Failed to load texture')) {
-        const textureMatch = message.match(/Couldn't load texture\s*(.+?)$/);
-        const textureName = textureMatch?.[1]?.trim() || 'unknown texture';
-        if (!textureErrorList.includes(textureName)) {
-          textureErrorList.push(textureName);
-          setTextureErrors(prev => [...prev, textureName]);
-        }
-        // Don't call original console.error for texture errors to reduce noise
-        return;
-      }
-      
-      // Call original console.error for other errors
-      originalConsoleError.apply(console, args);
-    };
-    
-    return () => {
-      console.error = originalConsoleError;
-    };
-  }, []);
-  
-  // Safe GLTF loading with comprehensive error handling
+  // Simplified GLTF loading with basic error handling
   let gltfResult;
   let scene;
   
   try {
-    // Wrap useGLTF in error handling
+    // Load GLTF with error callback
     gltfResult = useGLTF(url, true, undefined, (loadError) => {
       console.error('GLTF Load Error:', loadError);
-      setIsLoading(false);
-      
-      const errorMessage = loadError.message || 'Failed to load 3D model';
-      
-      // Enhanced error categorization
-      if (errorMessage.includes('Failed to load buffer') || errorMessage.includes('.bin')) {
-        setError('Missing binary data files (.bin). GLTF models require all referenced .bin files to be uploaded to the same storage location.');
-      } else if (errorMessage.includes('NetworkError') || errorMessage.includes('404') || errorMessage.includes('not found')) {
-        setError('Model file not found. The 3D model file may have been deleted or the URL is incorrect.');
-      } else if (errorMessage.includes('CORS') || errorMessage.includes('Cross-Origin')) {
-        setError('Access denied. The model file cannot be loaded due to CORS restrictions.');
-      } else if (errorMessage.includes('Invalid') || errorMessage.includes('malformed')) {
-        setError('Invalid model file. The GLTF/GLB file appears to be corrupted or malformed.');
-      } else {
-        setError(`Failed to load 3D model: ${errorMessage}`);
-      }
-      
+      const errorMessage = loadError?.message || 'Failed to load 3D model';
       onError?.(errorMessage);
     });
     
     scene = gltfResult?.scene;
   } catch (loadError: any) {
-    // Catch any synchronous errors from useGLTF
     console.error('Synchronous GLTF Load Error:', loadError);
-    setIsLoading(false);
-    
-    const errorMessage = loadError.message || 'Failed to load 3D model';
-    
-    if (errorMessage.includes('Failed to load buffer') || errorMessage.includes('.bin')) {
-      setError('Missing binary data files (.bin). GLTF models require all referenced .bin files.');
-    } else {
-      setError(`Failed to load 3D model: ${errorMessage}`);
-    }
-    
+    const errorMessage = loadError?.message || 'Failed to load 3D model';
     onError?.(errorMessage);
     scene = null;
   }
   
+  // Notify parent when model loads successfully
   useEffect(() => {
-    if (scene && !error) {
-      setModelLoaded(true);
-      setIsLoading(false);
-      
-      // Brief delay to allow textures to load
+    if (scene && onLoadingComplete) {
       const timer = setTimeout(() => {
-        onLoadingComplete?.();
-      }, 1000);
-      
+        onLoadingComplete();
+      }, 500);
       return () => clearTimeout(timer);
     }
-  }, [scene, error, onLoadingComplete]);
+  }, [scene, onLoadingComplete]);
   
-  // Show error state
-  if (error) {
-    return (
-      <Html center>
-        <div className="bg-black/90 p-6 rounded-lg text-white text-center max-w-md">
-          <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
-          <p className="font-medium text-red-400 mb-2">Failed to Load 3D Model</p>
-          <p className="text-sm text-white/70 mb-4">{error}</p>
-          <div className="text-xs text-white/50 space-y-1">
-            <p><strong>Common solutions:</strong></p>
-            <p>• Convert to GLB format (self-contained)</p>
-            <p>• Upload all GLTF dependencies (.bin, textures)</p>
-            <p>• Verify file permissions in Supabase</p>
-            <p>• Check model file integrity</p>
-          </div>
-          {textureErrors.length > 0 && (
-            <div className="mt-4 p-2 bg-yellow-500/10 rounded text-xs">
-              <p className="text-yellow-400 font-medium">Missing textures:</p>
-              <p className="text-yellow-300">{textureErrors.join(', ')}</p>
-            </div>
-          )}
-        </div>
-      </Html>
-    );
-  }
-  
-  // Show loading or model
-  if (!scene || isLoading) {
-    return <LoadingIndicator />;
+  // If no scene, return null and let parent handle error state
+  if (!scene) {
+    return null;
   }
   
   return (
-    <>
-      <Stage
-        shadows
-        environment="city"
-        intensity={0.5}
-        adjustCamera={false}
-        preset="rembrandt"
-      >
-        <primitive 
-          object={scene} 
-          scale={1.8} 
-          position={[0, -1.8, 0]} 
-          rotation={[0, 0, 0]} 
-        />
-      </Stage>
-      
-      {/* Show texture warning if there are missing textures but model loaded */}
-      {modelLoaded && textureErrors.length > 0 && (
-        <Html position={[0, 2, 0]}>
-          <div className="bg-yellow-500/20 border border-yellow-500/40 rounded-lg p-3 text-yellow-300 text-xs max-w-xs">
-            <div className="flex items-center gap-2 mb-1">
-              <Info className="w-4 h-4" />
-              <span className="font-medium">Missing Textures ({textureErrors.length})</span>
-            </div>
-            <p className="mb-2">Some texture files are missing. The model will appear with default materials.</p>
-            <p className="text-xs opacity-75">Missing: {textureErrors.slice(0, 3).join(', ')}{textureErrors.length > 3 ? '...' : ''}</p>
-          </div>
-        </Html>
-      )}
-    </>
+    <Stage
+      shadows
+      environment="city"
+      intensity={0.5}
+      adjustCamera={false}
+      preset="rembrandt"
+    >
+      <primitive 
+        ref={modelRef}
+        object={scene} 
+        scale={1.8} 
+        position={[0, -1.8, 0]} 
+        rotation={[0, 0, 0]} 
+      />
+    </Stage>
+  );
+}
+
+// Error display component
+function ModelError({ error }: { error: string }) {
+  let displayError = error;
+  let solution = '';
+  
+  if (error.includes('Failed to load buffer') || error.includes('.bin')) {
+    displayError = 'Missing binary data files (.bin)';
+    solution = 'GLTF models require all referenced .bin files to be uploaded to the same storage location.';
+  } else if (error.includes('Couldn\'t load texture')) {
+    displayError = 'Missing texture files';
+    solution = 'Upload all texture files (.jpg, .png) referenced by the model.';
+  } else if (error.includes('404') || error.includes('not found')) {
+    displayError = 'Model file not found';
+    solution = 'The 3D model file may have been deleted or the URL is incorrect.';
+  } else if (error.includes('CORS') || error.includes('Cross-Origin')) {
+    displayError = 'Access denied';
+    solution = 'The model file cannot be loaded due to CORS restrictions.';
+  }
+  
+  return (
+    <Html center>
+      <div className="bg-black/90 p-6 rounded-lg text-white text-center max-w-md">
+        <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+        <p className="font-medium text-red-400 mb-2">Failed to Load 3D Model</p>
+        <p className="text-sm text-white/70 mb-4">{displayError}</p>
+        {solution && (
+          <p className="text-xs text-white/50 mb-4">{solution}</p>
+        )}
+        <div className="text-xs text-white/50 space-y-1">
+          <p><strong>Common solutions:</strong></p>
+          <p>• Convert to GLB format (self-contained)</p>
+          <p>• Upload all GLTF dependencies (.bin, textures)</p>
+          <p>• Verify file permissions in Supabase</p>
+          <p>• Check model file integrity</p>
+        </div>
+      </div>
+    </Html>
   );
 }
 
@@ -288,59 +165,12 @@ function FallbackScene() {
   );
 }
 
-// Safe Canvas wrapper that catches rendering errors
-function SafeCanvas({ children, onError }: { children: React.ReactNode, onError?: (error: string) => void }) {
-  const [hasCanvasError, setHasCanvasError] = useState(false);
-  
-  useEffect(() => {
-    const errorHandler = (event: ErrorEvent) => {
-      if (event.error?.message?.includes('Canvas') || 
-          event.error?.message?.includes('WebGL') ||
-          event.error?.message?.includes('THREE.')) {
-        console.error('Canvas error caught:', event.error);
-        setHasCanvasError(true);
-        onError?.(event.error.message);
-        event.preventDefault();
-      }
-    };
-    
-    window.addEventListener('error', errorHandler);
-    
-    return () => {
-      window.removeEventListener('error', errorHandler);
-    };
-  }, [onError]);
-  
-  if (hasCanvasError) {
-    return (
-      <div className="w-full h-full bg-black/30 flex items-center justify-center">
-        <div className="bg-black/90 p-6 rounded-lg text-white text-center max-w-md">
-          <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
-          <p className="font-medium text-red-400 mb-2">3D Renderer Error</p>
-          <p className="text-sm text-white/70 mb-4">
-            The 3D model viewer encountered a critical error. This is usually caused by missing model dependencies.
-          </p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-colors"
-          >
-            Reload Page
-          </button>
-        </div>
-      </div>
-    );
-  }
-  
-  return <>{children}</>;
-}
-
 export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
   const [selectedAvatar, setSelectedAvatar] = useState(data[0]?.id || null);
   const [modelLoaded, setModelLoaded] = useState(false);
   const [modelError, setModelError] = useState<string | null>(null);
   const [reloadTrigger, setReloadTrigger] = useState(0);
   const [showModelIssues, setShowModelIssues] = useState(false);
-  const [canvasError, setCanvasError] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
   // Get the URL for the avatar (model or avaturn) - moved before usage
@@ -368,12 +198,6 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
   const handleModelError = useCallback((error: string) => {
     setModelError(error);
     setModelLoaded(false);
-    setShowModelIssues(true); // Auto-show issues panel when error occurs
-  }, []);
-
-  // Handle canvas error
-  const handleCanvasError = useCallback((error: string) => {
-    setCanvasError(error);
     setShowModelIssues(true);
   }, []);
 
@@ -381,7 +205,6 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
   const handleReloadModel = useCallback(() => {
     setModelLoaded(false);
     setModelError(null);
-    setCanvasError(null);
     setShowModelIssues(false);
     setReloadTrigger(prev => prev + 1);
   }, []);
@@ -389,7 +212,6 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
   // Reset error state when switching avatars
   useEffect(() => {
     setModelError(null);
-    setCanvasError(null);
     setModelLoaded(false);
     setShowModelIssues(false);
   }, [selectedAvatar]);
@@ -444,7 +266,6 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                   setSelectedAvatar(avatar.id);
                   setModelLoaded(false);
                   setModelError(null);
-                  setCanvasError(null);
                   setShowModelIssues(false);
                 }}
               >
@@ -497,60 +318,60 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                 <div className="w-full h-full relative">
                   {/* Canvas container with key for remounting */}
                   <div className="w-full h-full" key={`model-canvas-${selectedAvatar}-${reloadTrigger}`}>
-                    <SafeCanvas onError={handleCanvasError}>
-                      <Canvas
-                        ref={canvasRef}
-                        shadows
-                        dpr={[1, 2]}
-                        gl={{ 
-                          antialias: true, 
-                          alpha: true, 
-                          preserveDrawingBuffer: true,
-                          powerPreference: 'high-performance'
-                        }}
-                        camera={{ position: [0, 0, 5], fov: 50 }}
-                        onCreated={(state) => {
-                          // Handle canvas creation errors
-                          state.gl.domElement.addEventListener('webglcontextlost', (event) => {
-                            event.preventDefault();
-                            console.error('WebGL context lost');
-                            setCanvasError('Graphics context lost. Please reload the page.');
-                          });
-                        }}
-                      >
-                        <PerspectiveCamera makeDefault position={[0, 0, 5]} fov={50} />
-                        <color attach="background" args={['#000000']} />
-                        
-                        {modelUrl ? (
-                          <Suspense fallback={<LoadingIndicator />}>
-                            <ModelErrorBoundary onError={handleModelError}>
-                              <Model 
-                                url={modelUrl} 
-                                onLoadingComplete={handleModelLoadingComplete}
-                                onError={handleModelError}
-                              />
-                            </ModelErrorBoundary>
-                          </Suspense>
-                        ) : (
-                          <FallbackScene />
-                        )}
-                        
-                        <OrbitControls 
-                          enablePan={true}
-                          enableZoom={true}
-                          enableRotate={true} 
-                          autoRotate={!modelLoaded && !modelError && !canvasError} 
-                          autoRotateSpeed={1}
-                          minDistance={2}
-                          maxDistance={10}
-                          target={[0, 0, 0]}
-                        />
-                        <Environment preset="city" />
-                        <ambientLight intensity={0.5} />
-                        <directionalLight position={[10, 10, 5]} intensity={1} castShadow />
-                        <directionalLight position={[-10, -10, -5]} intensity={0.5} />
-                      </Canvas>
-                    </SafeCanvas>
+                    <Canvas
+                      ref={canvasRef}
+                      shadows
+                      dpr={[1, 2]}
+                      gl={{ 
+                        antialias: true, 
+                        alpha: true, 
+                        preserveDrawingBuffer: true,
+                        powerPreference: 'high-performance'
+                      }}
+                      camera={{ position: [0, 0, 5], fov: 50 }}
+                      onCreated={(state) => {
+                        // Handle canvas creation errors
+                        state.gl.domElement.addEventListener('webglcontextlost', (event) => {
+                          event.preventDefault();
+                          console.error('WebGL context lost');
+                          setModelError('Graphics context lost. Please reload the page.');
+                        });
+                      }}
+                    >
+                      <PerspectiveCamera makeDefault position={[0, 0, 5]} fov={50} />
+                      <color attach="background" args={['#000000']} />
+                      
+                      {modelUrl ? (
+                        <Suspense fallback={<LoadingIndicator />}>
+                          {modelError ? (
+                            <ModelError error={modelError} />
+                          ) : (
+                            <Model 
+                              url={modelUrl} 
+                              onLoadingComplete={handleModelLoadingComplete}
+                              onError={handleModelError}
+                            />
+                          )}
+                        </Suspense>
+                      ) : (
+                        <FallbackScene />
+                      )}
+                      
+                      <OrbitControls 
+                        enablePan={true}
+                        enableZoom={true}
+                        enableRotate={true} 
+                        autoRotate={!modelLoaded && !modelError} 
+                        autoRotateSpeed={1}
+                        minDistance={2}
+                        maxDistance={10}
+                        target={[0, 0, 0]}
+                      />
+                      <Environment preset="city" />
+                      <ambientLight intensity={0.5} />
+                      <directionalLight position={[10, 10, 5]} intensity={1} castShadow />
+                      <directionalLight position={[-10, -10, -5]} intensity={0.5} />
+                    </Canvas>
                     
                     {/* Reload button overlay */}
                     {modelUrl && (
@@ -579,9 +400,9 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                       : '3D Avatar'}
                   </h3>
                   <p className="text-white/60 text-sm">
-                    {(modelError || canvasError) ? 'Model failed to load' : hasValidModel ? 'Interactive 3D Model' : 'No model available'}
+                    {modelError ? 'Model failed to load' : hasValidModel ? 'Interactive 3D Model' : 'No model available'}
                   </p>
-                  {(modelError || canvasError) && (
+                  {modelError && (
                     <p className="text-red-400 text-xs mt-1">
                       Click the info button below for troubleshooting
                     </p>
@@ -589,7 +410,7 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                 </div>
                 
                 <div className="flex gap-2">
-                  {modelUrl && !modelLoaded && !modelError && !canvasError && (
+                  {modelUrl && !modelLoaded && !modelError && (
                     <button
                       onClick={handleReloadModel}
                       className="p-2 rounded-full bg-orange-500/20 hover:bg-orange-500/30 transition-colors"
@@ -599,7 +420,7 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                     </button>
                   )}
                   
-                  {(modelError || canvasError || !hasValidModel) && (
+                  {(modelError || !hasValidModel) && (
                     <button
                       onClick={() => setShowModelIssues(!showModelIssues)}
                       className="p-2 rounded-full bg-red-500/20 hover:bg-red-500/30 transition-colors"
@@ -609,7 +430,7 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                     </button>
                   )}
                   
-                  {hasValidModel && !modelError && !canvasError && (
+                  {hasValidModel && !modelError && (
                     <button 
                       onClick={() => {
                         if (navigator.share && selectedAvatarData) {
@@ -626,7 +447,7 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                     </button>
                   )}
                   
-                  {hasValidModel && !modelError && !canvasError && (
+                  {hasValidModel && !modelError && (
                     <button 
                       onClick={() => openExternalModel(selectedAvatarData)}
                       className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
@@ -641,17 +462,17 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
           </div>
           
           {/* Error Details Panel */}
-          {showModelIssues && (modelError || canvasError || !hasValidModel) && (
+          {showModelIssues && (modelError || !hasValidModel) && (
             <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
               <h4 className="text-red-400 font-medium mb-2 flex items-center gap-2">
                 <AlertCircle className="w-5 h-5" />
                 3D Model Issues & Solutions
               </h4>
               <div className="text-white/70 text-sm space-y-3">
-                {(modelError || canvasError) && (
+                {modelError && (
                   <div className="p-3 bg-red-500/10 rounded border border-red-500/20">
                     <p className="text-red-300 font-medium mb-1">Current Error:</p>
-                    <p className="text-red-200 text-xs">{modelError || canvasError}</p>
+                    <p className="text-red-200 text-xs">{modelError}</p>
                   </div>
                 )}
                 
