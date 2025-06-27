@@ -168,7 +168,7 @@ export function Gallery3DCarousel({ galleryItems, onClose, onItemSelect }: Galle
                 ←
               </button>
               
-              <div className="flex-1 flex flex-col">
+              <div className="flex-1">
                 <input
                   type="range"
                   min="0"
