@@ -49,10 +49,8 @@ const DEFAULT_SETTINGS: SpaceCustomizationSettings = {
 
 // Component that uses R3F hooks - must be inside Canvas
 function ProfileSpaceControls({ settings, isGalleryActive }: { settings: SpaceCustomizationSettings, isGalleryActive: boolean }) {
-  // Only enable keyboard controls when gallery is not active
-  if (!isGalleryActive) {
-    useKeyboardControls(0.15); // Slightly slower movement for better control
-  }
+  // Always call the hook, but pass enabled state to control when it's active
+  useKeyboardControls(0.15, !isGalleryActive); // Slightly slower movement for better control
   return null;
 }
 

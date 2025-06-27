@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useThree } from '@react-three/fiber';
 import { Vector3, Matrix4, Euler } from 'three';
 
-export function useKeyboardControls(speed = 0.2) {
+export function useKeyboardControls(speed = 0.2, enabled = true) {
   const { camera } = useThree();
   const moveDirection = useRef(new Vector3());
   const tempVector = useRef(new Vector3());
@@ -10,6 +10,11 @@ export function useKeyboardControls(speed = 0.2) {
   const keysPressed = useRef(new Set<string>());
 
   useEffect(() => {
+    // If not enabled, don't set up event listeners
+    if (!enabled) {
+      return;
+    }
+
     const handleKeyDown = (e: KeyboardEvent) => {
       keysPressed.current.add(e.key.toLowerCase());
     };
@@ -19,6 +24,12 @@ export function useKeyboardControls(speed = 0.2) {
     };
 
     const updateCamera = () => {
+      // If not enabled, don't process movement
+      if (!enabled) {
+        requestAnimationFrame(updateCamera);
+        return;
+      }
+
       moveDirection.current.set(0, 0, 0);
       
       // Get movement input
@@ -59,5 +70,5 @@ export function useKeyboardControls(speed = 0.2) {
       window.removeEventListener('keyup', handleKeyUp);
       cancelAnimationFrame(animationFrame);
     };
-  }, [camera, speed]);
+  }, [camera, speed, enabled]);
 }
