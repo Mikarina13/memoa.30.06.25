@@ -518,14 +518,6 @@ export function ProfilePage() {
                         <div className="flex flex-col md:flex-row gap-4">
                           <button
                             type="button"
-                            className="px-4 py-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-colors"
-                            onClick={() => alert("Data export feature is not yet implemented. This feature will be available soon.")}
-                          >
-                            Export Data
-                          </button>
-                          
-                          <button
-                            type="button"
                             className="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
                             onClick={() => {
                               if (window.confirm("Are you sure you want to delete all your data? This action cannot be undone.")) {
