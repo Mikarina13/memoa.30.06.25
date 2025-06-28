@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Brain, CheckCircle, ChevronRight, ExternalLink, Save, X, Upload, FileText, Download, AlertCircle, ArrowRight, Edit, RefreshCw } from 'lucide-react';
+import { Brain, CheckCircle, ChevronRight, ExternalLink, Save, X, Upload, FileText, Download, AlertCircle, ArrowLeft, RefreshCw } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { MemoirIntegrations } from '../lib/memoir-integrations';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Footer } from './Footer';
 
-interface PersonalityTestInterfaceProps {
+interface PersonalityTestProps {
   memoriaProfileId?: string;
   onTestCompleted?: (results: any) => void;
   onClose?: () => void;
@@ -94,23 +96,85 @@ const personalityTypes = {
   }
 };
 
-export function PersonalityTestInterface({ memoriaProfileId, onTestCompleted, onClose }: PersonalityTestInterfaceProps) {
+// Sample questions from the 16Personalities test
+const sampleQuestions = [
+  {
+    id: 1,
+    text: "You regularly make new friends.",
+    category: "Extraversion"
+  },
+  {
+    id: 2,
+    text: "You spend a lot of your free time exploring various random topics that pique your interest.",
+    category: "Intuition"
+  },
+  {
+    id: 3,
+    text: "Seeing other people cry can easily make you feel like you want to cry too.",
+    category: "Feeling"
+  },
+  {
+    id: 4,
+    text: "You usually stay calm, even under a lot of pressure.",
+    category: "Judging"
+  },
+  {
+    id: 5,
+    text: "At social events, you rarely try to introduce yourself to new people and mostly talk to the ones you already know.",
+    category: "Introversion"
+  },
+  {
+    id: 6,
+    text: "You prefer to completely finish one project before starting another.",
+    category: "Judging"
+  },
+  {
+    id: 7,
+    text: "You are more of a natural improviser than a careful planner.",
+    category: "Perceiving"
+  },
+  {
+    id: 8,
+    text: "Your emotions control you more than you control them.",
+    category: "Feeling"
+  },
+  {
+    id: 9,
+    text: "You enjoy going to social events that involve dress-up or role-play activities.",
+    category: "Extraversion"
+  },
+  {
+    id: 10,
+    text: "You often spend time exploring unrealistic yet intriguing ideas.",
+    category: "Intuition"
+  }
+];
+
+export function PersonalityTestInterface({ memoriaProfileId: propMemoriaProfileId, onTestCompleted, onClose }: PersonalityTestProps) {
   const { user } = useAuth();
-  const [selectedType, setSelectedType] = useState<string | null>(null);
-  const [typeName, setTypeName] = useState<string>('');
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [answers, setAnswers] = useState<Record<number, number>>({});
+  const [testCompleted, setTestCompleted] = useState(false);
+  const [personalityType, setPersonalityType] = useState<string | null>(null);
   const [existingResults, setExistingResults] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [pdfName, setPdfName] = useState<string | null>(null);
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [pdfUploadError, setPdfUploadError] = useState<string | null>(null);
   const [pdfUploadSuccess, setPdfUploadSuccess] = useState(false);
-  const [isEditingType, setIsEditingType] = useState(false);
-
+  const [showTypeSelector, setShowTypeSelector] = useState(false);
+  const [selectedType, setSelectedType] = useState<string | null>(null);
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Get memoriaProfileId from either props or location state
+  const memoriaProfileId = propMemoriaProfileId || location.state?.memoriaProfileId;
+  const returnPath = location.state?.returnPath || '/';
 
   useEffect(() => {
     if (user) {
@@ -128,10 +192,10 @@ export function PersonalityTestInterface({ memoriaProfileId, onTestCompleted, on
         
         if (profile?.profile_data?.personality_test) {
           setExistingResults(profile.profile_data.personality_test);
+          setPersonalityType(profile.profile_data.personality_test.type);
           setSelectedType(profile.profile_data.personality_test.type);
-          setTypeName(profile.profile_data.personality_test.name);
           setPdfUrl(profile.profile_data.personality_test.pdfUrl || null);
-          setPdfName(profile.profile_data.personality_test.pdfName || null);
+          setTestCompleted(true);
         }
       } else {
         // Load personality test results for user profile
@@ -139,10 +203,10 @@ export function PersonalityTestInterface({ memoriaProfileId, onTestCompleted, on
         
         if (profile?.memoir_data?.personality_test) {
           setExistingResults(profile.memoir_data.personality_test);
+          setPersonalityType(profile.memoir_data.personality_test.type);
           setSelectedType(profile.memoir_data.personality_test.type);
-          setTypeName(profile.memoir_data.personality_test.name);
           setPdfUrl(profile.memoir_data.personality_test.pdfUrl || null);
-          setPdfName(profile.memoir_data.personality_test.pdfName || null);
+          setTestCompleted(true);
         }
       }
     } catch (error) {
@@ -152,40 +216,93 @@ export function PersonalityTestInterface({ memoriaProfileId, onTestCompleted, on
     }
   };
 
-  const saveResults = async () => {
-    if (!user || !selectedType) {
-      setSaveError("Please select a personality type");
-      return;
+  const handleAnswer = (questionId: number, value: number) => {
+    setAnswers(prev => ({
+      ...prev,
+      [questionId]: value
+    }));
+
+    // Move to next question or complete test
+    if (currentQuestionIndex < sampleQuestions.length - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
+    } else {
+      completeTest();
     }
+  };
+
+  const completeTest = () => {
+    // Calculate personality type based on answers
+    // This is a simplified version - the real test has many more questions and complex scoring
+    
+    // Count traits based on answers
+    let e = 0, i = 0, s = 0, n = 0, t = 0, f = 0, j = 0, p = 0;
+    
+    Object.entries(answers).forEach(([questionId, value]) => {
+      const question = sampleQuestions.find(q => q.id === parseInt(questionId));
+      if (!question) return;
+      
+      switch (question.category) {
+        case "Extraversion":
+          value > 3 ? e++ : i++;
+          break;
+        case "Introversion":
+          value > 3 ? i++ : e++;
+          break;
+        case "Sensing":
+          value > 3 ? s++ : n++;
+          break;
+        case "Intuition":
+          value > 3 ? n++ : s++;
+          break;
+        case "Thinking":
+          value > 3 ? t++ : f++;
+          break;
+        case "Feeling":
+          value > 3 ? f++ : t++;
+          break;
+        case "Judging":
+          value > 3 ? j++ : p++;
+          break;
+        case "Perceiving":
+          value > 3 ? p++ : j++;
+          break;
+      }
+    });
+    
+    // Determine type based on highest scores
+    const type = `${e > i ? 'E' : 'I'}${n > s ? 'N' : 'S'}${f > t ? 'F' : 'T'}${j > p ? 'J' : 'P'}`;
+    setPersonalityType(type);
+    setSelectedType(type);
+    setTestCompleted(true);
+    
+    // Save results
+    saveResults(type);
+  };
+
+  const saveResults = async (type: string) => {
+    if (!user) return;
     
     setIsSaving(true);
     setSaveError(null);
     
     try {
       const testResults = {
-        type: selectedType,
-        name: personalityTypes[selectedType as keyof typeof personalityTypes]?.name || 'Unknown',
-        description: personalityTypes[selectedType as keyof typeof personalityTypes]?.description || '',
+        type,
+        name: personalityTypes[type as keyof typeof personalityTypes]?.name || 'Unknown',
+        description: personalityTypes[type as keyof typeof personalityTypes]?.description || '',
+        answers,
         completedAt: new Date().toISOString(),
-        pdfUrl: pdfUrl,
-        pdfName: pdfName
+        pdfUrl: pdfUrl
       };
       
       // Store personality test results
       await MemoirIntegrations.storePersonalityTestResults(user.id, testResults, memoriaProfileId);
       
       setExistingResults(testResults);
-      setIsEditingType(false);
       
       if (onTestCompleted) {
         onTestCompleted(testResults);
       }
-      
-      // Auto-close after successful save
-      setTimeout(() => {
-        onClose?.();
-      }, 1500);
-      
     } catch (error) {
       console.error('Error saving personality test results:', error);
       setSaveError(error instanceof Error ? error.message : 'An unexpected error occurred');
@@ -194,90 +311,97 @@ export function PersonalityTestInterface({ memoriaProfileId, onTestCompleted, on
     }
   };
 
+  const restartTest = () => {
+    setCurrentQuestionIndex(0);
+    setAnswers({});
+    setTestCompleted(false);
+    setPersonalityType(null);
+    setSelectedType(null);
+  };
+
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     
-    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-      setPdfFile(file);
+    try {
+      setUploadingPdf(true);
       setPdfUploadError(null);
       
-      try {
-        setUploadingPdf(true);
-        
-        // Upload the PDF to storage
-        const fileUrl = await MemoirIntegrations.uploadDocumentFile(user.id, file, memoriaProfileId);
-        
-        // Update the personality test data with the PDF info
-        const updatedTestResults = {
-          ...(existingResults || {}),
-          type: selectedType || existingResults?.type || 'INFJ',
-          name: typeName || existingResults?.name || personalityTypes['INFJ'].name,
-          description: personalityTypes[selectedType as keyof typeof personalityTypes]?.description || personalityTypes['INFJ'].description,
-          pdfUrl: fileUrl,
-          pdfName: file.name,
-          pdfUploadedAt: new Date().toISOString()
-        };
-        
-        // Store the updated test results
-        await MemoirIntegrations.storePersonalityTestResults(user.id, updatedTestResults, memoriaProfileId);
-        
-        setPdfUrl(fileUrl);
-        setPdfName(file.name);
-        setPdfUploadSuccess(true);
-        
-        if (onTestCompleted) {
-          onTestCompleted(updatedTestResults);
-        }
-      } catch (error) {
-        console.error('Error uploading PDF:', error);
-        setPdfUploadError(error instanceof Error ? error.message : 'Failed to upload PDF');
-      } finally {
-        setUploadingPdf(false);
-      }
-    } else if (file.type.startsWith('image/')) {
-      setPdfFile(file);
-      setPdfUploadError(null);
+      // Upload the PDF to storage using improved method
+      const fileUrl = await MemoirIntegrations.uploadDocumentFile(user.id, file, memoriaProfileId);
       
-      try {
-        setUploadingPdf(true);
-        
-        // Upload the image to documents storage
-        const fileUrl = await MemoirIntegrations.uploadDocumentFile(user.id, file, memoriaProfileId);
-        
-        // Update the personality test data with the image info
-        const updatedTestResults = {
-          ...(existingResults || {}),
-          type: selectedType || existingResults?.type || 'INFJ',
-          name: typeName || existingResults?.name || personalityTypes['INFJ'].name,
-          description: personalityTypes[selectedType as keyof typeof personalityTypes]?.description || personalityTypes['INFJ'].description,
-          pdfUrl: fileUrl,
-          pdfName: file.name,
-          pdfUploadedAt: new Date().toISOString()
-        };
-        
-        // Store the updated test results
-        await MemoirIntegrations.storePersonalityTestResults(user.id, updatedTestResults, memoriaProfileId);
-        
-        setPdfUrl(fileUrl);
-        setPdfName(file.name);
-        setPdfUploadSuccess(true);
-        
-        if (onTestCompleted) {
-          onTestCompleted(updatedTestResults);
-        }
-      } catch (error) {
-        console.error('Error uploading image:', error);
-        setPdfUploadError(error instanceof Error ? error.message : 'Failed to upload image');
-      } finally {
-        setUploadingPdf(false);
+      // Update the personality test data with the PDF info
+      const updatedTestResults = {
+        ...existingResults,
+        pdfUrl: fileUrl,
+        pdfName: file.name,
+        pdfUploadedAt: new Date().toISOString()
+      };
+      
+      // Store the updated test results
+      await MemoirIntegrations.storePersonalityTestResults(user.id, updatedTestResults, memoriaProfileId);
+      
+      setPdfUrl(fileUrl);
+      setPdfUploadSuccess(true);
+      
+      if (onTestCompleted) {
+        onTestCompleted(updatedTestResults);
       }
-    } else {
-      setPdfUploadError('Please select a PDF file or image file (JPG, PNG, etc.)');
+    } catch (error) {
+      console.error('Error uploading PDF:', error);
+      setPdfUploadError(error instanceof Error ? error.message : 'Failed to upload PDF');
+    } finally {
+      setUploadingPdf(false);
     }
     
     event.target.value = '';
   };
+
+  const handleGoBack = () => {
+    if (onClose) {
+      onClose();
+    } else {
+      navigate(returnPath);
+    }
+  };
+
+  const handleTypeChange = async (type: string) => {
+    if (!user) return;
+    
+    setIsSaving(true);
+    setSaveError(null);
+    
+    try {
+      // Update the personality type
+      const updatedResults = {
+        ...existingResults,
+        type,
+        name: personalityTypes[type as keyof typeof personalityTypes]?.name || 'Unknown',
+        description: personalityTypes[type as keyof typeof personalityTypes]?.description || '',
+        updatedAt: new Date().toISOString()
+      };
+      
+      // Store the updated test results
+      await MemoirIntegrations.storePersonalityTestResults(user.id, updatedResults, memoriaProfileId);
+      
+      setExistingResults(updatedResults);
+      setPersonalityType(type);
+      setSelectedType(type);
+      
+      if (onTestCompleted) {
+        onTestCompleted(updatedResults);
+      }
+      
+      setShowTypeSelector(false);
+    } catch (error) {
+      console.error('Error updating personality type:', error);
+      setSaveError(error instanceof Error ? error.message : 'An unexpected error occurred');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const currentQuestion = sampleQuestions[currentQuestionIndex];
 
   return (
     <motion.div
@@ -290,26 +414,23 @@ export function PersonalityTestInterface({ memoriaProfileId, onTestCompleted, on
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-3">
             <Brain className="w-8 h-8 text-indigo-400" />
-            <h2 className="text-2xl font-bold text-white font-[Orbitron]">
-              {memoriaProfileId ? "Memorial Personality Profile" : "Personality Profile"}
-            </h2>
+            <h2 className="text-2xl font-bold text-white font-[Orbitron]">Personality Profile</h2>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleGoBack}
             className="text-white/60 hover:text-white transition-colors"
           >
-            ×
+            <X className="w-6 h-6" />
           </button>
         </div>
 
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
-            <div className="w-8 h-8 border-2 border-indigo-300 border-t-transparent rounded-full animate-spin mr-3"></div>
+            <div className="w-6 h-6 border-2 border-indigo-300 border-t-transparent rounded-full animate-spin mr-3"></div>
             <p className="text-white/70">Loading personality data...</p>
           </div>
-        ) : (
-          <div className="space-y-8">
-            {/* Introduction */}
+        ) : existingResults && !testCompleted ? (
+          <div className="space-y-6">
             <div className="bg-gradient-to-r from-indigo-500/20 to-purple-500/20 rounded-lg p-6 border border-indigo-500/30">
               <h3 className="text-xl font-semibold text-white mb-4">About Personality Tests</h3>
               <p className="text-white/70 mb-4">
@@ -317,294 +438,513 @@ export function PersonalityTestInterface({ memoriaProfileId, onTestCompleted, on
               </p>
               
               <a 
-                href="https://www.16personalities.com/free-personality-test" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="flex items-center gap-2 px-6 py-3 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg transition-colors w-fit"
+                href="https://www.16personalities.com/free-personality-test"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 px-6 py-3 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg transition-colors"
               >
                 <ExternalLink className="w-5 h-5" />
                 Take the Free Test
               </a>
             </div>
 
-            {/* Upload Results */}
-            <div className="bg-white/5 rounded-lg p-6">
-              <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-                <Upload className="w-6 h-6 text-indigo-400" />
-                Upload Test Results
-              </h3>
+            <div className="bg-gradient-to-r from-indigo-500/20 to-purple-500/20 rounded-lg p-6 border border-indigo-500/30">
+              <h3 className="text-xl font-semibold text-white mb-4">Your Current Results</h3>
+              <p className="text-white/70 mb-4">
+                You completed the personality test on {new Date(existingResults.completedAt).toLocaleDateString()}. 
+                Your personality type is:
+              </p>
               
-              <div className="mb-8">
-                <p className="text-white/70 mb-6">
-                  After completing the personality test, you can select your personality type and upload your results as a PDF or screenshot.
-                </p>
-                
-                {/* Personality Type Selection */}
-                {(!existingResults || !existingResults.type || isEditingType) ? (
-                  <div className="mb-6">
-                    <label className="block text-sm text-white/70 mb-2">Your Personality Type</label>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {Object.entries(personalityTypes).map(([type, info]) => (
-                        <button
-                          key={type}
-                          onClick={() => {
-                            setSelectedType(type);
-                            setTypeName(info.name);
-                          }}
-                          className={`px-3 py-2 rounded-lg text-center transition-colors ${
-                            selectedType === type 
-                              ? `bg-gradient-to-r ${info.color} text-white` 
-                              : 'bg-white/5 hover:bg-white/10 text-white/70'
-                          }`}
-                        >
-                          <div className="font-bold">{type}</div>
-                          <div className="text-xs">{info.name}</div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mb-6">
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="block text-sm text-white/70">Your Personality Type</label>
-                      <button
-                        onClick={() => setIsEditingType(true)}
-                        className="flex items-center gap-1 text-xs px-2 py-1 bg-indigo-500/20 text-indigo-400 rounded-full hover:bg-indigo-500/30 transition-colors"
-                      >
-                        <Edit className="w-3 h-3" />
-                        Change Type
-                      </button>
-                    </div>
-                    <div className={`bg-gradient-to-r ${personalityTypes[existingResults.type as keyof typeof personalityTypes]?.color || 'from-indigo-500 to-purple-500'} p-4 rounded-lg text-white`}>
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="text-xl font-bold">{existingResults.type}</div>
-                        <div className="font-medium">{existingResults.name}</div>
-                      </div>
-                      <p className="text-white/90">{existingResults.description}</p>
-                    </div>
-                  </div>
-                )}
-              
-                {/* File Upload */}
-                <div>
-                  <label className="block text-sm text-white/70 mb-2">Upload PDF or Image of Test Results</label>
-                  
-                  {pdfUrl ? (
-                    <div className="bg-white/10 rounded-lg p-4 border border-white/20">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <FileText className="w-5 h-5 text-indigo-400" />
-                          <div>
-                            <p className="text-white font-medium">{pdfName || 'Personality Test Results'}</p>
-                            {existingResults?.pdfUploadedAt && (
-                              <p className="text-white/60 text-sm">Uploaded on {new Date(existingResults.pdfUploadedAt).toLocaleDateString()}</p>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <a 
-                            href={pdfUrl} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2 px-3 py-1.5 bg-indigo-500/20 text-indigo-400 rounded-lg hover:bg-indigo-500/30 transition-colors"
-                          >
-                            <ExternalLink className="w-4 h-4" />
-                            View
-                          </a>
-                          <a 
-                            href={pdfUrl} 
-                            download
-                            className="flex items-center gap-2 px-3 py-1.5 bg-indigo-500/20 text-indigo-400 rounded-lg hover:bg-indigo-500/30 transition-colors"
-                          >
-                            <Download className="w-4 h-4" />
-                            Download
-                          </a>
-                          <button
-                            onClick={() => {
-                              if (fileInputRef.current) {
-                                fileInputRef.current.click();
-                              }
-                            }}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 transition-colors"
-                          >
-                            <Upload className="w-4 h-4" />
-                            Replace
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="mb-4">
-                      <input 
-                        type="file"
-                        accept=".pdf,image/*,application/pdf"
-                        onChange={handleFileSelect}
-                        className="hidden"
-                        ref={fileInputRef}
-                      />
-                      <div 
-                        onClick={() => fileInputRef.current?.click()}
-                        className="border-2 border-dashed border-indigo-500/30 rounded-lg p-6 text-center cursor-pointer hover:bg-indigo-500/5 transition-colors"
-                      >
-                        <FileText className="w-10 h-10 text-indigo-400/50 mx-auto mb-3" />
-                        <p className="text-white mb-2">Click to upload your test results</p>
-                        <p className="text-white/50 text-sm">PDF file or image (screenshot)</p>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {uploadingPdf && (
-                    <div className="mt-4 flex items-center justify-center gap-3 text-white/70">
-                      <div className="w-5 h-5 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
-                      <span>Uploading file...</span>
-                    </div>
-                  )}
-                  
-                  {pdfUploadError && (
-                    <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
-                      <div className="flex items-center gap-2">
-                        <AlertCircle className="w-4 h-4" />
-                        <span>{pdfUploadError}</span>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {pdfUploadSuccess && (
-                    <div className="mt-4 p-3 bg-green-500/10 border border-green-500/20 rounded-lg text-green-400 text-sm">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4" />
-                        <span>File uploaded successfully!</span>
-                      </div>
-                    </div>
-                  )}
+              <div className={`bg-gradient-to-r ${personalityTypes[existingResults.type as keyof typeof personalityTypes]?.color || 'from-blue-500 to-purple-600'} p-6 rounded-lg text-white mb-4`}>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-2xl font-bold">{existingResults.type}</h4>
+                  <span className="text-lg font-medium">{existingResults.name}</span>
                 </div>
+                <p>{existingResults.description}</p>
               </div>
               
-              {/* Save Button */}
-              {((!existingResults || !existingResults.type) || isEditingType) && (
-                <div className="flex gap-3">
+              <div className="flex flex-col md:flex-row gap-3">
+                <button
+                  onClick={restartTest}
+                  className="flex-1 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 py-3 rounded-lg transition-colors"
+                >
+                  Retake Test
+                </button>
+                <button
+                  onClick={() => setShowTypeSelector(true)}
+                  className="flex-1 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 py-3 rounded-lg transition-colors"
+                >
+                  Change Type
+                </button>
+                <a
+                  href={`https://www.16personalities.com/${existingResults.type.toLowerCase()}-personality`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 flex-1 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 py-3 rounded-lg transition-colors"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Learn More
+                </a>
+              </div>
+            </div>
+            
+            {/* PDF Upload Section */}
+            <div className="bg-white/5 rounded-lg p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <FileText className="w-6 h-6 text-rose-400" />
+                <h3 className="text-lg font-semibold text-white">Upload Test Results</h3>
+              </div>
+              
+              <p className="text-white/70 mb-4">
+                If you've taken a more comprehensive personality test elsewhere, you can upload the PDF results here to enhance your digital legacy.
+              </p>
+              
+              {pdfUrl ? (
+                <div className="bg-white/10 rounded-lg p-4 border border-white/20">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <FileText className="w-5 h-5 text-rose-400" />
+                      <div>
+                        <p className="text-white font-medium">{existingResults?.pdfName || '16 Personalities Test Results.pdf'}</p>
+                        <p className="text-white/60 text-sm">Uploaded on {new Date(existingResults?.pdfUploadedAt || Date.now()).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <a 
+                        href={pdfUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-3 py-1.5 bg-rose-500/20 text-rose-400 rounded-lg hover:bg-rose-500/30 transition-colors"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        View
+                      </a>
+                      <a 
+                        href={pdfUrl} 
+                        download
+                        className="flex items-center gap-2 px-3 py-1.5 bg-rose-500/20 text-rose-400 rounded-lg hover:bg-rose-500/30 transition-colors"
+                      >
+                        <Download className="w-4 h-4" />
+                        Download
+                      </a>
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-colors"
+                      >
+                        <Upload className="w-4 h-4" />
+                        Replace
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,application/pdf"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
                   <button
-                    onClick={saveResults}
-                    disabled={!selectedType || isSaving}
-                    className="flex-1 items-center gap-2 px-6 py-3 bg-indigo-500 hover:bg-indigo-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors inline-flex justify-center"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                    disabled={uploadingPdf}
                   >
-                    {isSaving ? (
+                    {uploadingPdf ? (
                       <>
-                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Saving...
+                        <div className="w-5 h-5 border-2 border-rose-400/30 border-t-rose-400 rounded-full animate-spin" />
+                        Uploading...
                       </>
                     ) : (
                       <>
-                        <Save className="w-5 h-5" />
-                        Save Personality Type
+                        <Upload className="w-5 h-5" />
+                        Select PDF File
                       </>
                     )}
                   </button>
-                  
-                  {isEditingType && (
-                    <button
-                      onClick={() => {
-                        setIsEditingType(false);
-                        setSelectedType(existingResults?.type || null);
-                        setTypeName(existingResults?.name || '');
-                      }}
-                      className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors inline-flex items-center gap-2"
-                    >
-                      <X className="w-5 h-5" />
-                      Cancel
-                    </button>
-                  )}
+                </>
+              )}
+              
+              {pdfUploadSuccess && (
+                <div className="mt-4 p-3 bg-green-500/20 border border-green-500/30 rounded-lg text-green-400 text-sm">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5" />
+                    <span>PDF uploaded successfully!</span>
+                  </div>
                 </div>
               )}
               
-              {/* Reset / Change Personality Type (for when it's not in edit mode but has existing results) */}
-              {existingResults && existingResults.type && !isEditingType && (
-                <button
-                  onClick={() => {
-                    if (confirm('Are you sure you want to change your personality type? Your current selection will be replaced.')) {
-                      setIsEditingType(true);
-                    }
-                  }}
-                  className="flex items-center gap-2 px-6 py-3 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 rounded-lg transition-colors"
-                >
-                  <RefreshCw className="w-5 h-5" />
-                  Change Personality Type
-                </button>
+              {pdfUploadError && (
+                <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-5 h-5" />
+                    <span>{pdfUploadError}</span>
+                  </div>
+                </div>
               )}
+            </div>
+          </div>
+        ) : testCompleted ? (
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-indigo-500/20 to-purple-500/20 rounded-lg p-6 border border-indigo-500/30 relative overflow-hidden">
+              <div className="relative z-10">
+                <div className="flex items-center gap-2 mb-4">
+                  <CheckCircle className="w-6 h-6 text-green-400" />
+                  <h3 className="text-xl font-semibold text-white">Test Completed!</h3>
+                </div>
+              
+                {personalityType && (
+                  <div className={`bg-gradient-to-r ${personalityTypes[personalityType as keyof typeof personalityTypes]?.color || 'from-blue-500 to-purple-600'} p-6 rounded-lg text-white mb-6 shadow-lg`}>
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-white/20 p-3 rounded-full">
+                          <Brain className="w-8 h-8 text-white" />
+                        </div>
+                        <h4 className="text-3xl font-bold">{personalityType}</h4>
+                      </div>
+                      <span className="text-xl font-medium bg-white/10 px-4 py-2 rounded-full">{personalityTypes[personalityType as keyof typeof personalityTypes]?.name || 'Unknown'}</span>
+                    </div>
+                    <p className="text-white/90 text-lg leading-relaxed">{personalityTypes[personalityType as keyof typeof personalityTypes]?.description || 'No description available.'}</p>
+                    
+                    <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {typeComponents.map((component, index) => (
+                        <div key={index} className="bg-white/10 rounded-lg p-3 text-center">
+                          <div className="text-2xl font-bold mb-1">{component.letter}</div>
+                          <div className="text-white/80 text-sm">{component.description}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                <div className="flex flex-col md:flex-row gap-3 mt-4">
+                  <button
+                    onClick={restartTest}
+                    className="flex-1 bg-indigo-500 hover:bg-indigo-600 text-white py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    <RefreshCw className="w-5 h-5" />
+                    Retake Test
+                  </button>
+                  <button
+                    onClick={() => setShowTypeSelector(true)}
+                    className="flex-1 bg-purple-500 hover:bg-purple-600 text-white py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Brain className="w-5 h-5" />
+                    Change Type
+                  </button>
+                  {personalityType && (
+                    <a
+                      href={`https://www.16personalities.com/${personalityType.toLowerCase()}-personality`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                    >
+                      <ExternalLink className="w-5 h-5" />
+                      Learn More
+                    </a>
+                  )}
+                </div>
+              </div>
+              
+              {/* Decorative background elements */}
+              <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full -mr-32 -mt-32 z-0"></div>
+              <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-500/10 rounded-full -ml-24 -mb-24 z-0"></div>
               
               {saveError && (
                 <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+                  {saveError}
+                </div>
+              )}
+            </div>
+            
+            {/* PDF Upload Section */}
+            <div className="bg-white/5 rounded-lg p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <FileText className="w-6 h-6 text-rose-400" />
+                <h3 className="text-lg font-semibold text-white">Upload Test Results</h3>
+              </div>
+              
+              <p className="text-white/70 mb-4">
+                If you've taken a more comprehensive personality test elsewhere, you can upload the PDF results here to enhance your digital legacy.
+              </p>
+              
+              {pdfUrl ? (
+                <div className="bg-white/10 rounded-lg p-4 border border-white/20">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <FileText className="w-5 h-5 text-rose-400" />
+                      <div>
+                        <p className="text-white font-medium">{existingResults?.pdfName || 'Personality Test Results.pdf'}</p>
+                        <p className="text-white/60 text-sm">Uploaded on {new Date(existingResults?.pdfUploadedAt || Date.now()).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <a 
+                        href={pdfUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-3 py-1.5 bg-rose-500/20 text-rose-400 rounded-lg hover:bg-rose-500/30 transition-colors"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        View
+                      </a>
+                      <a 
+                        href={pdfUrl} 
+                        download
+                        className="flex items-center gap-2 px-3 py-1.5 bg-rose-500/20 text-rose-400 rounded-lg hover:bg-rose-500/30 transition-colors"
+                      >
+                        <Download className="w-4 h-4" />
+                        Download
+                      </a>
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-colors"
+                      >
+                        <Upload className="w-4 h-4" />
+                        Replace
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,application/pdf"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                    disabled={uploadingPdf}
+                  >
+                    {uploadingPdf ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-rose-400/30 border-t-rose-400 rounded-full animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-5 h-5" />
+                        Select PDF File
+                      </>
+                    )}
+                  </button>
+                </>
+              )}
+              
+              {pdfUploadSuccess && (
+                <div className="mt-4 p-3 bg-green-500/20 border border-green-500/30 rounded-lg text-green-400 text-sm">
                   <div className="flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4" />
-                    <span>{saveError}</span>
+                    <CheckCircle className="w-5 h-5" />
+                    <span>PDF uploaded successfully!</span>
+                  </div>
+                </div>
+              )}
+              
+              {pdfUploadError && (
+                <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-5 h-5" />
+                    <span>{pdfUploadError}</span>
                   </div>
                 </div>
               )}
             </div>
             
-            {/* Why This Matters */}
             <div className="bg-white/5 rounded-lg p-6">
-              <h3 className="text-xl font-semibold text-white mb-4">Why This Matters for Your Digital Legacy</h3>
+              <h3 className="text-lg font-semibold text-white mb-4">Why This Matters for Your Digital Legacy</h3>
               <p className="text-white/70 mb-4">
-                Your personality type provides insights into your preferences, decision-making style, and how you interact with the world. By preserving this information:
+                Your personality type is a fundamental aspect of who you are. By preserving this information:
               </p>
-              
-              <ul className="space-y-2">
-                <li className="flex items-start gap-2 text-white/70">
-                  <ChevronRight className="w-5 h-5 text-indigo-400 flex-shrink-0" />
-                  <span>Future generations can gain a deeper understanding of your character</span>
+              <ul className="space-y-2 text-white/70">
+                <li className="flex items-start gap-2">
+                  <ChevronRight className="w-4 h-4 text-indigo-400 flex-shrink-0 mt-1" />
+                  <span>Future generations can gain deeper insights into your character and decision-making style</span>
                 </li>
-                <li className="flex items-start gap-2 text-white/70">
-                  <ChevronRight className="w-5 h-5 text-indigo-400 flex-shrink-0" />
-                  <span>AI systems can more accurately represent your authentic voice and perspectives</span>
+                <li className="flex items-start gap-2">
+                  <ChevronRight className="w-4 h-4 text-indigo-400 flex-shrink-0 mt-1" />
+                  <span>AI systems can better represent your authentic self in digital interactions</span>
                 </li>
-                <li className="flex items-start gap-2 text-white/70">
-                  <ChevronRight className="w-5 h-5 text-indigo-400 flex-shrink-0" />
-                  <span>Your loved ones can discover aspects of your personality they might not have fully appreciated</span>
+                <li className="flex items-start gap-2">
+                  <ChevronRight className="w-4 h-4 text-indigo-400 flex-shrink-0 mt-1" />
+                  <span>Your loved ones can understand aspects of your personality they might not have fully appreciated</span>
                 </li>
-                <li className="flex items-start gap-2 text-white/70">
-                  <ChevronRight className="w-5 h-5 text-indigo-400 flex-shrink-0" />
-                  <span>It adds psychological depth to your digital legacy</span>
+                <li className="flex items-start gap-2">
+                  <ChevronRight className="w-4 h-4 text-indigo-400 flex-shrink-0 mt-1" />
+                  <span>Your digital legacy becomes more nuanced and three-dimensional</span>
                 </li>
               </ul>
             </div>
-            
-            {/* More Information */}
-            <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-6">
-              <h3 className="text-xl font-semibold text-white mb-4">Personality Type Resources</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <a 
-                  href="https://www.16personalities.com/free-personality-test" 
-                  target="_blank" 
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="bg-white/5 rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-white mb-4">About This Test</h3>
+              <p className="text-white/70 mb-4">
+                This is a simplified version of the 16Personalities test, based on the Myers-Briggs Type Indicator (MBTI). 
+                The test will help identify your personality type, which is an important aspect of your digital legacy.
+              </p>
+              <div className="flex justify-between items-center">
+                <div className="text-white/60 text-sm">
+                  Question {currentQuestionIndex + 1} of {sampleQuestions.length}
+                </div>
+                <a
+                  href="https://www.16personalities.com/free-personality-test"
+                  target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-3 bg-white/10 rounded-lg hover:bg-white/15 transition-colors"
+                  className="text-indigo-400 hover:text-indigo-300 text-sm flex items-center gap-1"
                 >
-                  <Brain className="w-6 h-6 text-indigo-400" />
-                  <div>
-                    <h4 className="font-semibold text-white">Free Personality Test</h4>
-                    <p className="text-white/60 text-sm">Take the official 16Personalities test</p>
-                  </div>
-                  <ArrowRight className="w-5 h-5 text-white/40 ml-auto" />
-                </a>
-                
-                <a 
-                  href="https://www.16personalities.com/personality-types" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-3 bg-white/10 rounded-lg hover:bg-white/15 transition-colors"
-                >
-                  <FileText className="w-6 h-6 text-purple-400" />
-                  <div>
-                    <h4 className="font-semibold text-white">Type Descriptions</h4>
-                    <p className="text-white/60 text-sm">Learn about all 16 personality types</p>
-                  </div>
-                  <ArrowRight className="w-5 h-5 text-white/40 ml-auto" />
+                  <ExternalLink className="w-3 h-3" />
+                  Take full test
                 </a>
               </div>
+            </div>
+            
+            <div className="bg-gradient-to-r from-indigo-500/20 to-purple-500/20 rounded-lg p-6 border border-indigo-500/30">
+              <div className="mb-6">
+                <h4 className="text-xl font-semibold text-white mb-2">{currentQuestion.text}</h4>
+                <p className="text-white/60 text-sm">Category: {currentQuestion.category}</p>
+              </div>
+              
+              <div className="space-y-3">
+                <button
+                  onClick={() => handleAnswer(currentQuestion.id, 1)}
+                  className="w-full bg-white/5 hover:bg-white/10 text-white py-3 rounded-lg transition-colors text-left px-4"
+                >
+                  Strongly Disagree
+                </button>
+                <button
+                  onClick={() => handleAnswer(currentQuestion.id, 2)}
+                  className="w-full bg-white/5 hover:bg-white/10 text-white py-3 rounded-lg transition-colors text-left px-4"
+                >
+                  Disagree
+                </button>
+                <button
+                  onClick={() => handleAnswer(currentQuestion.id, 3)}
+                  className="w-full bg-white/5 hover:bg-white/10 text-white py-3 rounded-lg transition-colors text-left px-4"
+                >
+                  Neutral
+                </button>
+                <button
+                  onClick={() => handleAnswer(currentQuestion.id, 4)}
+                  className="w-full bg-white/5 hover:bg-white/10 text-white py-3 rounded-lg transition-colors text-left px-4"
+                >
+                  Agree
+                </button>
+                <button
+                  onClick={() => handleAnswer(currentQuestion.id, 5)}
+                  className="w-full bg-white/5 hover:bg-white/10 text-white py-3 rounded-lg transition-colors text-left px-4"
+                >
+                  Strongly Agree
+                </button>
+              </div>
+              
+              <div className="mt-4 bg-black/30 rounded-lg p-3">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-white/60 text-sm">Progress</span>
+                  <span className="text-white/60 text-sm">{Math.round(((currentQuestionIndex + 1) / sampleQuestions.length) * 100)}%</span>
+                </div>
+                <div className="w-full bg-white/10 rounded-full h-2.5">
+                  <div 
+                    className="bg-gradient-to-r from-indigo-500 to-purple-500 h-2.5 rounded-full" 
+                    style={{ width: `${((currentQuestionIndex + 1) / sampleQuestions.length) * 100}%` }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white/5 rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-white mb-4">Why Take This Test?</h3>
+              <ul className="space-y-2 text-white/70">
+                <li className="flex items-start gap-2">
+                  <ChevronRight className="w-4 h-4 text-indigo-400 flex-shrink-0 mt-1" />
+                  <span>Gain insights into your personality traits, strengths, and potential areas for growth</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <ChevronRight className="w-4 h-4 text-indigo-400 flex-shrink-0 mt-1" />
+                  <span>Preserve an important aspect of your identity as part of your digital legacy</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <ChevronRight className="w-4 h-4 text-indigo-400 flex-shrink-0 mt-1" />
+                  <span>Help AI systems better understand and represent your authentic self</span>
+                </li>
+              </ul>
             </div>
           </div>
         )}
       </div>
+
+      {/* Personality Type Selector Modal */}
+      <AnimatePresence>
+        {showTypeSelector && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-80"
+            onClick={() => setShowTypeSelector(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-black/90 border border-white/20 rounded-xl p-6 max-w-3xl w-full max-h-[80vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-white">Select Personality Type</h3>
+                <button
+                  onClick={() => setShowTypeSelector(false)}
+                  className="text-white/60 hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                {Object.entries(personalityTypes).map(([type, data]) => (
+                  <button
+                    key={type}
+                    onClick={() => handleTypeChange(type)}
+                    className={`p-4 rounded-lg text-left transition-all ${
+                      selectedType === type
+                        ? `bg-gradient-to-r ${data.color} text-white ring-2 ring-white/30`
+                        : 'bg-white/5 hover:bg-white/10 text-white'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold text-lg">{type}</span>
+                      <span className="font-medium">{data.name}</span>
+                    </div>
+                    <p className="text-sm opacity-80">{data.description}</p>
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setShowTypeSelector(false)}
+                  className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
+
+// Type components for personality type display
+const typeComponents = [
+  { letter: "E/I", description: "Extraversion vs. Introversion" },
+  { letter: "S/N", description: "Sensing vs. Intuition" },
+  { letter: "T/F", description: "Thinking vs. Feeling" },
+  { letter: "J/P", description: "Judging vs. Perceiving" }
+];

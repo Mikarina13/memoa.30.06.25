@@ -15,9 +15,9 @@ import { FamilyTreeInterface } from '../components/FamilyTreeInterface';
 import { MediaLinksInterface } from '../components/MediaLinksInterface';
 import { MemoriaProfileSelector } from '../components/MemoriaProfileSelector';
 import { TributeImageInterface } from '../components/TributeImageInterface';
-import { PersonalityTestInterface } from '../components/PersonalityTestInterface';
 import { MemoirIntegrations, MemoriaProfile } from '../lib/memoir-integrations';
 import { Footer } from '../components/Footer';
+import { PersonalityTestInterface } from '../components/PersonalityTestInterface';
 
 export function MemoriaDashboard() {
   const navigate = useNavigate();
@@ -42,7 +42,7 @@ export function MemoriaDashboard() {
   const [personalData, setPersonalData] = useState<any>(null);
   const [familyTreeData, setFamilyTreeData] = useState<any>(null);
   const [mediaLinksData, setMediaLinksData] = useState<any>(null);
-  const [personalityTestData, setPersonalityTestData] = useState<any>(null);
+  const [personalityData, setPersonalityData] = useState<any>(null);
   
   // Ensure user has accepted terms
   useRequireTermsAcceptance();
@@ -106,7 +106,7 @@ export function MemoriaDashboard() {
       setMediaLinksData(profile.profile_data?.media_links || []);
       
       // Load personality test data
-      setPersonalityTestData(profile.profile_data?.personality_test);
+      setPersonalityData(profile.profile_data?.personality_test);
       
     } catch (error) {
       console.error('Error loading profile data:', error);
@@ -429,55 +429,6 @@ export function MemoriaDashboard() {
                     )}
                   </div>
 
-                  {/* Personality Test */}
-                  <div 
-                    className={`p-6 bg-white/5 rounded-lg cursor-pointer transition-all ${expandedSection === 'personality' ? 'ring-2 ring-indigo-400' : 'hover:bg-white/10'}`}
-                    onClick={() => setExpandedSection(expandedSection === 'personality' ? null : 'personality')}
-                  >
-                    <div className="flex items-start gap-4">
-                      <Brain className="w-6 h-6 text-indigo-400 flex-shrink-0 mt-1" />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="font-semibold text-lg">Personality Test</h3>
-                          <a
-                            href="https://www.16personalities.com/free-personality-test"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-xs bg-indigo-500/20 text-indigo-400 px-2 py-1 rounded-full hover:bg-indigo-500/30 transition-colors"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <ExternalLink className="w-3 h-3" />
-                            16Personalities
-                          </a>
-                          {personalityTestData && (
-                            <div className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">
-                              ✓ Test Completed
-                            </div>
-                          )}
-                        </div>
-                        <p className="text-white/70">Document your loved one's personality type or take the test as them. Add depth to their digital memorial with psychological insights.</p>
-                      </div>
-                    </div>
-                    {expandedSection === 'personality' && (
-                      <div className="mt-6 pt-6 border-t border-white/10">
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (selectedProfile) {
-                              setShowPersonalityTest(true);
-                            } else {
-                              alert('Please select a memorial profile first');
-                            }
-                          }}
-                          className="w-full bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
-                        >
-                          <Brain className="w-5 h-5" />
-                          {personalityTestData ? 'Manage Personality Profile' : 'Add Personality Profile'}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
                   {/* AI Tribute Images */}
                   <div 
                     className={`p-6 bg-white/5 rounded-lg cursor-pointer transition-all ${expandedSection === 'tribute' ? 'ring-2 ring-amber-400' : 'hover:bg-white/10'}`}
@@ -602,6 +553,79 @@ export function MemoriaDashboard() {
                           <Brain className="w-5 h-5" />
                           Create Narratives
                         </button>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Personality Test */}
+                  <div 
+                    className={`p-6 bg-white/5 rounded-lg cursor-pointer transition-all ${expandedSection === 'personality' ? 'ring-2 ring-indigo-400' : 'hover:bg-white/10'}`}
+                    onClick={() => setExpandedSection(expandedSection === 'personality' ? null : 'personality')}
+                  >
+                    <div className="flex items-start gap-4">
+                      <Brain className="w-6 h-6 text-indigo-400 flex-shrink-0 mt-1" />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="font-semibold text-lg">Personality Profile</h3>
+                          <a
+                            href="https://www.16personalities.com/free-personality-test"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-xs bg-indigo-500/20 text-indigo-400 px-2 py-1 rounded-full hover:bg-indigo-500/30 transition-colors"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            16Personalities
+                          </a>
+                          {personalityData && (
+                            <div className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">
+                              ✓ Test Completed
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-white/70">Document your loved one's personality type to add psychological depth to their digital memorial.</p>
+                      </div>
+                    </div>
+                    {expandedSection === 'personality' && (
+                      <div className="mt-6 pt-6 border-t border-white/10">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (selectedProfile) {
+                              setShowPersonalityTest(true);
+                            } else {
+                              alert('Please select a memorial profile first');
+                            }
+                          }}
+                          className="w-full bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                        >
+                          <Brain className="w-5 h-5" />
+                          {personalityData ? 'Manage Personality Profile' : 'Create Personality Profile'}
+                        </button>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                          <a
+                            href="https://www.16personalities.com/free-personality-test"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-1 px-3 py-2 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-lg transition-colors text-sm"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            Take Full Test
+                          </a>
+                          
+                          <a
+                            href="https://www.16personalities.com/articles/our-theory"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-1 px-3 py-2 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-lg transition-colors text-sm"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            Learn More
+                          </a>
+                        </div>
                       </div>
                     )}
                   </div>

@@ -180,7 +180,9 @@ export function Profile3DSpacePage() {
               hasMediaLinks: !!dataObject.media_links?.length,
               mediaLinksCount: dataObject.media_links?.length || 0,
               hasFamilyTree: !!dataObject.family_tree?.files?.length,
-              familyTreeFilesCount: dataObject.family_tree?.files?.length || 0
+              familyTreeFilesCount: dataObject.family_tree?.files?.length || 0,
+              hasPersonalityTest: !!dataObject.personality_test,
+              personalityTestType: dataObject.personality_test?.type
             });
           }
           
@@ -271,11 +273,13 @@ export function Profile3DSpacePage() {
               hasMemoriaPreferences: !!profile.profile_data?.preferences?.personal,
               hasMemoriaAvaturn: !!profile.profile_data?.avaturn_avatars,
               hasMemoriaTributeImages: !!profile.profile_data?.tribute_images,
+              hasMemoriaPersonalityTest: !!profile.profile_data?.personality_test,
               
               hasMemoirData: !!profile.memoir_data,
               hasMemoirPreferences: !!profile.memoir_data?.preferences?.personal,
               hasMemoirAvaturn: !!profile.memoir_data?.avaturn_avatars,
-              hasMemoirTributeImages: !!profile.memoir_data?.tribute_images
+              hasMemoirTributeImages: !!profile.memoir_data?.tribute_images,
+              hasMemoirPersonalityTest: !!profile.memoir_data?.personality_test
             });
           }
         }
@@ -507,15 +511,7 @@ export function Profile3DSpacePage() {
     >
       <div className="fixed top-8 left-8 z-50 flex items-center gap-4">
         <button
-          onClick={() => {
-            if (showDetailModal) {
-              handleCloseDetailModal();
-            } else if (showGalleryCarousel) {
-              setShowGalleryCarousel(false);
-            } else {
-              navigate('/memento');
-            }
-          }}
+          onClick={() => navigate('/memento')}
           className="flex items-center gap-2 px-3 py-2 bg-black/40 backdrop-blur-sm rounded-lg border border-white/10 text-white/80 hover:text-white transition-colors font-[Orbitron]"
         >
           <ArrowLeft className="w-6 h-6" />
@@ -774,11 +770,12 @@ export function Profile3DSpacePage() {
               {selectedItem.type === 'personal_favorites' && <PersonalFavoritesDetail data={selectedItem.data} />}
               {selectedItem.type === 'digital_presence' && <DigitalPresenceDetail data={selectedItem.data} />}
               {selectedItem.type === 'gaming_preferences' && <GamingPreferencesDetail data={selectedItem.data} />}
-              {selectedItem.type === 'voice' && <VoiceDetail data={selectedItem.data} memoriaProfileId={memoriaProfileId} />}
+              {selectedItem.type === 'voice' && <VoiceDetail data={selectedItem.data} />}
               {selectedItem.type === 'tavus_avatar' && <TavusAvatarDetail data={selectedItem.data} />}
               {selectedItem.type === 'avaturn_avatars' && <AvaturnAvatarDetail data={selectedItem.data} />}
               {selectedItem.type === 'narratives' && <NarrativesDetail data={selectedItem.data} />}
               {selectedItem.type === 'gallery' && <GalleryDetail data={selectedItem.data} />}
+              {selectedItem.type === 'personality' && <PersonalityDetail data={selectedItem.data} />}
               {selectedItem.type === 'family_tree' && <FamilyTreeDetail data={selectedItem.data} />}
               {selectedItem.type === 'media_links' && <MediaLinksDetail data={selectedItem.data} />}
               {selectedItem.type === 'ai_tribute_images' && <TributeImageDetail data={selectedItem.data} />}
