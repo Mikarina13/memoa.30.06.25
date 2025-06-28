@@ -15,6 +15,7 @@ import { FamilyTreeInterface } from '../components/FamilyTreeInterface';
 import { MediaLinksInterface } from '../components/MediaLinksInterface';
 import { MemoriaProfileSelector } from '../components/MemoriaProfileSelector';
 import { TributeImageInterface } from '../components/TributeImageInterface';
+import { PersonalityTestInterface } from '../components/PersonalityTestInterface';
 import { MemoirIntegrations, MemoriaProfile } from '../lib/memoir-integrations';
 import { Footer } from '../components/Footer';
 
@@ -27,6 +28,7 @@ export function MemoriaDashboard() {
   const [showGeminiNarratives, setShowGeminiNarratives] = useState(false);
   const [showGamingPreferences, setShowGamingPreferences] = useState(false);
   const [showPersonalPreferences, setShowPersonalPreferences] = useState(false);
+  const [showPersonalityTest, setShowPersonalityTest] = useState(false);
   const [initialPersonalPreferencesTab, setInitialPersonalPreferencesTab] = useState<'favorites' | 'digital'>('favorites');
   const [showFamilyTree, setShowFamilyTree] = useState(false);
   const [showMediaLinks, setShowMediaLinks] = useState(false);
@@ -40,6 +42,7 @@ export function MemoriaDashboard() {
   const [personalData, setPersonalData] = useState<any>(null);
   const [familyTreeData, setFamilyTreeData] = useState<any>(null);
   const [mediaLinksData, setMediaLinksData] = useState<any>(null);
+  const [personalityTestData, setPersonalityTestData] = useState<any>(null);
   
   // Ensure user has accepted terms
   useRequireTermsAcceptance();
@@ -101,6 +104,9 @@ export function MemoriaDashboard() {
       
       // Load media links
       setMediaLinksData(profile.profile_data?.media_links || []);
+      
+      // Load personality test data
+      setPersonalityTestData(profile.profile_data?.personality_test);
       
     } catch (error) {
       console.error('Error loading profile data:', error);
@@ -176,6 +182,13 @@ export function MemoriaDashboard() {
   const handleTributeImagesSaved = async (imageData: any) => {
     if (selectedProfile) {
       await loadProfileData(selectedProfile.id);
+    }
+  };
+  
+  const handlePersonalityTestCompleted = async (testResults: any) => {
+    if (selectedProfile) {
+      await loadProfileData(selectedProfile.id);
+      setShowPersonalityTest(false);
     }
   };
 
@@ -411,6 +424,55 @@ export function MemoriaDashboard() {
                         >
                           <User className="w-5 h-5" />
                           {selectedProfile?.profile_data?.avaturn_avatars?.avatars?.length > 0 ? 'Manage 3D Avatar' : 'Create 3D Avatar'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Personality Test */}
+                  <div 
+                    className={`p-6 bg-white/5 rounded-lg cursor-pointer transition-all ${expandedSection === 'personality' ? 'ring-2 ring-indigo-400' : 'hover:bg-white/10'}`}
+                    onClick={() => setExpandedSection(expandedSection === 'personality' ? null : 'personality')}
+                  >
+                    <div className="flex items-start gap-4">
+                      <Brain className="w-6 h-6 text-indigo-400 flex-shrink-0 mt-1" />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="font-semibold text-lg">Personality Test</h3>
+                          <a
+                            href="https://www.16personalities.com/free-personality-test"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-xs bg-indigo-500/20 text-indigo-400 px-2 py-1 rounded-full hover:bg-indigo-500/30 transition-colors"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            16Personalities
+                          </a>
+                          {personalityTestData && (
+                            <div className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">
+                              ✓ Test Completed
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-white/70">Document your loved one's personality type or take the test as them. Add depth to their digital memorial with psychological insights.</p>
+                      </div>
+                    </div>
+                    {expandedSection === 'personality' && (
+                      <div className="mt-6 pt-6 border-t border-white/10">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (selectedProfile) {
+                              setShowPersonalityTest(true);
+                            } else {
+                              alert('Please select a memorial profile first');
+                            }
+                          }}
+                          className="w-full bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                        >
+                          <Brain className="w-5 h-5" />
+                          {personalityTestData ? 'Manage Personality Profile' : 'Add Personality Profile'}
                         </button>
                       </div>
                     )}
@@ -866,6 +928,14 @@ export function MemoriaDashboard() {
               memoriaProfileId={selectedProfile.id}
               onClose={() => setShowTributeImage(false)}
               onImagesGenerated={handleTributeImagesSaved}
+            />
+          )}
+          
+          {showPersonalityTest && selectedProfile && (
+            <PersonalityTestInterface
+              memoriaProfileId={selectedProfile.id}
+              onClose={() => setShowPersonalityTest(false)}
+              onTestCompleted={handlePersonalityTestCompleted}
             />
           )}
         </AnimatePresence>

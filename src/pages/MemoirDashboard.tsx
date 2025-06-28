@@ -15,6 +15,7 @@ import { GalleryInterface } from '../components/GalleryInterface';
 import { FamilyTreeInterface } from '../components/FamilyTreeInterface';
 import { MediaLinksInterface } from '../components/MediaLinksInterface';
 import { PortraitGenerationInterface } from '../components/PortraitGenerationInterface';
+import { PersonalityTestInterface } from '../components/PersonalityTestInterface';
 import { MemoirIntegrations } from '../lib/memoir-integrations';
 import { Footer } from '../components/Footer';
 
@@ -28,6 +29,7 @@ export function MemoirDashboard() {
   const [showGeminiNarratives, setShowGeminiNarratives] = useState(false);
   const [showGamingPreferences, setShowGamingPreferences] = useState(false);
   const [showPersonalPreferences, setShowPersonalPreferences] = useState(false);
+  const [showPersonalityTest, setShowPersonalityTest] = useState(false);
   const [initialPersonalPreferencesTab, setInitialPersonalPreferencesTab] = useState<'favorites' | 'digital'>('favorites');
   const [showFamilyTree, setShowFamilyTree] = useState(false);
   const [showMediaLinks, setShowMediaLinks] = useState(false);
@@ -40,6 +42,7 @@ export function MemoirDashboard() {
   const [familyTreeData, setFamilyTreeData] = useState<any>(null);
   const [mediaLinksData, setMediaLinksData] = useState<any>(null);
   const [narrativesData, setNarrativesData] = useState<any>(null);
+  const [personalityTestData, setPersonalityTestData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Ensure user has accepted terms
@@ -86,6 +89,9 @@ export function MemoirDashboard() {
 
       // Load narratives
       setNarrativesData(profile.memoir_data?.narratives);
+      
+      // Load personality test data
+      setPersonalityTestData(profile.memoir_data?.personality_test);
       
       console.log('User profile data loaded successfully');
     } catch (error) {
@@ -141,6 +147,11 @@ export function MemoirDashboard() {
   const handlePortraitsGenerated = async (portraitData: any) => {
     await loadUserProfile();
     setShowPortraitGeneration(false);
+  };
+  
+  const handlePersonalityTestCompleted = async (testResults: any) => {
+    await loadUserProfile();
+    setShowPersonalityTest(false);
   };
 
   if (loading) {
@@ -386,6 +397,51 @@ export function MemoirDashboard() {
                     >
                       <User className="w-5 h-5" />
                       {userProfile?.memoir_data?.avaturn_avatars?.avatars?.length > 0 ? 'Manage 3D Avatar' : 'Create 3D Avatar'}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Personality Test */}
+              <div 
+                className={`p-6 bg-white/5 rounded-lg cursor-pointer transition-all ${expandedSection === 'personality' ? 'ring-2 ring-indigo-400' : 'hover:bg-white/10'}`}
+                onClick={() => setExpandedSection(expandedSection === 'personality' ? null : 'personality')}
+              >
+                <div className="flex items-start gap-4">
+                  <Brain className="w-6 h-6 text-indigo-400 flex-shrink-0 mt-1" />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="font-semibold text-lg">Personality Test</h3>
+                      <a
+                        href="https://www.16personalities.com/free-personality-test"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-xs bg-indigo-500/20 text-indigo-400 px-2 py-1 rounded-full hover:bg-indigo-500/30 transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        16Personalities
+                      </a>
+                      {personalityTestData && (
+                        <div className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">
+                          ✓ Test Completed
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-white/70">Take a personality test and document your psychological profile. Add depth to your digital legacy with insights about your personality type.</p>
+                  </div>
+                </div>
+                {expandedSection === 'personality' && (
+                  <div className="mt-6 pt-6 border-t border-white/10">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowPersonalityTest(true);
+                      }}
+                      className="w-full bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Brain className="w-5 h-5" />
+                      {personalityTestData ? 'Manage Personality Profile' : 'Take Personality Test'}
                     </button>
                   </div>
                 )}
@@ -835,6 +891,13 @@ export function MemoirDashboard() {
             <PortraitGenerationInterface
               onClose={() => setShowPortraitGeneration(false)}
               onPortraitsGenerated={handlePortraitsGenerated}
+            />
+          )}
+          
+          {showPersonalityTest && (
+            <PersonalityTestInterface
+              onClose={() => setShowPersonalityTest(false)}
+              onTestCompleted={handlePersonalityTestCompleted}
             />
           )}
         </AnimatePresence>
