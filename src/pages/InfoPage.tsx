@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ArrowLeft, Book, Shield, FileText } from 'lucide-react';
+import { ArrowLeft, Book, Shield, FileText, Mail, Phone, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
@@ -24,10 +24,10 @@ export function InfoPage() {
       </button>
 
       <div className="max-w-4xl mx-auto py-20 px-8 relative">
-        <h1 className="text-4xl font-bold mb-12 text-center bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent font-[Rajdhani] pt-8">
+        <h1 className="text-4xl font-bold mb-12 text-center bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent font-[Orbitron] pt-8">
           About MEMOĀ
         </h1>
-
+        
         <div className="flex justify-center gap-4 mb-12">
           <button 
             onClick={() => navigate('/community-guidelines')}
@@ -127,12 +127,54 @@ export function InfoPage() {
 
           <section className="bg-black/40 backdrop-blur-sm p-8 rounded-xl border border-white/10">
             <h2 className="text-2xl font-semibold mb-6 text-green-400 font-[Orbitron]">Contact</h2>
-            <p className="text-lg text-white/80 leading-relaxed font-[Rajdhani]">
-              Have questions, suggestions, or just want to share your thoughts? We'd love to hear from you. Please reach out to our team at{' '}
-              <a href="mailto:ava.dsa25@proton.me" className="text-blue-400 hover:text-blue-300 underline">
-                ava.dsa25@proton.me
-              </a>
-            </p>
+            <div className="space-y-6 text-white/80 leading-relaxed font-[Rajdhani]">
+              <div className="flex flex-col md:flex-row gap-6">
+                <div className="bg-white/5 p-4 rounded-lg flex-1">
+                  <div className="flex items-start gap-3 mb-3">
+                    <MapPin className="w-5 h-5 text-blue-400 flex-shrink-0 mt-1" />
+                    <div>
+                      <h3 className="font-medium text-white">Address</h3>
+                      <p className="text-white/70">
+                        AVA Digital L.L.C<br />
+                        1603 Capitol Ave Ste 415<br />
+                        Cheyenne WY 82001
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-white/5 p-4 rounded-lg flex-1">
+                  <div className="flex items-start gap-3">
+                    <Phone className="w-5 h-5 text-green-400 flex-shrink-0 mt-1" />
+                    <div>
+                      <h3 className="font-medium text-white">Phone</h3>
+                      <p className="text-white/70">
+                        +1(307) 313-5017
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-white/5 p-4 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <Mail className="w-5 h-5 text-purple-400 flex-shrink-0 mt-1" />
+                  <div className="w-full">
+                    <h3 className="font-medium text-white mb-3">Email</h3>
+                    <p className="text-white/70 mb-4">
+                      Have questions, suggestions, or just want to share your thoughts? We'd love to hear from you. Please reach out to our team using the button below.
+                    </p>
+                    <a 
+                      href="mailto:ava.dsa25@proton.me" 
+                      className="inline-flex items-center gap-2 px-5 py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors shadow-lg"
+                    >
+                      <Mail className="w-5 h-5" />
+                      Send Email
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
           </section>
         </div>
 
