@@ -1,6 +1,6 @@
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
-import * as THREE from 'three';
+import * THREE from 'three';
 
 interface EnhancedStarsProps {
   count?: number;
@@ -92,7 +92,7 @@ export function EnhancedStars({
 
   return (
     <points ref={pointsRef}>
-      <bufferGeometry>
+      <bufferGeometry key={count}>
         <bufferAttribute
           attach="attributes-position"
           count={count}
