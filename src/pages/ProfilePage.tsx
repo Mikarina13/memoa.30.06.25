@@ -503,13 +503,13 @@ export function ProfilePage() {
                         <p className="text-white/70 text-sm mb-4">
                           You've agreed to our Privacy Policy which details how we collect, use, and protect your personal information.
                         </p>
-                        <a 
-                          href="/privacy-policy" 
-                          target="_blank"
+                        <button 
+                          type="button"
+                          onClick={() => navigate('/privacy-policy')}
                           className="text-blue-400 hover:text-blue-300 transition-colors"
                         >
                           View Privacy Policy
-                        </a>
+                        </button>
                       </div>
                       
                       {/* Data Management */}
