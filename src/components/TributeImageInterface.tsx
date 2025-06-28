@@ -178,6 +178,7 @@ export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGener
       for (const file of Array.from(files)) {
         const newImage = {
           id: `tribute-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+          url: '', // Will be set after upload
           title: `AI Tribute ${file.type.startsWith('video/') ? 'Video' : 'Image'} - ${personName}`,
           tribute: true,
           isTribute: true,
@@ -191,6 +192,9 @@ export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGener
         
         // Upload image to storage
         const filePath = await MemoirIntegrations.uploadGalleryFile(user.id, file, memoriaProfileId);
+        
+        // Set the URL after upload
+        newImage.url = filePath;
         
         // Create a gallery item entry
         await MemoirIntegrations.createGalleryItem({
@@ -498,13 +502,16 @@ export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGener
               </div>
             ) : generatedImages.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {generatedImages.map((content) => (
-                  <div key={content.id} className="bg-white/5 border border-white/10 rounded-lg overflow-hidden group relative">
-                    {content.isVideo ? (
+                {generatedImages.map((item) => (
+                  <div 
+                    key={item.id} 
+                    className="bg-white/5 border border-white/10 rounded-lg overflow-hidden group relative cursor-pointer"
+                  >
+                    {item.isVideo ? (
                       <div className="w-full h-48 relative bg-black/50">
                         <video 
-                          src={content.url}
-                          className="w-full h-48 object-cover"
+                          src={item.url}
+                          className="w-full h-48 object-cover opacity-70"
                           muted
                         />
                         <div className="absolute inset-0 flex items-center justify-center">
@@ -513,7 +520,7 @@ export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGener
                       </div>
                     ) : (
                       <img 
-                        src={content.url} 
+                        src={item.url} 
                         alt="Tribute Image" 
                         className="w-full h-48 object-cover"
                       />
@@ -523,16 +530,16 @@ export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGener
                         <div className="flex justify-between items-center">
                           <div>
                             <div className="text-xs text-white/80 flex items-center gap-1">
-                              {content.isVideo ? <Video className="w-3 h-3 text-amber-400" /> : <ImageIcon className="w-3 h-3 text-amber-400" />}
-                              {content.isVideo ? 'Video' : 'Image'} Tribute
+                              {item.isVideo ? <Video className="w-3 h-3 text-amber-400" /> : <ImageIcon className="w-3 h-3 text-amber-400" />}
+                              {item.isVideo ? 'Video' : 'Image'} Tribute
                             </div>
                             <div className="text-xs text-white/50">
-                              {new Date(content.createdAt).toLocaleDateString()}
+                              {new Date(item.createdAt).toLocaleDateString()}
                             </div>
                           </div>
                           <div className="flex gap-2">
                             <a 
-                              href={content.url} 
+                              href={item.url} 
                               download 
                               className="p-1.5 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
                               onClick={(e) => e.stopPropagation()}
@@ -540,7 +547,7 @@ export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGener
                               <Download className="w-4 h-4 text-white" />
                             </a>
                             <button 
-                              onClick={() => handleDeleteImage(content.id)}
+                              onClick={() => handleDeleteImage(item.id)}
                               className="p-1.5 bg-red-500/20 hover:bg-red-500/40 rounded-lg transition-colors"
                             >
                               <X className="w-4 h-4 text-red-400" />

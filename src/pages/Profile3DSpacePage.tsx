@@ -215,8 +215,10 @@ export function Profile3DSpacePage() {
             console.log('Profile data structure before loading personal preferences:', {
               hasMemoriaData: !!profile.profile_data,
               hasMemoriaPreferences: !!profile.profile_data?.preferences?.personal,
+              hasMemoriaTributeImages: !!profile.profile_data?.tribute_images,
               hasMemoirData: !!profile.memoir_data,
-              hasMemoirPreferences: !!profile.memoir_data?.preferences?.personal
+              hasMemoirPreferences: !!profile.memoir_data?.preferences?.personal,
+              hasMemoirTributeImages: !!profile.memoir_data?.tribute_images
             });
             
             
@@ -335,7 +337,7 @@ export function Profile3DSpacePage() {
           item.metadata.isTribute === true ||
           (item.metadata.type === 'tribute') ||
           (item.tags && item.tags.includes('tribute')) ||
-          (item.folder === 'Tribute Images') ||
+          (item.metadata.folder === 'Tribute Images') ||
           (item.title && item.title.toLowerCase().includes('tribute'));
         
         return !isTribute;
@@ -716,7 +718,7 @@ export function Profile3DSpacePage() {
                 item.metadata.isTribute === true ||
                 (item.metadata.type === 'tribute') ||
                 (item.tags && item.tags.includes('tribute')) ||
-                (item.folder === 'Tribute Images') ||
+                (item.metadata.folder === 'Tribute Images') ||
                 (item.title && item.title.toLowerCase().includes('tribute'));
               
               return !isTribute;
@@ -754,6 +756,18 @@ export function Profile3DSpacePage() {
       >
         <RefreshCw className="w-5 h-5" />
       </button>
+
+      {/* AI Tribute Button - only for Memoria profiles in builder mode */}
+      {profileType === 'memoria' && memoriaProfileId && isBuilderMode && (
+        <button 
+          onClick={() => setShowTributeImageInterface(true)}
+          className="fixed bottom-16 left-4 px-4 py-2 bg-black/60 backdrop-blur-sm rounded-full border border-amber-500/30 text-amber-400 hover:text-amber-300 transition-colors z-40 flex items-center gap-2 shadow-lg shadow-amber-500/10" 
+          title="Generate AI Tribute Images"
+        >
+          <Sparkles className="w-5 h-5" />
+          <span className="text-sm font-medium">AI Tributes</span>
+        </button>
+      )}
       
       {/* Gallery Navigation Footer - Only shown when gallery carousel is active */}
       {showGalleryCarousel && selectedGalleryItems.length > 0 && (
