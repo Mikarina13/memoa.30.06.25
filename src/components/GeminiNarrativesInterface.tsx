@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Brain, Save, Sparkles, ExternalLink, CheckCircle, AlertCircle, PenTool, FileText, Trash2, Download, Upload, Database, FileUp, File as FilePdf, BookOpen } from 'lucide-react';
+import { Brain, Save, Sparkles, CheckCircle, AlertCircle, PenTool, FileText, Trash2, Download, Upload, Database, FileUp, File as FilePdf, BookOpen } from 'lucide-react';
 import { MemoirIntegrations } from '../lib/memoir-integrations';
 import { useAuth } from '../hooks/useAuth';
 import { OnlineDataImportInterface } from './OnlineDataImportInterface';
@@ -312,10 +312,6 @@ export function GeminiNarrativesInterface({ memoriaProfileId, onNarrativesProces
     a.download = `memoir-narratives-${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
-  };
-
-  const openGeminiAffiliate = () => {
-    window.open('https://makersuite.google.com/app/apikey', '_blank');
   };
 
   const processWithGeminiAI = async () => {
@@ -635,7 +631,7 @@ export function GeminiNarrativesInterface({ memoriaProfileId, onNarrativesProces
                                   className="text-blue-400 hover:underline flex items-center gap-1"
                                   onClick={(e) => e.stopPropagation()}
                                 >
-                                  {narrative.documentName} <ExternalLink className="w-3 h-3" />
+                                  {narrative.documentName} <span className="inline-block ml-1">↗</span>
                                 </a>
                               </div>
                             ) : (
@@ -709,14 +705,6 @@ export function GeminiNarrativesInterface({ memoriaProfileId, onNarrativesProces
                       Process with AI
                     </>
                   )}
-                </button>
-
-                <button
-                  onClick={openGeminiAffiliate}
-                  className="flex items-center gap-2 px-4 py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  Get Gemini API
                 </button>
               </div>
 
