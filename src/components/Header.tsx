@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
-import { Compass, Heart, Sparkles, Info, LogIn, UserPlus, LogOut, User, Menu } from 'lucide-react';
+import { Compass, Heart, Sparkles, Info, LogIn, UserPlus, LogOut, User, Menu, PlayCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 export function Header() {
@@ -20,6 +20,16 @@ export function Header() {
             className="absolute top-12 left-0 bg-black/90 backdrop-blur-sm p-4 rounded-lg border border-white/10"
           >
             <div className="flex flex-col gap-3">
+              <a 
+                href="https://www.youtube.com/watch?v=tT0fwMpRTcI"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-amber-400 hover:text-amber-300 transition-colors"
+                onClick={() => setShowMenu(false)}
+              >
+                <PlayCircle className="w-5 h-5" />
+                <span className="text-amber-400/90 font-[Rajdhani]">Intro</span>
+              </a>
               <Link 
                 to="/memoir"
                 className={`flex items-center gap-2 ${
