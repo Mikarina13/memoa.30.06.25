@@ -1,6 +1,6 @@
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
-import * THREE from 'three';
+import * as THREE from 'three';
 
 interface EnhancedStarsProps {
   count?: number;
