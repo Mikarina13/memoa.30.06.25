@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
-import { Image as ImageIcon, Video, Upload, Play, Pause, Trash2, Download, Eye, X, Filter, AlertCircle } from 'lucide-react';
+import { Image as ImageIcon, Video, Upload, Play, Pause, Trash2, Download, Eye, X, Filter, AlertCircle, Save } from 'lucide-react';
 import { MemoirIntegrations } from '../lib/memoir-integrations';
 import { useAuth } from '../hooks/useAuth';
 
@@ -332,8 +332,8 @@ export function GalleryInterface({ onGallerySaved, onClose, context = 'memoir', 
                         </>
                       ) : (
                         <>
-                          <Upload className="w-5 h-5" />
-                          Upload Files
+                          <Save className="w-5 h-5" />
+                          Save Files
                         </>
                       )}
                     </button>
