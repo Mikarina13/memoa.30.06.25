@@ -87,6 +87,12 @@ export function Profile3DSpacePage() {
   const [showCustomizer, setShowCustomizer] = useState(false);
   const [customizationSettings, setCustomizationSettings] = useState<SpaceCustomizationSettings>(DEFAULT_SETTINGS);
   
+  // Determine if we're in builder mode (our own profile) or view mode (someone else's profile)
+  const isBuilderMode = useMemo(() => {
+    // If we have an initialUserId that's different from the current user, we're in view mode
+    return !initialUserId || initialUserId === user?.id;
+  }, [initialUserId, user]);
+  
   // Generate the list of item types for the customizer
   const itemTypes = useMemo(() => [
     { id: 'personal_favorites', name: 'Personal Favorites', color: '#ec4899' },
@@ -592,14 +598,16 @@ export function Profile3DSpacePage() {
             </AnimatePresence>
           </div>
           
-          {/* Settings Button */}
-          <button 
-            onClick={() => setShowCustomizer(!showCustomizer)}
-            className="p-2 bg-black/40 backdrop-blur-sm rounded-lg border border-white/10 text-white/70 hover:text-white hover:bg-black/60 transition-colors"
-            title="Customize Space"
-          >
-            <Cog className="w-5 h-5" />
-          </button>
+          {/* Settings Button - only show in builder mode */}
+          {isBuilderMode && (
+            <button 
+              onClick={() => setShowCustomizer(!showCustomizer)}
+              className="p-2 bg-black/40 backdrop-blur-sm rounded-lg border border-white/10 text-white/70 hover:text-white hover:bg-black/60 transition-colors"
+              title="Customize Space"
+            >
+              <Cog className="w-5 h-5" />
+            </button>
+          )}
         </div>
       </div>
       
@@ -724,37 +732,10 @@ export function Profile3DSpacePage() {
           <Image className="w-5 h-5" />
         </button>
       )}
-
-      {/* AI Tribute Gallery Button - Show for profiles with tribute images */}
-      {profileData?.profile_data?.tribute_images?.length > 0 && (
-        <button 
-          onClick={() => {
-            // Get tribute images from profile data
-            const tributeImages = profileData.profile_data.tribute_images;
-            
-            // Transform tribute images for the carousel
-            const transformedItems = tributeImages.map((item: any) => ({
-              id: item.id,
-              file_path: item.url, // Map url to file_path for the carousel
-              media_type: item.isVideo ? 'video' : 'image', // Add media_type
-              title: `AI Tribute ${item.style || ''}`,
-              original_tribute_item: item, // Store original item for later use
-            }));
-            
-            setSelectedGalleryItems(transformedItems);
-            setGalleryCurrentIndex(0); // Reset to first image
-            setShowGalleryCarousel(true);
-          }}
-          className="fixed top-52 right-8 p-3 bg-amber-500/20 backdrop-blur-sm rounded-full border border-amber-500/30 text-amber-400 hover:text-amber-300 transition-colors z-40" 
-          title="View AI Tributes"
-        >
-          <Sparkles className="w-5 h-5" />
-        </button>
-      )}
       
-      {/* Space Customizer */}
+      {/* Space Customizer - only visible in builder mode */}
       <AnimatePresence>
-        {showCustomizer && (
+        {showCustomizer && isBuilderMode && (
           <SpaceCustomizer
             settings={customizationSettings}
             onSettingsChange={handleSettingsChange}
@@ -775,7 +756,7 @@ export function Profile3DSpacePage() {
       </button>
 
       {/* AI Tribute Button (only for Memoria profiles) */}
-      {profileType === 'memoria' && memoriaProfileId && (
+      {isBuilderMode && profileType === 'memoria' && memoriaProfileId && (
         <button 
           onClick={() => setShowTributeImageInterface(true)}
           className="fixed bottom-16 left-4 px-4 py-2 bg-black/60 backdrop-blur-sm rounded-full border border-amber-500/30 text-amber-400 hover:text-amber-300 transition-colors z-40 flex items-center gap-2 shadow-lg shadow-amber-500/10" 
@@ -846,9 +827,9 @@ export function Profile3DSpacePage() {
         )}
       </AnimatePresence>
 
-      {/* AI Tribute Image Interface */}
+      {/* AI Tribute Image Interface - only visible in builder mode */}
       <AnimatePresence>
-        {showTributeImageInterface && memoriaProfileId && (
+        {showTributeImageInterface && memoriaProfileId && isBuilderMode && (
           <TributeImageInterface
             memoriaProfileId={memoriaProfileId}
             onClose={() => setShowTributeImageInterface(false)}
