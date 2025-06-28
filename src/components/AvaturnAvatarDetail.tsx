@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Environment, useGLTF, Html, PerspectiveCamera, Stage } from '@react-three/drei';
 import { User, Download, ExternalLink, RefreshCw, AlertCircle, Info, AlertTriangle, Link } from 'lucide-react';
@@ -638,9 +638,9 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                           enableRotate={true} 
                           autoRotate={!modelLoaded && !modelError} 
                           autoRotateSpeed={1}
-                          minDistance={2}
-                          maxDistance={10}
-                          target={[0, 0, 0]}
+                          minDistance={1.5}
+                          maxDistance={5}
+                          target={[0, -0.8, 0]}
                         />
                         <Environment preset="city" />
                         <ambientLight intensity={0.5} />

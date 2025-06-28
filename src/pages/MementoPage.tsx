@@ -2,7 +2,7 @@ import { useEffect, useState, FormEvent, Suspense } from 'react';
 import { Canvas, useThree, ThreeEvent } from '@react-three/fiber';
 import { OrbitControls, Environment, Html } from '@react-three/drei';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Loader, LogIn, UserPlus, LogOut, Info, Compass, Heart, Sparkles, Menu, User, Users as UsersIcon, Globe, AlertCircle, RefreshCw, Star, Space } from 'lucide-react';
+import { ArrowLeft, Loader, LogIn, UserPlus, LogOut, Info, Compass, Heart, Sparkles, Menu, User, UsersIcon, Globe, AlertCircle, RefreshCw, Star, Space } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { AuthForm } from '../components/AuthForm';
@@ -395,9 +395,9 @@ export function MementoPage() {
             enableZoom={true}
             enableRotate={true}
             autoRotate={false}
-            target={[0, 0, 0]}
-            minDistance={8}
-            maxDistance={25}
+            target={[0, -1, 0]}
+            minDistance={5}
+            maxDistance={20}
           />
           <Environment preset="city" />
           <ambientLight intensity={0.5} />
@@ -426,7 +426,7 @@ export function MementoPage() {
                 <div className="space-y-6">
                   <button
                     onClick={() => handleSelectSpaceType('memoir')}
-                    className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white py-6 rounded-lg transition-colors flex flex-col items-center justify-center gap-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                    className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white py-6 rounded-lg transition-colors flex flex-col items-center justify-center gap-3"
                   >
                     <Compass className="w-10 h-10" />
                     <div className="space-y-1 text-center">
@@ -437,7 +437,7 @@ export function MementoPage() {
                   
                   <button
                     onClick={() => handleSelectSpaceType('memoria')}
-                    className="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white py-6 rounded-lg transition-colors flex flex-col items-center justify-center gap-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50"
+                    className="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white py-6 rounded-lg transition-colors flex flex-col items-center justify-center gap-3"
                   >
                     <Heart className="w-10 h-10" />
                     <div className="space-y-1 text-center">
@@ -959,9 +959,9 @@ export function MementoPage() {
             enableZoom={true}
             enableRotate={true}
             autoRotate={false}
-            target={[0, 0, 0]}
-            minDistance={8}
-            maxDistance={25}
+            target={[0, -1, 0]}
+            minDistance={5}
+            maxDistance={20}
           />
           <Environment preset="city" />
           <ambientLight intensity={0.5} />
