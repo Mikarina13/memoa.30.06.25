@@ -41,6 +41,9 @@ export function MemoriaProfileSelector({ onSelectProfile, onCreateProfile }: Mem
     isCelebrity: false,
     isPublic: false
   });
+  
+  // Get today's date in YYYY-MM-DD format for max date constraint
+  const today = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
     if (user) {
@@ -409,6 +412,7 @@ export function MemoriaProfileSelector({ onSelectProfile, onCreateProfile }: Mem
                       value={formData.birthDate}
                       onChange={(e) => setFormData(prev => ({ ...prev, birthDate: e.target.value }))}
                       className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-purple-500"
+                      max={today}
                     />
                   </div>
                   
@@ -419,6 +423,7 @@ export function MemoriaProfileSelector({ onSelectProfile, onCreateProfile }: Mem
                       value={formData.deathDate}
                       onChange={(e) => setFormData(prev => ({ ...prev, deathDate: e.target.value }))}
                       className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-purple-500"
+                      max={today}
                     />
                   </div>
                 </div>
@@ -555,6 +560,7 @@ export function MemoriaProfileSelector({ onSelectProfile, onCreateProfile }: Mem
                       value={formData.birthDate}
                       onChange={(e) => setFormData(prev => ({ ...prev, birthDate: e.target.value }))}
                       className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+                      max={today}
                     />
                   </div>
                   
@@ -565,6 +571,7 @@ export function MemoriaProfileSelector({ onSelectProfile, onCreateProfile }: Mem
                       value={formData.deathDate}
                       onChange={(e) => setFormData(prev => ({ ...prev, deathDate: e.target.value }))}
                       className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+                      max={today}
                     />
                   </div>
                 </div>

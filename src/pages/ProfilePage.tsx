@@ -23,6 +23,9 @@ export function ProfilePage() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
   const [saveError, setSaveError] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<'overview' | 'personal' | 'account' | 'privacy'>('personal');
+  
+  // Get today's date in YYYY-MM-DD format for max date constraint
+  const today = new Date().toISOString().split('T')[0];
 
   // Ensure user has accepted terms
   useRequireTermsAcceptance();
@@ -324,6 +327,7 @@ export function ProfilePage() {
                           value={birthDate}
                           onChange={(e) => setBirthDate(e.target.value)}
                           className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
+                          max={today}
                         />
                       </div>
                       

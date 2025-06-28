@@ -47,6 +47,9 @@ export function MediaLinksInterface({ memoriaProfileId, onClose, onMediaLinksSav
     description: '',
     date: new Date().toISOString().split('T')[0]
   });
+  
+  // Get today's date in YYYY-MM-DD format for max date constraint
+  const today = new Date().toISOString().split('T')[0];
 
   // Determine the context label (Memoria vs Memoir)
   const context = memoriaProfileId ? "Memoria" : "MEMOIR";
@@ -238,7 +241,7 @@ export function MediaLinksInterface({ memoriaProfileId, onClose, onMediaLinksSav
             onClick={onClose}
             className="text-white/60 hover:text-white transition-colors"
           >
-            <X className="w-6 h-6" />
+            ×
           </button>
         </div>
 
@@ -306,6 +309,7 @@ export function MediaLinksInterface({ memoriaProfileId, onClose, onMediaLinksSav
                 value={newLink.date}
                 onChange={(e) => setNewLink(prev => ({ ...prev, date: e.target.value }))}
                 className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-amber-500"
+                max={today}
               />
             </div>
             
