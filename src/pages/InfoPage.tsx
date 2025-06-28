@@ -17,7 +17,7 @@ export function InfoPage() {
       
       <button
         onClick={() => navigate('/')}
-        className="fixed top-8 left-8 z-50 flex items-center gap-2 text-white/80 hover:text-white transition-colors"
+        className="fixed top-24 left-8 z-50 flex items-center gap-2 text-white/80 hover:text-white transition-colors"
       >
         <ArrowLeft className="w-6 h-6" />
         Return
@@ -62,10 +62,10 @@ export function InfoPage() {
             <iframe
               width="100%"
               height="100%"
-              src="https://www.youtube.com/embed/tT0fwMpRTcI"
+              src="https://www.youtube-nocookie.com/embed/tT0fwMpRTcI"
               title="MEMOA Introduction Video"
               frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowFullScreen
               className="w-full h-full"
             ></iframe>
