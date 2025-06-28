@@ -68,6 +68,7 @@ export function Profile3DSpacePage() {
   const [galleryItems, setGalleryItems] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [errorType, setErrorType] = useState<'generic' | 'profile_not_found' | 'permission_denied'>('generic');
   const [profileName, setProfileName] = useState<string | null>(null);
   
   // State for detail modal
@@ -152,6 +153,7 @@ export function Profile3DSpacePage() {
       try {
         setIsLoading(true);
         setLoadError(null);
+        setErrorType('generic');
         
         if (user) {
           console.log(`Loading profile data for ${profileType}${memoriaProfileId ? ` with ID: ${memoriaProfileId}` : ''}${initialUserId ? ` with userId: ${initialUserId}` : ''}`);
@@ -303,15 +305,30 @@ export function Profile3DSpacePage() {
             }
           } catch (profileError) {
             console.error('Error loading profile data:', profileError);
+            
+            // Handle specific error types
             if (profileError instanceof Error) {
-              setLoadError(profileError.message);
+              const errorMessage = profileError.message;
+              
+              if (errorMessage.includes('Memoria profile not found') || errorMessage.includes('Profile not found')) {
+                setErrorType('profile_not_found');
+                setLoadError(`The ${profileType} profile you're looking for doesn't exist or has been removed.`);
+              } else if (errorMessage.includes('Permission denied') || errorMessage.includes('Unauthorized')) {
+                setErrorType('permission_denied');
+                setLoadError(`You don't have permission to view this ${profileType} profile.`);
+              } else {
+                setErrorType('generic');
+                setLoadError(errorMessage);
+              }
             } else {
+              setErrorType('generic');
               setLoadError(`Failed to load ${profileType} profile data`);
             }
           }
         }
       } catch (error) {
         console.error('Error loading profile data:', error instanceof Error ? error.message : error);
+        setErrorType('generic');
         setLoadError(`Failed to load data: ${error instanceof Error ? error.message : 'Unknown error'}`);
       } finally {
         setIsLoading(false);
@@ -444,6 +461,15 @@ export function Profile3DSpacePage() {
     navigate('/memento');
   };
 
+  // Handle return to appropriate dashboard based on error type
+  const handleReturnToDashboard = () => {
+    if (profileType === 'memoria') {
+      navigate('/memoria');
+    } else {
+      navigate('/memento');
+    }
+  };
+
   // Handle manual refresh
   const handleRefresh = async () => {
     setIsLoading(true);
@@ -535,22 +561,41 @@ export function Profile3DSpacePage() {
     return (
       <div className="w-full h-screen bg-black flex flex-col items-center justify-center p-6">
         <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-6 max-w-lg">
-          <h2 className="text-xl font-bold text-white mb-4">Error Loading Space</h2>
+          <h2 className="text-xl font-bold text-white mb-4">
+            {errorType === 'profile_not_found' ? 'Profile Not Found' : 
+             errorType === 'permission_denied' ? 'Access Denied' : 
+             'Error Loading Space'}
+          </h2>
           <p className="text-white/70 mb-6">{loadError}</p>
+          
+          {errorType === 'profile_not_found' && (
+            <div className="text-white/60 text-sm mb-6">
+              <p>This could happen if:</p>
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>The profile was deleted</li>
+                <li>The profile ID is incorrect</li>
+                <li>You don't have permission to view this profile</li>
+              </ul>
+            </div>
+          )}
+          
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button 
-              onClick={() => navigate('/memento')}
-              className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
+              onClick={handleReturnToDashboard}
+              className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
             >
-              Return to Home
+              {profileType === 'memoria' ? 'Return to Memoria' : 'Return to Home'}
             </button>
-            <button 
-              onClick={handleRefresh}
-              className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
-            >
-              <RefreshCw className="w-5 h-5" />
-              Try Again
-            </button>
+            
+            {errorType !== 'profile_not_found' && (
+              <button 
+                onClick={handleRefresh}
+                className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                <RefreshCw className="w-5 h-5" />
+                Try Again
+              </button>
+            )}
           </div>
         </div>
       </div>
