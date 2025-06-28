@@ -92,7 +92,7 @@ export class MemoirIntegrations {
           .select('*')
           .eq('id', memoriaProfileId)
           .eq('user_id', userId)
-          .single();
+          .maybeSingle();
           
         if (error) throw error;
         return memoriaProfile;
@@ -102,7 +102,7 @@ export class MemoirIntegrations {
           .from('profiles')
           .select('*')
           .eq('user_id', userId)
-          .single();
+          .maybeSingle();
           
         if (error) throw error;
         return profile;
