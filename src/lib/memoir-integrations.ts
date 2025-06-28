@@ -114,7 +114,11 @@ export class MemoirIntegrations {
         return profile;
       }
     } catch (error) {
-      console.error('Error getting memoir profile:', error);
+      // Only log to console if it's not a "profile not found" error
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (!errorMessage.includes('profile not found')) {
+        console.error('Error getting memoir profile:', error);
+      }
       throw error;
     }
   }
