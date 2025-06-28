@@ -269,24 +269,34 @@ function CarouselItem({
   const meshRef = useRef<THREE.Mesh>(null);
   const loadedRef = useRef(false);
   const [textureError, setTextureError] = useState(false);
+  const [currentTextureUrl, setCurrentTextureUrl] = useState(item.file_path);
+  const [hasAttemptedFallback, setHasAttemptedFallback] = useState(false);
   
-  // Always call useTexture, but with error handling
+  // Only load texture for image items
   let texture = null;
   const shouldLoadTexture = item.media_type === 'image' && !textureError;
   
-  try {
-    // Always call the hook, but conditionally pass the file path
-    texture = useTexture(
-      shouldLoadTexture ? item.file_path : '/placeholder.jpg', 
-      undefined, 
-      (error) => {
-        console.warn('Texture loading error:', error);
-        setTextureError(true);
-      }
-    );
-  } catch (error) {
-    console.warn('useTexture hook error:', error);
-    setTextureError(true);
+  if (shouldLoadTexture) {
+    try {
+      texture = useTexture(
+        currentTextureUrl, 
+        undefined, 
+        (error) => {
+          console.warn('Texture loading error:', error);
+          if (!hasAttemptedFallback) {
+            // Attempt to load fallback image only once
+            setCurrentTextureUrl('/placeholder.jpg');
+            setHasAttemptedFallback(true);
+          } else {
+            // Both original and fallback failed
+            setTextureError(true);
+          }
+        }
+      );
+    } catch (error) {
+      console.warn('useTexture hook error:', error);
+      setTextureError(true);
+    }
   }
   
   // Call onImageLoaded when texture is available
