@@ -1,8 +1,9 @@
 import { motion } from 'framer-motion';
-import { ArrowLeft, Book, Shield, FileText, Mail, Phone, MapPin, PlayCircle } from 'lucide-react';
+import { ArrowLeft, Book, Shield, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
+import { YouTubeVideo } from '../components/YouTubeVideo';
 
 export function InfoPage() {
   const navigate = useNavigate();
@@ -17,17 +18,17 @@ export function InfoPage() {
       
       <button
         onClick={() => navigate('/')}
-        className="fixed top-24 left-8 z-50 flex items-center gap-2 text-white/80 hover:text-white transition-colors"
+        className="fixed top-8 left-8 z-50 flex items-center gap-2 text-white/80 hover:text-white transition-colors"
       >
         <ArrowLeft className="w-6 h-6" />
         Return
       </button>
 
       <div className="max-w-4xl mx-auto py-20 px-8 relative">
-        <h1 className="text-4xl font-bold mb-12 text-center bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent font-[Orbitron] pt-8">
+        <h1 className="text-4xl font-bold mb-12 text-center bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent font-[Rajdhani] pt-8">
           About MEMOĀ
         </h1>
-        
+
         <div className="flex justify-center gap-4 mb-12">
           <button 
             onClick={() => navigate('/community-guidelines')}
@@ -51,29 +52,6 @@ export function InfoPage() {
             <span className="font-[Rajdhani]">Terms of Service</span>
           </button>
         </div>
-
-        {/* YouTube Intro Video Section */}
-        <div className="bg-black/40 backdrop-blur-sm p-8 rounded-xl border border-white/10 mb-12">
-          <h2 className="text-2xl font-semibold mb-6 text-amber-400 font-[Orbitron] flex items-center gap-3">
-            <PlayCircle className="w-7 h-7" />
-            MEMOĀ Introduction
-          </h2>
-          <div className="aspect-video w-full rounded-lg overflow-hidden shadow-2xl bg-black/70">
-            <iframe 
-              src="https://www.youtube.com/embed/tT0fwMpRTcI?rel=0&autoplay=0"
-              title="MEMOĀ Introduction Video"
-              width="100%"
-              height="100%"
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              className="w-full h-full"
-            ></iframe>
-          </div>
-          <p className="text-white/70 mt-4 text-center font-[Rajdhani]">
-            Watch this video to learn more about MEMOĀ and how it can help preserve your digital legacy.
-          </p>
-        </div>
         
         <div className="space-y-12 pb-12">
           <section className="bg-black/40 backdrop-blur-sm p-8 rounded-xl border border-white/10">
@@ -86,6 +64,20 @@ export function InfoPage() {
                 MEMOĀ is designed to be a revolutionary platform combining cutting-edge 3D visualization with secure, heartfelt remembrance. We are pioneering a new way to ensure that personal stories, wisdom, and identities are not just stored, but continue to resonate and connect across generations.
               </p>
             </div>
+          </section>
+
+          <section className="bg-black/40 backdrop-blur-sm p-8 rounded-xl border border-white/10">
+            <h2 className="text-2xl font-semibold mb-6 text-purple-400 font-[Orbitron]">MEMOĀ Introduction</h2>
+            <div className="mb-6">
+              <YouTubeVideo 
+                videoId="dQw4w9WgXcQ" 
+                title="MEMOĀ Introduction" 
+                className="rounded-lg overflow-hidden shadow-xl"
+              />
+            </div>
+            <p className="text-white/70 text-center">
+              Watch this video to learn more about MEMOĀ and how it can help preserve your digital legacy.
+            </p>
           </section>
 
           <section className="bg-black/40 backdrop-blur-sm p-8 rounded-xl border border-white/10">
@@ -150,54 +142,12 @@ export function InfoPage() {
 
           <section className="bg-black/40 backdrop-blur-sm p-8 rounded-xl border border-white/10">
             <h2 className="text-2xl font-semibold mb-6 text-green-400 font-[Orbitron]">Contact</h2>
-            <div className="space-y-6 text-white/80 leading-relaxed font-[Rajdhani]">
-              <div className="flex flex-col md:flex-row gap-6">
-                <div className="bg-white/5 p-4 rounded-lg flex-1">
-                  <div className="flex items-start gap-3 mb-3">
-                    <MapPin className="w-5 h-5 text-blue-400 flex-shrink-0 mt-1" />
-                    <div>
-                      <h3 className="font-medium text-white">Address</h3>
-                      <p className="text-white/70">
-                        AVA Digital L.L.C<br />
-                        1603 Capitol Ave Ste 415<br />
-                        Cheyenne WY 82001
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="bg-white/5 p-4 rounded-lg flex-1">
-                  <div className="flex items-start gap-3">
-                    <Phone className="w-5 h-5 text-green-400 flex-shrink-0 mt-1" />
-                    <div>
-                      <h3 className="font-medium text-white">Phone</h3>
-                      <p className="text-white/70">
-                        +1(307) 313-5017
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="bg-white/5 p-4 rounded-lg">
-                <div className="flex items-start gap-3">
-                  <Mail className="w-5 h-5 text-purple-400 flex-shrink-0 mt-1" />
-                  <div className="w-full">
-                    <h3 className="font-medium text-white mb-3">Email</h3>
-                    <p className="text-white/70 mb-4">
-                      Have questions, suggestions, or just want to share your thoughts? We'd love to hear from you. Please reach out to our team using the button below.
-                    </p>
-                    <a 
-                      href="mailto:ava.dsa25@proton.me" 
-                      className="inline-flex items-center gap-2 px-5 py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors shadow-lg"
-                    >
-                      <Mail className="w-5 h-5" />
-                      Send Email
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <p className="text-lg text-white/80 leading-relaxed font-[Rajdhani]">
+              Have questions, suggestions, or just want to share your thoughts? We'd love to hear from you. Please reach out to our team at{' '}
+              <a href="mailto:ava.dsa25@proton.me" className="text-blue-400 hover:text-blue-300 underline">
+                ava.dsa25@proton.me
+              </a>
+            </p>
           </section>
         </div>
 
