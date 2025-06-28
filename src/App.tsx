@@ -290,16 +290,6 @@ function MainScene() {
               className="fixed top-16 left-4 bg-black/60 backdrop-blur-sm border border-white/10 rounded-lg p-4 z-20"
             >
               <div className="flex flex-col gap-3">
-                <a 
-                  href="https://www.youtube.com/watch?v=tT0fwMpRTcI"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-amber-400 hover:text-amber-300 transition-colors"
-                  onClick={() => setShowMenu(false)}
-                >
-                  <PlayCircle className="w-5 h-5" />
-                  <span className="text-amber-400/90 font-[Rajdhani]">Intro</span>
-                </a>
                 <button 
                   onClick={() => {
                     navigate('/memoir');
@@ -366,6 +356,16 @@ function MainScene() {
                   </>
                 ) : (
                   <>
+                    <a 
+                      href="https://www.youtube.com/watch?v=tT0fwMpRTcI"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-amber-400 hover:text-amber-300 transition-colors"
+                      onClick={() => setShowMenu(false)}
+                    >
+                      <PlayCircle className="w-5 h-5" />
+                      <span className="text-amber-400/90 font-[Rajdhani]">Intro</span>
+                    </a>
                     <button 
                       onClick={() => {
                         navigate('/profile');

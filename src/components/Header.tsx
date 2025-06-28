@@ -20,16 +20,6 @@ export function Header() {
             className="absolute top-12 left-0 bg-black/90 backdrop-blur-sm p-4 rounded-lg border border-white/10"
           >
             <div className="flex flex-col gap-3">
-              <a 
-                href="https://www.youtube.com/watch?v=tT0fwMpRTcI"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-amber-400 hover:text-amber-300 transition-colors"
-                onClick={() => setShowMenu(false)}
-              >
-                <PlayCircle className="w-5 h-5" />
-                <span className="text-amber-400/90 font-[Rajdhani]">Intro</span>
-              </a>
               <Link 
                 to="/memoir"
                 className={`flex items-center gap-2 ${
@@ -100,6 +90,16 @@ export function Header() {
                 </>
               ) : (
                 <>
+                  <a 
+                    href="https://www.youtube.com/watch?v=tT0fwMpRTcI"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-amber-400 hover:text-amber-300 transition-colors"
+                    onClick={() => setShowMenu(false)}
+                  >
+                    <PlayCircle className="w-5 h-5" />
+                    <span className="text-amber-400/90 font-[Rajdhani]">Intro</span>
+                  </a>
                   <Link 
                     to="/profile"
                     className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors"
