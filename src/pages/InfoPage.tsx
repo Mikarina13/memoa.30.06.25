@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ArrowLeft, Book, Shield, FileText, Mail, Phone, MapPin } from 'lucide-react';
+import { ArrowLeft, Book, Shield, FileText, Mail, Phone, MapPin, PlayCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
@@ -50,6 +50,29 @@ export function InfoPage() {
             <FileText className="w-5 h-5" />
             <span className="font-[Rajdhani]">Terms of Service</span>
           </button>
+        </div>
+
+        {/* YouTube Intro Video Section */}
+        <div className="bg-black/40 backdrop-blur-sm p-8 rounded-xl border border-white/10 mb-12">
+          <h2 className="text-2xl font-semibold mb-6 text-amber-400 font-[Orbitron] flex items-center gap-3">
+            <PlayCircle className="w-7 h-7" />
+            MEMOĀ Introduction
+          </h2>
+          <div className="aspect-video w-full rounded-lg overflow-hidden shadow-2xl bg-black/50">
+            <iframe
+              width="100%"
+              height="100%"
+              src="https://www.youtube.com/embed/tT0fwMpRTcI"
+              title="MEMOA Introduction Video"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="w-full h-full"
+            ></iframe>
+          </div>
+          <p className="text-white/70 mt-4 text-center font-[Rajdhani]">
+            Watch this video to learn more about MEMOĀ and how it can help preserve your digital legacy.
+          </p>
         </div>
         
         <div className="space-y-12 pb-12">
