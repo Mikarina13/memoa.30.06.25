@@ -16,15 +16,48 @@ const GAMING_PLATFORMS = [
   'PC (Origin)',
   'PlayStation 5',
   'PlayStation 4',
+  'PlayStation 3',
+  'PlayStation 2',
+  'PlayStation 1',
   'Xbox Series X/S',
   'Xbox One',
+  'Xbox 360',
+  'Xbox (Original)',
   'Nintendo Switch',
+  'Nintendo Wii U',
+  'Nintendo Wii',
+  'Nintendo GameCube',
+  'Nintendo 64',
+  'Super Nintendo (SNES)',
+  'Nintendo Entertainment System (NES)',
+  'Game Boy Advance',
+  'Game Boy Color',
+  'Game Boy',
+  'Sega Genesis/Mega Drive',
+  'Sega Saturn',
+  'Sega Dreamcast',
+  'Sega Master System',
+  'Atari 2600',
+  'Atari 5200',
+  'Atari 7800',
+  'Atari Jaguar',
+  'Neo Geo',
   'Mobile (iOS)',
   'Mobile (Android)',
   'VR (Meta Quest)',
   'VR (Steam VR)',
   'Browser Game',
+  'Arcade',
   'Other'
+];
+
+const SOCIAL_MEDIA_PLATFORMS = [
+  'Facebook', 'Instagram', 'Twitter (X)', 'LinkedIn', 'YouTube', 'TikTok',
+  'Pinterest', 'Snapchat', 'Reddit', 'Discord', 'Twitch', 'Spotify',
+  'WhatsApp', 'Telegram', 'Viber', 'WeChat', 'Line', 'Tumblr', 'Flickr',
+  'Vimeo', 'SoundCloud', 'Bandcamp', 'Behance', 'Dribbble', 'GitHub',
+  'Stack Overflow', 'Medium', 'Substack', 'OnlyFans', 'Patreon', 'Etsy',
+  'Shopify Store', 'Personal Website', 'Blog', 'Portfolio', 'Other'
 ];
 
 export function GamingPreferencesInterface({ memoriaProfileId, onClose, onGamesStored }: GamingPreferencesInterfaceProps) {
@@ -279,10 +312,10 @@ export function GamingPreferencesInterface({ memoriaProfileId, onClose, onGamesS
                 <select
                   value={newGame.platform}
                   onChange={(e) => setNewGame(prev => ({ ...prev, platform: e.target.value }))}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-cyan-500"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-cyan-500 [color-scheme:dark]"
                 >
                   {GAMING_PLATFORMS.map(platform => (
-                    <option key={platform} value={platform} className="bg-black">
+                    <option key={platform} value={platform} className="text-white bg-slate-800">
                       {platform}
                     </option>
                   ))}
