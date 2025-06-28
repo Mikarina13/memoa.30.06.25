@@ -95,6 +95,9 @@ export class MemoirIntegrations {
           .maybeSingle();
           
         if (error) throw error;
+        if (!memoriaProfile) {
+          throw new Error(`Memoria profile not found: ${memoriaProfileId}`);
+        }
         return memoriaProfile;
       } else {
         // Get the user's MEMOIR profile
@@ -105,6 +108,9 @@ export class MemoirIntegrations {
           .maybeSingle();
           
         if (error) throw error;
+        if (!profile) {
+          throw new Error(`Profile not found for user: ${userId}`);
+        }
         return profile;
       }
     } catch (error) {
@@ -250,9 +256,13 @@ export class MemoirIntegrations {
           .select('profile_data')
           .eq('id', memoriaProfileId)
           .eq('user_id', userId)
-          .single();
+          .maybeSingle();
           
         if (error) throw error;
+        
+        if (!profile) {
+          throw new Error(`Memoria profile not found: ${memoriaProfileId}`);
+        }
         
         const updatedData = {
           profile_data: {
@@ -277,9 +287,13 @@ export class MemoirIntegrations {
           .from('profiles')
           .select('memoir_data')
           .eq('user_id', userId)
-          .single();
+          .maybeSingle();
           
         if (error) throw error;
+        
+        if (!profile) {
+          throw new Error(`Profile not found for user: ${userId}`);
+        }
         
         const updatedData = {
           memoir_data: {
@@ -363,7 +377,7 @@ export class MemoirIntegrations {
           .select('profile_data')
           .eq('id', memoriaProfileId)
           .eq('user_id', userId)
-          .single();
+          .maybeSingle();
           
         if (error) throw error;
         return data?.profile_data?.preferences?.personal || null;
@@ -373,7 +387,7 @@ export class MemoirIntegrations {
           .from('profiles')
           .select('memoir_data')
           .eq('user_id', userId)
-          .single();
+          .maybeSingle();
           
         if (error) throw error;
         return data?.memoir_data?.preferences?.personal || null;
@@ -516,9 +530,13 @@ export class MemoirIntegrations {
           .select('integration_status')
           .eq('id', memoriaProfileId)
           .eq('user_id', userId)
-          .single();
+          .maybeSingle();
           
         if (error) throw error;
+        
+        if (!profile) {
+          throw new Error(`Memoria profile not found: ${memoriaProfileId}`);
+        }
         
         const currentStatus = profile.integration_status || {};
         
@@ -548,9 +566,13 @@ export class MemoirIntegrations {
           .from('profiles')
           .select('integration_status')
           .eq('user_id', userId)
-          .single();
+          .maybeSingle();
           
         if (error) throw error;
+        
+        if (!profile) {
+          throw new Error(`Profile not found for user: ${userId}`);
+        }
         
         const currentStatus = profile.integration_status || {};
         
@@ -1013,9 +1035,13 @@ export class MemoirIntegrations {
           .select('profile_data')
           .eq('id', memoriaProfileId)
           .eq('user_id', userId)
-          .single();
+          .maybeSingle();
           
         if (error) throw error;
+        
+        if (!profile) {
+          throw new Error(`Memoria profile not found: ${memoriaProfileId}`);
+        }
         
         const updatedData = {
           profile_data: {
@@ -1040,9 +1066,13 @@ export class MemoirIntegrations {
           .from('profiles')
           .select('memoir_data')
           .eq('user_id', userId)
-          .single();
+          .maybeSingle();
           
         if (error) throw error;
+        
+        if (!profile) {
+          throw new Error(`Profile not found for user: ${userId}`);
+        }
         
         const updatedData = {
           memoir_data: {
@@ -1079,7 +1109,7 @@ export class MemoirIntegrations {
           .select('profile_data')
           .eq('id', memoriaProfileId)
           .eq('user_id', userId)
-          .single();
+          .maybeSingle();
           
         if (error) throw error;
         return data?.profile_data?.media_links || [];
@@ -1089,7 +1119,7 @@ export class MemoirIntegrations {
           .from('profiles')
           .select('memoir_data')
           .eq('user_id', userId)
-          .single();
+          .maybeSingle();
           
         if (error) throw error;
         return data?.memoir_data?.media_links || [];
@@ -1120,9 +1150,13 @@ export class MemoirIntegrations {
           .select('profile_data')
           .eq('id', memoriaProfileId)
           .eq('user_id', userId)
-          .single();
+          .maybeSingle();
           
         if (error) throw error;
+        
+        if (!profile) {
+          throw new Error(`Memoria profile not found: ${memoriaProfileId}`);
+        }
         
         const updatedData = {
           profile_data: {
@@ -1147,9 +1181,13 @@ export class MemoirIntegrations {
           .from('profiles')
           .select('memoir_data')
           .eq('user_id', userId)
-          .single();
+          .maybeSingle();
           
         if (error) throw error;
+        
+        if (!profile) {
+          throw new Error(`Profile not found for user: ${userId}`);
+        }
         
         const updatedData = {
           memoir_data: {
@@ -1190,7 +1228,7 @@ export class MemoirIntegrations {
           .select('*')
           .eq('id', memoriaProfileId)
           .eq('user_id', userId)
-          .single();
+          .maybeSingle();
           
         if (error) throw error;
         profile = data;
@@ -1199,14 +1237,14 @@ export class MemoirIntegrations {
           .from('profiles')
           .select('*')
           .eq('user_id', userId)
-          .single();
+          .maybeSingle();
           
         if (error) throw error;
         profile = data;
       }
       
       // Navigate through the data path
-      let currentData = memoriaProfileId ? profile.profile_data : profile.memoir_data;
+      let currentData = memoriaProfileId ? profile?.profile_data : profile?.memoir_data;
       if (!currentData) return null;
       
       for (let i = 0; i < pathParts.length; i++) {
