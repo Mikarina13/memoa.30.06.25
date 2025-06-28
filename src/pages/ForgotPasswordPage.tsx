@@ -2,7 +2,6 @@ import { useState, FormEvent } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Loader, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Header } from '../components/Header';
 import { supabase } from '../lib/supabase';
 import { Footer } from '../components/Footer';
 
@@ -40,15 +39,13 @@ export function ForgotPasswordPage() {
       exit={{ opacity: 0 }}
       className="min-h-screen bg-gradient-to-b from-black to-gray-900 text-white p-8 font-[Orbitron]"
     >
-      <Header />
-      
-      <div className="fixed top-8 left-24 z-40">
+      <div className="fixed top-8 left-8 z-40">
         <button
           onClick={() => navigate(-1)}
           className="flex items-center gap-2 text-white/80 hover:text-white transition-colors"
         >
           <ArrowLeft className="w-6 h-6" />
-          Return
+          Return to Login
         </button>
       </div>
 
