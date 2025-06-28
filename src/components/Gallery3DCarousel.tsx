@@ -2,6 +2,7 @@ import { useRef, useState, useEffect, useCallback } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useTexture, Html } from '@react-three/drei';
 import { Group, MathUtils, Vector3 } from 'three';
+import React from 'react';
 
 interface Gallery3DCarouselProps {
   galleryItems: any[];
@@ -9,6 +10,55 @@ interface Gallery3DCarouselProps {
   onItemSelect?: (item: any) => void;
   currentIndex?: number;
   onIndexChange?: (index: number) => void;
+}
+
+// Error Boundary for individual carousel items
+class CarouselItemErrorBoundary extends React.Component<
+  { children: React.ReactNode; onError?: () => void },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode; onError?: () => void }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.warn('CarouselItem error caught:', error, errorInfo);
+    if (this.props.onError) {
+      this.props.onError();
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <CarouselItemErrorFallback />;
+    }
+
+    return this.props.children;
+  }
+}
+
+// Fallback component for failed carousel items
+function CarouselItemErrorFallback() {
+  return (
+    <group>
+      <mesh>
+        <planeGeometry args={[6, 4]} />
+        <meshBasicMaterial color="#333333" opacity={0.8} transparent />
+      </mesh>
+      <Html center>
+        <div className="bg-black/70 text-white p-4 rounded-lg text-center max-w-xs">
+          <div className="text-red-400 mb-2">⚠️</div>
+          <div className="text-sm font-medium mb-1">Failed to load media</div>
+          <div className="text-xs text-gray-300">Image unavailable</div>
+        </div>
+      </Html>
+    </group>
+  );
 }
 
 // Component that manages camera controls specifically for the carousel
@@ -152,17 +202,22 @@ export function Gallery3DCarousel({
           const scale = isActive ? 1.2 : 0.9;
           
           return (
-            <CarouselItem 
-              key={`carousel-item-${item.id}`}
-              item={item}
-              position={[x, y, z]}
-              rotation={[0, Math.PI + angle, 0]} // Face toward center
-              isActive={isActive}
-              isLoaded={!!loadingStatesRef.current[item.id]}
-              onImageLoaded={() => handleImageLoaded(item.id)}
-              onClick={() => handleItemSelect(item)} 
-              scale={scale}
-            />
+            <CarouselItemErrorBoundary 
+              key={`carousel-item-boundary-${item.id}`}
+              onError={() => console.warn(`Failed to load carousel item: ${item.id}`)}
+            >
+              <CarouselItem 
+                key={`carousel-item-${item.id}`}
+                item={item}
+                position={[x, y, z]}
+                rotation={[0, Math.PI + angle, 0]} // Face toward center
+                isActive={isActive}
+                isLoaded={!!loadingStatesRef.current[item.id]}
+                onImageLoaded={() => handleImageLoaded(item.id)}
+                onClick={() => handleItemSelect(item)} 
+                scale={scale}
+              />
+            </CarouselItemErrorBoundary>
           );
         })}
       </group>
@@ -195,25 +250,36 @@ function CarouselItem({
 }: CarouselItemProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const loadedRef = useRef(false);
+  const [textureError, setTextureError] = useState(false);
   
-  // Load texture for image items
-  const texture = item.media_type === 'image' 
-    ? useTexture(item.file_path)
-    : null;
+  // Load texture for image items with error handling
+  let texture = null;
+  try {
+    if (item.media_type === 'image' && !textureError) {
+      // Only attempt to load texture if we haven't encountered an error
+      texture = useTexture(item.file_path, undefined, (error) => {
+        console.warn('Texture loading error:', error);
+        setTextureError(true);
+      });
+    }
+  } catch (error) {
+    console.warn('useTexture hook error:', error);
+    setTextureError(true);
+  }
   
   // Call onImageLoaded when texture is available
   useEffect(() => {
-    if (texture && item.media_type === 'image' && !loadedRef.current) {
+    if (texture && item.media_type === 'image' && !loadedRef.current && !textureError) {
       loadedRef.current = true;
       onImageLoaded();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [texture, item.media_type]);
+  }, [texture, item.media_type, textureError]);
   
-  // Set material based on media type
-  const materialProps = item.media_type === 'image' 
+  // Set material based on media type and error state
+  const materialProps = item.media_type === 'image' && texture && !textureError
     ? { map: texture } 
-    : { color: '#111111' };
+    : { color: textureError ? '#666666' : '#111111' };
   
   // Apply scale directly
   useEffect(() => {
@@ -221,6 +287,24 @@ function CarouselItem({
       meshRef.current.scale.set(scale, scale, scale);
     }
   }, [scale]);
+  
+  // If there's a texture error for an image, show error state
+  if (item.media_type === 'image' && textureError) {
+    return (
+      <group position={position} rotation={rotation}>
+        <mesh ref={meshRef} onClick={onClick}>
+          <planeGeometry args={[6, 4]} />
+          <meshBasicMaterial color="#444444" opacity={0.8} transparent />
+        </mesh>
+        <Html center position={[0, 0, 0.1]}>
+          <div className="bg-black/70 text-white p-2 rounded text-center text-xs">
+            <div className="text-red-400 mb-1">⚠️</div>
+            <div>Image failed to load</div>
+          </div>
+        </Html>
+      </group>
+    );
+  }
   
   return (
     <group position={position} rotation={rotation}>
@@ -244,7 +328,7 @@ function CarouselItem({
             </div>
           </Html>
         )}
-      </mesh>
-    </group>
-  );
+      </group>
+    );
+  }
 }
