@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Brain, CheckCircle, ChevronRight, ExternalLink, Save, X, Upload, FileText, Download, AlertCircle, ArrowRight } from 'lucide-react';
+import { Brain, CheckCircle, ChevronRight, ExternalLink, Save, X, Upload, FileText, Download, AlertCircle, ArrowRight, Edit, RefreshCw } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { MemoirIntegrations } from '../lib/memoir-integrations';
 
@@ -108,6 +108,7 @@ export function PersonalityTestInterface({ memoriaProfileId, onTestCompleted, on
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [pdfUploadError, setPdfUploadError] = useState<string | null>(null);
   const [pdfUploadSuccess, setPdfUploadSuccess] = useState(false);
+  const [isEditingType, setIsEditingType] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -174,6 +175,7 @@ export function PersonalityTestInterface({ memoriaProfileId, onTestCompleted, on
       await MemoirIntegrations.storePersonalityTestResults(user.id, testResults, memoriaProfileId);
       
       setExistingResults(testResults);
+      setIsEditingType(false);
       
       if (onTestCompleted) {
         onTestCompleted(testResults);
@@ -338,7 +340,7 @@ export function PersonalityTestInterface({ memoriaProfileId, onTestCompleted, on
                 </p>
                 
                 {/* Personality Type Selection */}
-                {!existingResults || !existingResults.type ? (
+                {(!existingResults || !existingResults.type || isEditingType) ? (
                   <div className="mb-6">
                     <label className="block text-sm text-white/70 mb-2">Your Personality Type</label>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -363,7 +365,16 @@ export function PersonalityTestInterface({ memoriaProfileId, onTestCompleted, on
                   </div>
                 ) : (
                   <div className="mb-6">
-                    <label className="block text-sm text-white/70 mb-2">Your Personality Type</label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm text-white/70">Your Personality Type</label>
+                      <button
+                        onClick={() => setIsEditingType(true)}
+                        className="flex items-center gap-1 text-xs px-2 py-1 bg-indigo-500/20 text-indigo-400 rounded-full hover:bg-indigo-500/30 transition-colors"
+                      >
+                        <Edit className="w-3 h-3" />
+                        Change Type
+                      </button>
+                    </div>
                     <div className={`bg-gradient-to-r ${personalityTypes[existingResults.type as keyof typeof personalityTypes]?.color || 'from-indigo-500 to-purple-500'} p-4 rounded-lg text-white`}>
                       <div className="flex items-center justify-between mb-2">
                         <div className="text-xl font-bold">{existingResults.type}</div>
@@ -470,23 +481,54 @@ export function PersonalityTestInterface({ memoriaProfileId, onTestCompleted, on
               </div>
               
               {/* Save Button */}
-              {(!existingResults || !existingResults.type) && (
-                <button
-                  onClick={saveResults}
-                  disabled={!selectedType || isSaving}
-                  className="flex items-center gap-2 px-6 py-3 bg-indigo-500 hover:bg-indigo-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
-                >
-                  {isSaving ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-5 h-5" />
-                      Save Personality Type
-                    </>
+              {((!existingResults || !existingResults.type) || isEditingType) && (
+                <div className="flex gap-3">
+                  <button
+                    onClick={saveResults}
+                    disabled={!selectedType || isSaving}
+                    className="flex-1 items-center gap-2 px-6 py-3 bg-indigo-500 hover:bg-indigo-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors inline-flex justify-center"
+                  >
+                    {isSaving ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-5 h-5" />
+                        Save Personality Type
+                      </>
+                    )}
+                  </button>
+                  
+                  {isEditingType && (
+                    <button
+                      onClick={() => {
+                        setIsEditingType(false);
+                        setSelectedType(existingResults?.type || null);
+                        setTypeName(existingResults?.name || '');
+                      }}
+                      className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors inline-flex items-center gap-2"
+                    >
+                      <X className="w-5 h-5" />
+                      Cancel
+                    </button>
                   )}
+                </div>
+              )}
+              
+              {/* Reset / Change Personality Type (for when it's not in edit mode but has existing results) */}
+              {existingResults && existingResults.type && !isEditingType && (
+                <button
+                  onClick={() => {
+                    if (confirm('Are you sure you want to change your personality type? Your current selection will be replaced.')) {
+                      setIsEditingType(true);
+                    }
+                  }}
+                  className="flex items-center gap-2 px-6 py-3 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 rounded-lg transition-colors"
+                >
+                  <RefreshCw className="w-5 h-5" />
+                  Change Personality Type
                 </button>
               )}
               
