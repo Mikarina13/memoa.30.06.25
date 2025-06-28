@@ -1,9 +1,8 @@
 import { motion } from 'framer-motion';
-import { ArrowLeft, Shield, FileText, Book } from 'lucide-react';
+import { ArrowLeft, Shield, FileText, Book, PlayCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
-import { YouTubeVideo } from '../components/YouTubeVideo';
 
 export function InfoPage() {
   const navigate = useNavigate();
@@ -40,20 +39,6 @@ export function InfoPage() {
                 MEMOĀ is designed to be a revolutionary platform combining cutting-edge 3D visualization with secure, heartfelt remembrance. We are pioneering a new way to ensure that personal stories, wisdom, and identities are not just stored, but continue to resonate and connect across generations.
               </p>
             </div>
-          </section>
-
-          <section className="bg-black/40 backdrop-blur-sm p-8 rounded-xl border border-white/10">
-            <h2 className="text-2xl font-semibold mb-6 text-purple-400 font-[Orbitron]">MEMOĀ Introduction</h2>
-            <div className="mb-6">
-              <YouTubeVideo 
-                videoId="dQw4w9WgXcQ" 
-                title="MEMOĀ Introduction" 
-                className="rounded-lg overflow-hidden shadow-xl"
-              />
-            </div>
-            <p className="text-white/70 text-center">
-              Watch this video to learn more about MEMOĀ and how it can help preserve your digital legacy.
-            </p>
           </section>
 
           <section className="bg-black/40 backdrop-blur-sm p-8 rounded-xl border border-white/10">
@@ -203,6 +188,42 @@ export function InfoPage() {
           </div>
         </section>
 
+        <div className="mt-12 text-center">
+          <a 
+            href="https://www.youtube.com/watch?v=tT0fwMpRTcI"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-black/40 backdrop-blur-sm rounded-lg border border-amber-500/30 text-amber-400 hover:text-amber-300 transition-colors shadow-lg"
+          >
+            <PlayCircle className="w-6 h-6" />
+            <span className="font-medium">Watch Our Introduction Video</span>
+          </a>
+        </div>
+
+        <div className="flex justify-center gap-4 mt-12">
+          <button 
+            onClick={() => navigate('/community-guidelines')}
+            className="flex items-center gap-2 px-4 py-2 bg-black/40 backdrop-blur-sm rounded-lg border border-white/10 text-purple-400 hover:text-purple-300 transition-colors"
+          >
+            <Book className="w-5 h-5" />
+            <span className="font-[Rajdhani]">Community Guidelines</span>
+          </button>
+          <button 
+            onClick={() => navigate('/privacy-policy')}
+            className="flex items-center gap-2 px-4 py-2 bg-black/40 backdrop-blur-sm rounded-lg border border-white/10 text-amber-400 hover:text-amber-300 transition-colors"
+          >
+            <Shield className="w-5 h-5" />
+            <span className="font-[Rajdhani]">Privacy Policy</span>
+          </button>
+          <button 
+            onClick={() => navigate('/terms-of-service')}
+            className="flex items-center gap-2 px-4 py-2 bg-black/40 backdrop-blur-sm rounded-lg border border-white/10 text-green-400 hover:text-green-300 transition-colors"
+          >
+            <FileText className="w-5 h-5" />
+            <span className="font-[Rajdhani]">Terms of Service</span>
+          </button>
+        </div>
+        
         <Footer />
       </div>
     </motion.div>
