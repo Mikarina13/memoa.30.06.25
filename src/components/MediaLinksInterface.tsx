@@ -12,7 +12,8 @@ import {
   CheckCircle, 
   AlertCircle, 
   Download, 
-  Upload
+  Upload,
+  Edit2
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { MemoirIntegrations } from '../lib/memoir-integrations';
@@ -47,6 +48,7 @@ export function MediaLinksInterface({ memoriaProfileId, onClose, onMediaLinksSav
     description: '',
     date: new Date().toISOString().split('T')[0]
   });
+  const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
   
   // Get today's date in YYYY-MM-DD format for max date constraint
   const today = new Date().toISOString().split('T')[0];
@@ -98,18 +100,39 @@ export function MediaLinksInterface({ memoriaProfileId, onClose, onMediaLinksSav
       return;
     }
 
-    const link: MediaLink = {
-      id: `media-${Date.now()}`,
-      title: newLink.title,
-      url: newLink.url,
-      type: newLink.type as 'video' | 'podcast' | 'article',
-      source: newLink.source,
-      description: newLink.description || '',
-      date: newLink.date || new Date().toISOString().split('T')[0]
-    };
+    // If we're editing an existing link
+    if (editingLinkId) {
+      // Update the existing link
+      const link: MediaLink = {
+        id: editingLinkId,
+        title: newLink.title!,
+        url: newLink.url!,
+        type: newLink.type as 'video' | 'podcast' | 'article',
+        source: newLink.source!,
+        description: newLink.description || '',
+        date: newLink.date || new Date().toISOString().split('T')[0]
+      };
 
-    // Add the new link to the existing links array
-    setMediaLinks(prev => [...prev, link]);
+      // Update the link in the array
+      setMediaLinks(prev => prev.map(l => l.id === editingLinkId ? link : l));
+      
+      // Reset editing state
+      setEditingLinkId(null);
+    } else {
+      // Add a new link
+      const link: MediaLink = {
+        id: `media-${Date.now()}`,
+        title: newLink.title!,
+        url: newLink.url!,
+        type: newLink.type as 'video' | 'podcast' | 'article',
+        source: newLink.source!,
+        description: newLink.description || '',
+        date: newLink.date || new Date().toISOString().split('T')[0]
+      };
+
+      // Add the new link to the existing links array
+      setMediaLinks(prev => [...prev, link]);
+    }
     
     // Reset form
     setNewLink({
@@ -120,6 +143,34 @@ export function MediaLinksInterface({ memoriaProfileId, onClose, onMediaLinksSav
       description: '',
       date: new Date().toISOString().split('T')[0]
     });
+  };
+
+  const handleEditLink = (link: MediaLink) => {
+    // Load link data into form
+    setNewLink({
+      title: link.title,
+      url: link.url,
+      type: link.type,
+      source: link.source,
+      description: link.description || '',
+      date: link.date
+    });
+    
+    // Set the editing state
+    setEditingLinkId(link.id);
+  };
+  
+  const handleCancelEdit = () => {
+    // Reset form and editing state
+    setNewLink({
+      title: '',
+      url: '',
+      type: 'video',
+      source: '',
+      description: '',
+      date: new Date().toISOString().split('T')[0]
+    });
+    setEditingLinkId(null);
   };
 
   const handleDeleteLink = (id: string) => {
@@ -253,7 +304,9 @@ export function MediaLinksInterface({ memoriaProfileId, onClose, onMediaLinksSav
 
         {/* Add New Link Form */}
         <div className="bg-white/5 rounded-lg p-6 mb-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Add New Media Link</h3>
+          <h3 className="text-lg font-semibold text-white mb-4">
+            {editingLinkId ? "Edit Media Link" : "Add New Media Link"}
+          </h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
@@ -325,13 +378,34 @@ export function MediaLinksInterface({ memoriaProfileId, onClose, onMediaLinksSav
             </div>
           </div>
           
-          <button
-            onClick={handleAddLink}
-            className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Add Link
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={handleAddLink}
+              className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors"
+            >
+              {editingLinkId ? (
+                <>
+                  <Save className="w-4 h-4" />
+                  Update Link
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4" />
+                  Add Link
+                </>
+              )}
+            </button>
+            
+            {editingLinkId && (
+              <button
+                onClick={handleCancelEdit}
+                className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
+              >
+                <X className="w-4 h-4" />
+                Cancel
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Media Links List */}
@@ -404,12 +478,22 @@ export function MediaLinksInterface({ memoriaProfileId, onClose, onMediaLinksSav
                       </a>
                     </div>
                     
-                    <button
-                      onClick={() => handleDeleteLink(link.id)}
-                      className="p-1 text-red-400 hover:text-red-300 transition-colors ml-2"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-2 ml-2">
+                      <button
+                        onClick={() => handleEditLink(link)}
+                        className="p-1.5 text-blue-400 hover:text-blue-300 bg-blue-400/10 rounded-lg hover:bg-blue-400/20 transition-colors"
+                        title="Edit link"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteLink(link.id)}
+                        className="p-1.5 text-red-400 hover:text-red-300 bg-red-400/10 rounded-lg hover:bg-red-400/20 transition-colors"
+                        title="Delete link"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
