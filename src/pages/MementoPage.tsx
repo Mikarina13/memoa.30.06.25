@@ -212,7 +212,11 @@ export function MementoPage() {
     }
   };
 
-  const handleBuildingSpaceClick = () => {
+  const handleBuildingSpaceClick = async () => {
+    // Refresh Memoria profiles to ensure we have the latest data
+    if (user) {
+      await loadMemoriaProfiles();
+    }
     setShowSpaceOptions(true);
   };
   
