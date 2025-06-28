@@ -252,16 +252,20 @@ function CarouselItem({
   const loadedRef = useRef(false);
   const [textureError, setTextureError] = useState(false);
   
-  // Load texture for image items with error handling
+  // Always call useTexture, but with error handling
   let texture = null;
+  const shouldLoadTexture = item.media_type === 'image' && !textureError;
+  
   try {
-    if (item.media_type === 'image' && !textureError) {
-      // Only attempt to load texture if we haven't encountered an error
-      texture = useTexture(item.file_path, undefined, (error) => {
+    // Always call the hook, but conditionally pass the file path
+    texture = useTexture(
+      shouldLoadTexture ? item.file_path : '', 
+      undefined, 
+      (error) => {
         console.warn('Texture loading error:', error);
         setTextureError(true);
-      });
-    }
+      }
+    );
   } catch (error) {
     console.warn('useTexture hook error:', error);
     setTextureError(true);
@@ -288,47 +292,53 @@ function CarouselItem({
     }
   }, [scale]);
   
-  // If there's a texture error for an image, show error state
-  if (item.media_type === 'image' && textureError) {
-    return (
-      <group position={position} rotation={rotation}>
-        <mesh ref={meshRef} onClick={onClick}>
-          <planeGeometry args={[6, 4]} />
-          <meshBasicMaterial color="#444444" opacity={0.8} transparent />
-        </mesh>
-        <Html center position={[0, 0, 0.1]}>
-          <div className="bg-black/70 text-white p-2 rounded text-center text-xs">
-            <div className="text-red-400 mb-1">⚠️</div>
-            <div>Image failed to load</div>
-          </div>
-        </Html>
-      </group>
-    );
-  }
-  
-  return (
-    <group position={position} rotation={rotation}>
-      {/* Image plane */}
-      <mesh
-        ref={meshRef}
-        onClick={onClick}
-      >
-        <planeGeometry args={[6, 4]} />
-        <meshBasicMaterial 
-          {...materialProps} 
-          transparent
-          opacity={1}
-        />
-        
-        {/* Video indicator for video items */}
-        {item.media_type === 'video' && (
+  // Render content based on state - no early returns
+  const renderContent = () => {
+    // If there's a texture error for an image, show error state
+    if (item.media_type === 'image' && textureError) {
+      return (
+        <group position={position} rotation={rotation}>
+          <mesh ref={meshRef} onClick={onClick}>
+            <planeGeometry args={[6, 4]} />
+            <meshBasicMaterial color="#444444" opacity={0.8} transparent />
+          </mesh>
           <Html center position={[0, 0, 0.1]}>
-            <div className="w-16 h-16 bg-black/50 rounded-full flex items-center justify-center">
-              <div className="w-0 h-0 border-t-[15px] border-t-transparent border-b-[15px] border-b-transparent border-l-[25px] border-l-white ml-1"></div>
+            <div className="bg-black/70 text-white p-2 rounded text-center text-xs">
+              <div className="text-red-400 mb-1">⚠️</div>
+              <div>Image failed to load</div>
             </div>
           </Html>
-        )}
-      </mesh>
-    </group>
-  );
+        </group>
+      );
+    }
+    
+    // Normal rendering
+    return (
+      <group position={position} rotation={rotation}>
+        {/* Image plane */}
+        <mesh
+          ref={meshRef}
+          onClick={onClick}
+        >
+          <planeGeometry args={[6, 4]} />
+          <meshBasicMaterial 
+            {...materialProps} 
+            transparent
+            opacity={1}
+          />
+          
+          {/* Video indicator for video items */}
+          {item.media_type === 'video' && (
+            <Html center position={[0, 0, 0.1]}>
+              <div className="w-16 h-16 bg-black/50 rounded-full flex items-center justify-center">
+                <div className="w-0 h-0 border-t-[15px] border-t-transparent border-b-[15px] border-b-transparent border-l-[25px] border-l-white ml-1"></div>
+              </div>
+            </Html>
+          )}
+        </mesh>
+      </group>
+    );
+  };
+  
+  return renderContent();
 }

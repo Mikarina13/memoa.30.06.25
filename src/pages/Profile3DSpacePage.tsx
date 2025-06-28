@@ -110,6 +110,14 @@ export function Profile3DSpacePage() {
     { id: 'documents', name: 'Documents', color: '#3b82f6' }
   ], []);
   
+  // Get the appropriate camera position based on settings
+  const cameraPosition = useMemo(() => {
+    return [0, 25, 0];
+  }, []);
+  
+  // Calculate star count based on density setting
+  const starCount = Math.floor(8000 * customizationSettings.particleDensity);
+
   // Load memoria profiles when in memoria mode
   useEffect(() => {
     if (profileType === 'memoria' && user) {
@@ -477,14 +485,6 @@ export function Profile3DSpacePage() {
       setIsLoading(false);
     }
   };
-  
-  // Get the appropriate camera position based on settings
-  const cameraPosition = useMemo(() => {
-    return [0, 25, 0];
-  }, []);
-  
-  // Calculate star count based on density setting
-  const starCount = Math.floor(8000 * customizationSettings.particleDensity);
 
   // Handle return to memento with proper state
   const handleReturnToMemento = () => {
@@ -528,6 +528,16 @@ export function Profile3DSpacePage() {
             </button>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // Show authentication redirect screen
+  if (!loading && !user) {
+    return (
+      <div className="w-full h-screen bg-black flex flex-col items-center justify-center">
+        <Loader className="w-8 h-8 text-white animate-spin" />
+        <span className="mt-4 text-white">Redirecting...</span>
       </div>
     );
   }
