@@ -328,7 +328,7 @@ function CarouselItem({
             </div>
           </Html>
         )}
-      </group>
-    );
-  }
+      </mesh>
+    </group>
+  );
 }
