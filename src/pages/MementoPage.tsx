@@ -2,7 +2,7 @@ import { useEffect, useState, FormEvent, Suspense } from 'react';
 import { Canvas, useThree, ThreeEvent } from '@react-three/fiber';
 import { OrbitControls, Environment, Html } from '@react-three/drei';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Loader, LogIn, UserPlus, LogOut, Info, Compass, Heart, Sparkles, Menu, User, Globe, AlertCircle, RefreshCw, Star, Space } from 'lucide-react';
+import { ArrowLeft, Loader, LogIn, UserPlus, LogOut, Info, Compass, Heart, Sparkles, Menu, User, Users, Globe, AlertCircle, RefreshCw, Star, Space } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { AuthForm } from '../components/AuthForm';
