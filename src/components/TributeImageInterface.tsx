@@ -200,13 +200,13 @@ export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGener
           file_path: filePath,
           file_size: file.size,
           mime_type: file.type,
-          folder: 'Tribute Images',
           metadata: {
             tribute: true,
             style: selectedStyle || 'custom',
             prompt: prompt,
             memoriaProfileId,
-            isVideo: file.type.startsWith('video/')
+            isVideo: file.type.startsWith('video/'),
+            folder: 'Tribute Images'
           },
           tags: ['tribute', 'custom', file.type.startsWith('video/') ? 'video' : 'image']
         }, memoriaProfileId);
