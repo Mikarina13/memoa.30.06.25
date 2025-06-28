@@ -2,7 +2,7 @@ import { useEffect, useState, FormEvent, Suspense } from 'react';
 import { Canvas, useThree, ThreeEvent } from '@react-three/fiber';
 import { OrbitControls, Environment, Html } from '@react-three/drei';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Loader, LogIn, UserPlus, LogOut, Info, Compass, Heart, Sparkles, Menu, User, Users, Globe, AlertCircle, RefreshCw, Star, Space } from 'lucide-react';
+import { ArrowLeft, Loader, LogIn, UserPlus, LogOut, Info, Compass, Heart, Sparkles, Menu, User, Users as UsersIcon, Globe, AlertCircle, RefreshCw, Star, Space } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { AuthForm } from '../components/AuthForm';
@@ -513,7 +513,7 @@ export function MementoPage() {
                             <div className="h-20 bg-gradient-to-br from-purple-500/20 to-pink-500/20 relative">
                               <div className="absolute inset-0 flex items-center justify-center">
                                 <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center">
-                                  <Users className="w-6 h-6 text-white/60" />
+                                  <UsersIcon className="w-6 h-6 text-white/60" />
                                 </div>
                               </div>
                               
@@ -698,7 +698,7 @@ export function MementoPage() {
                               <div className="h-20 bg-gradient-to-br from-purple-500/20 to-pink-500/20 relative">
                                 <div className="absolute inset-0 flex items-center justify-center">
                                   <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center">
-                                    <Users className="w-6 h-6 text-white/60" />
+                                    <UsersIcon className="w-6 h-6 text-white/60" />
                                   </div>
                                 </div>
                                 

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Upload, ExternalLink, CheckCircle, AlertCircle, Download, Share2, Eye, Cuboid as Cube, FileUp, Trash2, AlertTriangle, Info, Link } from 'lucide-react';
+import { User, Upload, ExternalLink, CheckCircle, AlertCircle, Download, Eye, Cuboid as Cube, FileUp, Trash2, AlertTriangle, Info, Link } from 'lucide-react';
 import { MemoirIntegrations } from '../lib/memoir-integrations';
 import { useAuth } from '../hooks/useAuth';
 
@@ -664,17 +664,6 @@ export function AvaturnAvatarInterface({ memoriaProfileId, onAvatarCreated, onCl
                             View in Avaturn
                           </a>
                         )}
-                        
-                        <button
-                          onClick={() => navigator.share?.({ 
-                            title: avatar.isCustomModel ? 'My 3D Model' : 'My 3D Avatar', 
-                            url: avatar.isCustomModel ? avatar.modelUrl : avatar.avaturnUrl 
-                          })}
-                          className="flex items-center gap-2 px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg transition-colors"
-                        >
-                          <Share2 className="w-4 h-4" />
-                          Share
-                        </button>
                       </div>
                     </div>
                   ))}
