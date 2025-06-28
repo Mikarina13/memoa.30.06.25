@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ArrowLeft, Book, Shield, FileText } from 'lucide-react';
+import { ArrowLeft, Shield, FileText, Book } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
@@ -18,40 +18,16 @@ export function InfoPage() {
       
       <button
         onClick={() => navigate('/')}
-        className="fixed top-8 left-8 z-50 flex items-center gap-2 text-white/80 hover:text-white transition-colors"
+        className="fixed top-24 left-8 z-50 flex items-center gap-2 text-white/80 hover:text-white transition-colors"
       >
         <ArrowLeft className="w-6 h-6" />
         Return
       </button>
 
       <div className="max-w-4xl mx-auto py-20 px-8 relative">
-        <h1 className="text-4xl font-bold mb-12 text-center bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent font-[Rajdhani] pt-8">
+        <h1 className="text-4xl font-bold mb-12 text-center bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent font-[Orbitron] pt-8">
           About MEMOĀ
         </h1>
-
-        <div className="flex justify-center gap-4 mb-12">
-          <button 
-            onClick={() => navigate('/community-guidelines')}
-            className="flex items-center gap-2 px-4 py-2 bg-black/40 backdrop-blur-sm rounded-lg border border-white/10 text-purple-400 hover:text-purple-300 transition-colors"
-          >
-            <Book className="w-5 h-5" />
-            <span className="font-[Rajdhani]">Community Guidelines</span>
-          </button>
-          <button 
-            onClick={() => navigate('/privacy-policy')}
-            className="flex items-center gap-2 px-4 py-2 bg-black/40 backdrop-blur-sm rounded-lg border border-white/10 text-amber-400 hover:text-amber-300 transition-colors"
-          >
-            <Shield className="w-5 h-5" />
-            <span className="font-[Rajdhani]">Privacy Policy</span>
-          </button>
-          <button 
-            onClick={() => navigate('/terms-of-service')}
-            className="flex items-center gap-2 px-4 py-2 bg-black/40 backdrop-blur-sm rounded-lg border border-white/10 text-green-400 hover:text-green-300 transition-colors"
-          >
-            <FileText className="w-5 h-5" />
-            <span className="font-[Rajdhani]">Terms of Service</span>
-          </button>
-        </div>
         
         <div className="space-y-12 pb-12">
           <section className="bg-black/40 backdrop-blur-sm p-8 rounded-xl border border-white/10">
