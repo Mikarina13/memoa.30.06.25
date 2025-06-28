@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Upload, ExternalLink, CheckCircle, AlertCircle, Download, Eye, Cuboid as Cube, FileUp, Trash2, AlertTriangle, Info, Link } from 'lucide-react';
+import { User, Upload, ExternalLink, CheckCircle, AlertCircle, Download, Eye, Cuboid as Cube, FileUp, Trash2, AlertTriangle, Info } from 'lucide-react';
 import { MemoirIntegrations } from '../lib/memoir-integrations';
 import { useAuth } from '../hooks/useAuth';
 
@@ -13,7 +13,6 @@ interface AvaturnAvatarInterfaceProps {
 export function AvaturnAvatarInterface({ memoriaProfileId, onAvatarCreated, onClose }: AvaturnAvatarInterfaceProps) {
   const { user } = useAuth();
   const [uploadedModel, setUploadedModel] = useState<File | null>(null);
-  const [externalModelUrl, setExternalModelUrl] = useState<string>('');
   const [modelPreview, setModelPreview] = useState<string | null>(null);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
   const [avatarData, setAvatarData] = useState<any>(null);
@@ -119,41 +118,12 @@ export function AvaturnAvatarInterface({ memoriaProfileId, onAvatarCreated, onCl
     }
   };
 
-  // Helper function to generate proper p3d.in embed code
-  const generateP3dEmbedCode = (url: string): string => {
-    let modelId;
-    if (url.includes('/e/')) {
-      // Format: https://p3d.in/e/abc123
-      modelId = url.split('/e/').pop();
-    } else {
-      // Format: https://p3d.in/abc123
-      modelId = url.split('p3d.in/').pop();
-    }
-    
-    return `<iframe allowfullscreen width="640" height="480" loading="lazy" frameborder="0" src="https://p3d.in/e/${modelId}"></iframe>`;
-  };
-
-  const validateUrl = (url: string): boolean => {
-    try {
-      new URL(url);
-      return true;
-    } catch (e) {
-      return false;
-    }
-  };
-
   const openAvaturn = () => {
     window.open('https://avaturn.me/', '_blank');
   };
 
   const uploadCustomModel = async () => {
-    if (!user || (!uploadedModel && !externalModelUrl)) return;
-
-    // Validate URL if provided
-    if (externalModelUrl && !validateUrl(externalModelUrl)) {
-      setUploadError('Please enter a valid URL (including http:// or https://)');
-      return;
-    }
+    if (!user || !uploadedModel) return;
 
     // Show additional warning for GLTF files
     if (uploadedModel && uploadedModel.name.endsWith('.gltf')) {
@@ -185,31 +155,20 @@ export function AvaturnAvatarInterface({ memoriaProfileId, onAvatarCreated, onCl
         });
       }
 
-      let modelUrl: string;
-      
-      // If external URL is provided, use it directly
-      if (externalModelUrl) {
-        modelUrl = externalModelUrl;
-      } else if (uploadedModel) {
-        // Otherwise upload the file to storage
-        modelUrl = await MemoirIntegrations.upload3DModelFile(user.id, uploadedModel, memoriaProfileId);
-      } else {
-        throw new Error('No model file or URL provided');
-      }
+      // Upload the file to storage
+      const modelUrl = await MemoirIntegrations.upload3DModelFile(user.id, uploadedModel, memoriaProfileId);
 
       const newAvatarData = {
         id: `custom-model-${Date.now()}`,
         sourcePhoto: null,
-        modelName: uploadedModel ? uploadedModel.name : externalModelUrl.split('/').pop() || 'External 3D Model',
-        modelSize: uploadedModel ? uploadedModel.size : 0,
+        modelName: uploadedModel.name,
+        modelSize: uploadedModel.size,
         modelUrl: modelUrl,
-        isExternal: !!externalModelUrl,
-        externalSource: externalModelUrl ? new URL(externalModelUrl).hostname : null,
-        embedCode: externalModelUrl && externalModelUrl.includes('p3d.in') ? generateP3dEmbedCode(externalModelUrl) : null,
+        isExternal: false,
         createdAt: new Date().toISOString(),
         status: 'ready',
         isCustomModel: true,
-        fileFormat: uploadedModel ? (uploadedModel.name.endsWith('.gltf') ? 'gltf' : 'glb') : 'external'
+        fileFormat: uploadedModel.name.endsWith('.gltf') ? 'gltf' : 'glb'
       };
 
       const avatarCollection = {
@@ -378,44 +337,6 @@ export function AvaturnAvatarInterface({ memoriaProfileId, onAvatarCreated, onCl
                 <h3 className="text-lg font-semibold text-white mb-4">Upload Your 3D Model</h3>
                 
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm text-white/60 mb-2">External 3D Model URL (Optional)</label>
-                    <div className="space-y-2">
-                      <div className="flex gap-2">
-                        <input
-                          type="url" 
-                          placeholder="https://p3d.in/e/abc123 or other 3D model URL"
-                          value={externalModelUrl}
-                          onChange={(e) => setExternalModelUrl(e.target.value)}
-                          className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:border-orange-500"
-                        />
-                        {externalModelUrl && (
-                          <a 
-                            href={externalModelUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-3 bg-orange-500/20 text-orange-400 rounded-lg hover:bg-orange-500/30 transition-colors"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <ExternalLink className="w-5 h-5" />
-                          </a>
-                        )}
-                      </div>
-                      <p className="text-xs text-white/50">
-                        Supports <a href="https://p3d.in" target="_blank" rel="noopener noreferrer" className="text-orange-400 hover:underline">p3d.in</a>, 
-                        <a href="https://sketchfab.com" target="_blank" rel="noopener noreferrer" className="text-orange-400 hover:underline"> Sketchfab</a>, 
-                        and other direct model URLs
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="relative">
-                    <div className="absolute inset-0 w-full h-0.5 bg-white/10 top-1/2 transform -translate-y-1/2"></div>
-                    <div className="relative flex justify-center">
-                      <span className="bg-black px-4 text-white/50 text-sm">OR</span>
-                    </div>
-                  </div>
-                  
                   <div 
                     className="border-2 border-dashed border-white/20 rounded-lg p-8 text-center cursor-pointer hover:border-white/40 transition-colors"
                     onClick={() => modelInputRef.current?.click()}
@@ -472,7 +393,7 @@ export function AvaturnAvatarInterface({ memoriaProfileId, onAvatarCreated, onCl
                   />
                 </div>
 
-                {(uploadedModel || externalModelUrl) && (
+                {uploadedModel && (
                   <div className="mt-6">
                     <button
                       onClick={uploadCustomModel} 
@@ -497,7 +418,7 @@ export function AvaturnAvatarInterface({ memoriaProfileId, onAvatarCreated, onCl
                       ) : (
                         <>
                           <FileUp className="w-5 h-5" />
-                          {uploadedModel ? "Upload 3D Model" : "Add External Model"}
+                          Upload 3D Model
                         </>
                       )}
                     </button>
@@ -517,8 +438,6 @@ export function AvaturnAvatarInterface({ memoriaProfileId, onAvatarCreated, onCl
                     <li>• <strong>GLTF files:</strong> May require additional texture/binary files</li>
                     <li>• Optimized models under 50MB work best</li>
                     <li>• Models should be in T-pose for best results</li>
-                    <li>• For p3d.in models, use format: https://p3d.in/e/abc123</li>
-                    <li className="text-orange-400">• External models will open in a new tab when clicked</li> 
                   </ul>
                 </div>
               </div>
@@ -580,9 +499,6 @@ export function AvaturnAvatarInterface({ memoriaProfileId, onAvatarCreated, onCl
                                 <div className="text-center">
                                   <Cube className="w-8 h-8 text-orange-400 mx-auto mb-2" />
                                   <p className="text-orange-400 text-sm">{avatar.modelName}</p>
-                                  {avatar.isExternal && (
-                                    <p className="text-xs text-orange-300 mt-1">External Model</p>
-                                  )}
                                 </div>
                                 {avatar.fileFormat === 'gltf' && (
                                   <div className="absolute -top-2 -right-2 bg-yellow-500 text-black text-xs px-1.5 py-0.5 rounded-full font-medium">
@@ -608,13 +524,8 @@ export function AvaturnAvatarInterface({ memoriaProfileId, onAvatarCreated, onCl
                                   </p>
                                 )}
                                 <p className="text-white/70 text-sm">
-                                  <span className="text-white/50">Type:</span> {avatar.isExternal ? 'External 3D Model' : `Custom 3D Model (${avatar.fileFormat?.toUpperCase() || 'Unknown'})`}
+                                  <span className="text-white/50">Type:</span> {`Custom 3D Model (${avatar.fileFormat?.toUpperCase() || 'Unknown'})`}
                                 </p>
-                                {avatar.externalSource && (
-                                  <p className="text-white/70 text-sm">
-                                    <span className="text-white/50">Source:</span> {avatar.externalSource}
-                                  </p>
-                                )}
                               </div>
                             </div>
                           </>
@@ -645,13 +556,13 @@ export function AvaturnAvatarInterface({ memoriaProfileId, onAvatarCreated, onCl
                       <div className="mt-4 flex gap-3">
                         {avatar.isCustomModel ? (
                           <a
-                            href={avatar.isExternal ? avatar.modelUrl : avatar.modelUrl}
+                            href={avatar.modelUrl}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center gap-2 px-4 py-2 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded-lg transition-colors"
                           >
-                            <ExternalLink className="w-4 h-4" />
-                            {avatar.isExternal ? 'View Model' : 'Download Model'}
+                            <Download className="w-4 h-4" />
+                            Download Model
                           </a>
                         ) : (
                           <a
