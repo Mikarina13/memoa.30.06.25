@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Camera, Upload, Image as ImageIcon, Sparkles, Download, Trash2, ExternalLink, CheckCircle, AlertCircle, Wand2, Copy, X, Play, Video, ArrowUpRight, Lightbulb } from 'lucide-react';
+import { Camera, Upload, Image as ImageIcon, Sparkles, Download, ExternalLink, Wand2, Copy, X, Play, Video, ArrowUpRight } from 'lucide-react';
 import { MemoirIntegrations } from '../lib/memoir-integrations';
 import { useAuth } from '../hooks/useAuth';
 
@@ -190,7 +190,7 @@ export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGener
           tags: ['tribute', 'ai-generated', 'custom', file.type.startsWith('video/') ? 'video' : 'image']
         };
         
-        // Upload image to storage
+        // Upload the file to storage
         const filePath = await MemoirIntegrations.uploadGalleryFile(user.id, file, memoriaProfileId);
         
         // Set the URL after upload
@@ -415,7 +415,7 @@ export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGener
             {/* Sample Prompts Section */}
             <div className="bg-gradient-to-r from-amber-500/10 to-yellow-500/10 border border-amber-500/20 rounded-lg p-4 mb-6">
               <h3 className="text-lg font-medium text-white mb-3 flex items-center gap-2 pb-2 border-b border-amber-500/20">
-                <Lightbulb className="w-5 h-5 text-amber-400" />
+                <Sparkles className="w-5 h-5 text-amber-400" />
                 Sample Prompts
               </h3>
               
@@ -523,6 +523,10 @@ export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGener
                         src={item.url} 
                         alt="Tribute Image" 
                         className="w-full h-48 object-cover"
+                        onError={(e) => {
+                          // Fallback for broken images
+                          e.currentTarget.src = "https://images.pexels.com/photos/4439425/pexels-photo-4439425.jpeg";
+                        }}
                       />
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">

@@ -139,7 +139,7 @@ export function Gallery3DCarousel({
   
   // Handle manual navigation
   const navigateCarousel = useCallback((direction: number) => {
-    if (isTransitioning) return;
+    if (isTransitioning || galleryItems.length === 0) return;
     
     // Update target rotation
     targetRotation.current += direction * angleStep;
@@ -183,6 +183,24 @@ export function Gallery3DCarousel({
   const handleImageLoaded = useCallback((itemId: string) => {
     loadingStatesRef.current[itemId] = true;
   }, []);
+  
+  // Check if the carousel is empty
+  if (galleryItems.length === 0) {
+    return (
+      <Html center>
+        <div className="bg-black/80 p-8 rounded-lg shadow-xl text-white text-center">
+          <h3 className="text-xl font-semibold mb-4">No Gallery Items</h3>
+          <p className="mb-4">There are no images or videos to display.</p>
+          <button 
+            onClick={onClose}
+            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </Html>
+    );
+  }
   
   return (
     <>
@@ -259,7 +277,7 @@ function CarouselItem({
   try {
     // Always call the hook, but conditionally pass the file path
     texture = useTexture(
-      shouldLoadTexture ? item.file_path : '', 
+      shouldLoadTexture ? item.file_path : '/placeholder.jpg', 
       undefined, 
       (error) => {
         console.warn('Texture loading error:', error);
@@ -293,52 +311,39 @@ function CarouselItem({
   }, [scale]);
   
   // Render content based on state - no early returns
-  const renderContent = () => {
-    // If there's a texture error for an image, show error state
-    if (item.media_type === 'image' && textureError) {
-      return (
-        <group position={position} rotation={rotation}>
-          <mesh ref={meshRef} onClick={onClick}>
-            <planeGeometry args={[6, 4]} />
-            <meshBasicMaterial color="#444444" opacity={0.8} transparent />
-          </mesh>
-          <Html center position={[0, 0, 0.1]}>
-            <div className="bg-black/70 text-white p-2 rounded text-center text-xs">
-              <div className="text-red-400 mb-1">⚠️</div>
-              <div>Image failed to load</div>
-            </div>
-          </Html>
-        </group>
-      );
-    }
-    
-    // Normal rendering
-    return (
-      <group position={position} rotation={rotation}>
-        {/* Image plane */}
-        <mesh
-          ref={meshRef}
-          onClick={onClick}
-        >
-          <planeGeometry args={[6, 4]} />
-          <meshBasicMaterial 
-            {...materialProps} 
-            transparent
-            opacity={1}
-          />
-          
-          {/* Video indicator for video items */}
-          {item.media_type === 'video' && (
-            <Html center position={[0, 0, 0.1]}>
-              <div className="w-16 h-16 bg-black/50 rounded-full flex items-center justify-center">
-                <div className="w-0 h-0 border-t-[15px] border-t-transparent border-b-[15px] border-b-transparent border-l-[25px] border-l-white ml-1"></div>
-              </div>
-            </Html>
-          )}
-        </mesh>
-      </group>
-    );
-  };
-  
-  return renderContent();
+  return (
+    <group position={position} rotation={rotation}>
+      {/* Image plane */}
+      <mesh
+        ref={meshRef}
+        onClick={onClick}
+      >
+        <planeGeometry args={[6, 4]} />
+        <meshBasicMaterial 
+          {...materialProps} 
+          transparent
+          opacity={1}
+        />
+      </mesh>
+      
+      {/* Error indicator if texture failed to load */}
+      {textureError && (
+        <Html center>
+          <div className="bg-black/70 text-white p-2 rounded text-center text-xs">
+            <div className="text-red-400 mb-1">⚠️</div>
+            <div>Image failed to load</div>
+          </div>
+        </Html>
+      )}
+      
+      {/* Video indicator for video items */}
+      {item.media_type === 'video' && (
+        <Html center position={[0, 0, 0.1]}>
+          <div className="w-16 h-16 bg-black/50 rounded-full flex items-center justify-center">
+            <div className="w-0 h-0 border-t-[15px] border-t-transparent border-b-[15px] border-b-transparent border-l-[25px] border-l-white ml-1"></div>
+          </div>
+        </Html>
+      )}
+    </group>
+  );
 }
