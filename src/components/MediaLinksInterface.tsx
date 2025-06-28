@@ -40,6 +40,7 @@ export function MediaLinksInterface({ memoriaProfileId, onClose, onMediaLinksSav
   const [isLoading, setIsLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
   const [newLink, setNewLink] = useState<Partial<MediaLink>>({
     title: '',
     url: '',
@@ -48,7 +49,9 @@ export function MediaLinksInterface({ memoriaProfileId, onClose, onMediaLinksSav
     description: '',
     date: new Date().toISOString().split('T')[0]
   });
-  const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
+  
+  // Ref for scrolling to the top of the form
+  const formRef = useRef<HTMLDivElement>(null);
   
   // Get today's date in YYYY-MM-DD format for max date constraint
   const today = new Date().toISOString().split('T')[0];
@@ -146,6 +149,11 @@ export function MediaLinksInterface({ memoriaProfileId, onClose, onMediaLinksSav
   };
 
   const handleEditLink = (link: MediaLink) => {
+    // Scroll to the top of the form
+    if (formRef.current) {
+      formRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+    
     // Load link data into form
     setNewLink({
       title: link.title,
@@ -303,9 +311,14 @@ export function MediaLinksInterface({ memoriaProfileId, onClose, onMediaLinksSav
         </p>
 
         {/* Add New Link Form */}
-        <div className="bg-white/5 rounded-lg p-6 mb-6">
+        <div className="bg-white/5 rounded-lg p-6 mb-6" ref={formRef}>
           <h3 className="text-lg font-semibold text-white mb-4">
             {editingLinkId ? "Edit Media Link" : "Add New Media Link"}
+            {editingLinkId && (
+              <span className="ml-2 text-sm text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full">
+                Editing
+              </span>
+            )}
           </h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -361,7 +374,7 @@ export function MediaLinksInterface({ memoriaProfileId, onClose, onMediaLinksSav
                 type="date"
                 value={newLink.date}
                 onChange={(e) => setNewLink(prev => ({ ...prev, date: e.target.value }))}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-amber-500"
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-amber-500 [color-scheme:dark]"
                 max={today}
               />
             </div>
@@ -444,7 +457,10 @@ export function MediaLinksInterface({ memoriaProfileId, onClose, onMediaLinksSav
           ) : mediaLinks.length > 0 ? (
             <div className="space-y-4">
               {mediaLinks.map((link) => (
-                <div key={link.id} className="bg-white/5 rounded-lg p-4">
+                <div 
+                  key={link.id} 
+                  className={`bg-white/5 rounded-lg p-4 ${editingLinkId === link.id ? 'border border-amber-500/50 bg-amber-500/5' : ''}`}
+                >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
@@ -453,6 +469,11 @@ export function MediaLinksInterface({ memoriaProfileId, onClose, onMediaLinksSav
                         <span className={`text-xs px-2 py-1 rounded-full ${getTypeColor(link.type)}`}>
                           {link.type.charAt(0).toUpperCase() + link.type.slice(1)}
                         </span>
+                        {editingLinkId === link.id && (
+                          <span className="text-xs px-2 py-1 bg-amber-500/20 text-amber-400 rounded-full">
+                            Editing
+                          </span>
+                        )}
                       </div>
                       
                       <div className="flex items-center gap-2 mb-2 text-sm">
@@ -521,7 +542,7 @@ export function MediaLinksInterface({ memoriaProfileId, onClose, onMediaLinksSav
             <button
               onClick={handleSaveLinks}
               disabled={saveStatus === 'saving'}
-              className="flex items-center gap-2 px-6 py-3 bg-amber-500 hover:bg-amber-600 disabled:bg-gray-500 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+              className="flex items-center gap-2 px-6 py-3 bg-amber-500 hover:bg-amber-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
             >
               {saveStatus === 'saving' ? (
                 <>
@@ -547,6 +568,15 @@ export function MediaLinksInterface({ memoriaProfileId, onClose, onMediaLinksSav
               <div className="flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
                 <span>{saveError}</span>
+              </div>
+            </div>
+          )}
+
+          {saveStatus === 'success' && (
+            <div className="mt-4 p-3 bg-green-500/20 border border-green-500/30 rounded-lg text-green-400 text-sm">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4" />
+                <span>Media links saved successfully!</span>
               </div>
             </div>
           )}
