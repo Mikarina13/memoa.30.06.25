@@ -60,7 +60,7 @@ export function InfoPage() {
           </h2>
           <div className="aspect-video w-full rounded-lg overflow-hidden shadow-2xl bg-black/70">
             <iframe 
-              src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0&autoplay=0"
+              src="https://www.youtube.com/embed/tT0fwMpRTcI?rel=0&autoplay=0"
               title="MEMOĀ Introduction Video"
               width="100%"
               height="100%"
