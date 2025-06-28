@@ -223,10 +223,8 @@ export function Profile3DSpacePage() {
             console.log('Profile data structure before loading personal preferences:', {
               hasMemoriaData: !!profile.profile_data,
               hasMemoriaPreferences: !!profile.profile_data?.preferences?.personal,
-              hasMemoriaTributeImages: !!profile.profile_data?.tribute_images,
               hasMemoirData: !!profile.memoir_data,
-              hasMemoirPreferences: !!profile.memoir_data?.preferences?.personal,
-              hasMemoirTributeImages: !!profile.memoir_data?.tribute_images
+              hasMemoirPreferences: !!profile.memoir_data?.preferences?.personal
             });
             
             
@@ -287,15 +285,10 @@ export function Profile3DSpacePage() {
             console.log('Final profile data structure:', {
               hasMemoriaData: !!profile.profile_data,
               hasMemoriaPreferences: !!profile.profile_data?.preferences?.personal,
-              hasMemoriaAvaturn: !!profile.profile_data?.avaturn_avatars,
               hasMemoriaTributeImages: !!profile.profile_data?.tribute_images,
-              hasMemoriaPersonalityTest: !!profile.profile_data?.personality_test,
-              
               hasMemoirData: !!profile.memoir_data,
               hasMemoirPreferences: !!profile.memoir_data?.preferences?.personal,
-              hasMemoirAvaturn: !!profile.memoir_data?.avaturn_avatars,
-              hasMemoirTributeImages: !!profile.memoir_data?.tribute_images,
-              hasMemoirPersonalityTest: !!profile.memoir_data?.personality_test
+              hasMemoirTributeImages: !!profile.memoir_data?.tribute_images
             });
           }
         }
@@ -388,7 +381,7 @@ export function Profile3DSpacePage() {
     setSelectedItem({ type: itemType, data: itemData });
     setShowDetailModal(true);
   };
-  
+
   // Handle close detail modal
   const handleCloseDetailModal = () => {
     setShowDetailModal(false);
@@ -425,6 +418,12 @@ export function Profile3DSpacePage() {
     const targetIndex = Math.floor(normalizedValue * selectedGalleryItems.length);
     const adjustedIndex = Math.min(Math.max(0, targetIndex), selectedGalleryItems.length - 1);
     setGalleryCurrentIndex(adjustedIndex);
+  };
+
+  // Handle return to memento with proper state
+  const handleReturnToMemento = () => {
+    // Go back to memento
+    navigate('/memento');
   };
 
   // Handle manual refresh
@@ -484,12 +483,6 @@ export function Profile3DSpacePage() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // Handle return to memento with proper state
-  const handleReturnToMemento = () => {
-    // Go back to memento
-    navigate('/memento');
   };
   
   // Show loading while checking authentication
@@ -766,7 +759,7 @@ export function Profile3DSpacePage() {
       >
         <RefreshCw className="w-5 h-5" />
       </button>
-
+      
       {/* Gallery Navigation Footer - Only shown when gallery carousel is active */}
       {showGalleryCarousel && selectedGalleryItems.length > 0 && (
         <GalleryNavigationFooter
