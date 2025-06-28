@@ -461,6 +461,12 @@ export function Profile3DSpacePage() {
   
   // Calculate star count based on density setting
   const starCount = Math.floor(8000 * customizationSettings.particleDensity);
+
+  // Handle return to memento with proper state
+  const handleReturnToMemento = () => {
+    // Go back to memento
+    navigate('/memento');
+  };
   
   // Show loading while checking authentication
   if (loading || isLoading) {
@@ -511,7 +517,7 @@ export function Profile3DSpacePage() {
     >
       <div className="fixed top-8 left-8 z-50 flex items-center gap-4">
         <button
-          onClick={() => navigate('/memento')}
+          onClick={handleReturnToMemento}
           className="flex items-center gap-2 px-3 py-2 bg-black/40 backdrop-blur-sm rounded-lg border border-white/10 text-white/80 hover:text-white transition-colors font-[Orbitron]"
         >
           <ArrowLeft className="w-6 h-6" />
@@ -771,7 +777,7 @@ export function Profile3DSpacePage() {
               {selectedItem.type === 'personal_favorites' && <PersonalFavoritesDetail data={selectedItem.data} />}
               {selectedItem.type === 'digital_presence' && <DigitalPresenceDetail data={selectedItem.data} />}
               {selectedItem.type === 'gaming_preferences' && <GamingPreferencesDetail data={selectedItem.data} />}
-              {selectedItem.type === 'voice' && <VoiceDetail data={selectedItem.data} />}
+              {selectedItem.type === 'voice' && <VoiceDetail data={selectedItem.data} memoriaProfileId={memoriaProfileId} />}
               {selectedItem.type === 'tavus_avatar' && <TavusAvatarDetail data={selectedItem.data} />}
               {selectedItem.type === 'avaturn_avatars' && <AvaturnAvatarDetail data={selectedItem.data} />}
               {selectedItem.type === 'narratives' && <NarrativesDetail data={selectedItem.data} />}
