@@ -62,7 +62,7 @@ export function InfoPage() {
             <iframe
               width="100%"
               height="100%"
-              src="https://www.youtube-nocookie.com/embed/tT0fwMpRTcI"
+              src="https://www.youtube.com/embed/tT0fwMpRTcI?rel=0"
               title="MEMOA Introduction Video"
               frameBorder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
