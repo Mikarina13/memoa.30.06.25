@@ -265,12 +265,33 @@ export function MementoPage() {
   };
   
   const handleViewProfile = (profileId: string, profileType: 'memoir' | 'memoria') => {
+    // Find the relevant userId depending on profile type
+    let userId;
+    
+    if (profileType === 'memoir') {
+      // For memoir profiles, the profileId is already the user_id
+      userId = profileId;
+    } else {
+      // For memoria profiles, we need to find the profile to get its user_id
+      const memoriaProfile = 
+        // First check favorites
+        favoriteProfiles.memoria.find(p => p.id === profileId) || 
+        // Then check public profiles
+        publicProfiles.memoria.find(p => p.id === profileId);
+      
+      if (memoriaProfile) {
+        userId = memoriaProfile.user_id;
+      } else {
+        console.error(`Could not find memoria profile with id ${profileId}`);
+        return;
+      }
+    }
+    
     navigate('/memento/profile-space', {
       state: {
         profileType: profileType,
         memoriaProfileId: profileType === 'memoria' ? profileId : undefined,
-        // If it's a memoir profile, we need the user_id instead
-        userId: profileType === 'memoir' ? profileId : undefined
+        userId: userId // Always pass the userId of the profile owner
       }
     });
     setShowExplorer(false);
@@ -457,7 +478,7 @@ export function MementoPage() {
                   
                   <button
                     onClick={() => setShowSpaceOptions(false)}
-                    className="w-full bg-white/10 hover:bg-white/20 text-white py-3 rounded-lg transition-colors mt-4 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-20"
+                    className="w-full bg-white/10 hover:bg-white/20 text-white py-3 rounded-lg transition-colors mt-4"
                   >
                     Cancel
                   </button>
