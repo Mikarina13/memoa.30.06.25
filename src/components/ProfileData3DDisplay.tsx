@@ -999,3 +999,6 @@ function Item({
     </group>
   );
 }
+
+// Import this here to avoid circular dependencies
+import { ChevronDown } from 'lucide-react';
