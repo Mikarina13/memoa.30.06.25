@@ -7,10 +7,16 @@ interface VoiceDetailProps {
     voiceId: string;
     status: string;
   };
+  memoriaProfileId?: string; // Add prop to determine if this is a Memoria profile
 }
 
-export function VoiceDetail({ data }: VoiceDetailProps) {
-  const [textToSpeak, setTextToSpeak] = useState('Hello, this is my voice preserved in the digital realm. Welcome to my memorial space.');
+export function VoiceDetail({ data, memoriaProfileId }: VoiceDetailProps) {
+  // Initialize text based on profile type
+  const defaultMessage = memoriaProfileId
+    ? "Hello, this is my voice preserved in the digital realm. Welcome to my memorial space."
+    : "Hello, this is my voice preserved in the digital realm. I've created this to enhance my digital legacy.";
+    
+  const [textToSpeak, setTextToSpeak] = useState(defaultMessage);
   const [isPlaying, setIsPlaying] = useState(false);
   const [generationStatus, setGenerationStatus] = useState<'idle' | 'generating' | 'success' | 'error'>('idle');
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -229,30 +235,64 @@ export function VoiceDetail({ data }: VoiceDetailProps) {
         <div className="mt-4 p-4 bg-purple-500/10 border border-purple-500/20 rounded-lg">
           <h4 className="text-purple-400 font-medium mb-2">Try Saying:</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            <button 
-              className="text-left p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/80 text-sm transition-colors"
-              onClick={() => setTextToSpeak("Hello, I'm glad you're visiting my memorial space. This is what my voice sounded like.")}
-            >
-              Welcome Message
-            </button>
-            <button 
-              className="text-left p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/80 text-sm transition-colors"
-              onClick={() => setTextToSpeak("I want to share some of my favorite memories with you. These are the moments that shaped who I am.")}
-            >
-              Memory Introduction
-            </button>
-            <button 
-              className="text-left p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/80 text-sm transition-colors"
-              onClick={() => setTextToSpeak("Thank you for keeping my memory alive. It means the world to me that you're here.")}
-            >
-              Thank You Message
-            </button>
-            <button 
-              className="text-left p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/80 text-sm transition-colors"
-              onClick={() => setTextToSpeak("This is a personal message just for you. I hope it brings you comfort to hear my voice again.")}
-            >
-              Personal Message
-            </button>
+            {/* Conditional sample messages based on profile type */}
+            {memoriaProfileId ? (
+              // Messages for MEMORIA profiles (memorial for someone who has passed)
+              <>
+                <button 
+                  className="text-left p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/80 text-sm transition-colors"
+                  onClick={() => setTextToSpeak("Hello, I'm glad you're visiting my memorial space. This is what my voice sounded like.")}
+                >
+                  Welcome Message
+                </button>
+                <button 
+                  className="text-left p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/80 text-sm transition-colors"
+                  onClick={() => setTextToSpeak("I want to share some of my favorite memories with you. These are the moments that shaped who I am.")}
+                >
+                  Memory Introduction
+                </button>
+                <button 
+                  className="text-left p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/80 text-sm transition-colors"
+                  onClick={() => setTextToSpeak("Thank you for keeping my memory alive. It means the world to me that you're here.")}
+                >
+                  Thank You Message
+                </button>
+                <button 
+                  className="text-left p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/80 text-sm transition-colors"
+                  onClick={() => setTextToSpeak("This is a personal message just for you. I hope it brings you comfort to hear my voice again.")}
+                >
+                  Personal Message
+                </button>
+              </>
+            ) : (
+              // Messages for MEMOIR profiles (user's own profile while still alive)
+              <>
+                <button 
+                  className="text-left p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/80 text-sm transition-colors"
+                  onClick={() => setTextToSpeak("Hello and welcome to my digital legacy. I've created this space to share my life stories and experiences with you.")}
+                >
+                  Welcome Message
+                </button>
+                <button 
+                  className="text-left p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/80 text-sm transition-colors"
+                  onClick={() => setTextToSpeak("I want to share some of my favorite memories with you. These moments have shaped who I am and what I value.")}
+                >
+                  Memory Introduction
+                </button>
+                <button 
+                  className="text-left p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/80 text-sm transition-colors"
+                  onClick={() => setTextToSpeak("I'm glad you're exploring my digital legacy. I hope you find it meaningful and insightful.")}
+                >
+                  Greeting Message
+                </button>
+                <button 
+                  className="text-left p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/80 text-sm transition-colors"
+                  onClick={() => setTextToSpeak("This is a personal reflection on what matters most to me. I hope these thoughts resonate with you in some way.")}
+                >
+                  Personal Reflection
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
