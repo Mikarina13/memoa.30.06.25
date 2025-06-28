@@ -315,7 +315,6 @@ export function Profile3DSpacePage() {
 
   // Handle item click
   const handleItemClick = (itemType: string, itemData: any) => {
-    // For personality, navigate to the dedicated page instead of showing a modal
     console.log('Item clicked:', itemType, itemData);
 
     // Special handling for gallery to show 3D carousel
@@ -337,6 +336,23 @@ export function Profile3DSpacePage() {
       });
       
       setSelectedGalleryItems(filteredItems);
+      setGalleryCurrentIndex(0); // Reset index to first item
+      setShowGalleryCarousel(true);
+      return;
+    }
+    
+    // Special handling for AI tribute images to show 3D carousel
+    if (itemType === 'ai_tribute_images') {
+      // Transform tribute image data to match the format expected by the carousel
+      const transformedItems = itemData.map((item: any) => ({
+        id: item.id,
+        file_path: item.url, // Map url to file_path for the carousel
+        media_type: item.isVideo ? 'video' : 'image', // Add media_type
+        title: `AI Tribute ${item.style || ''}`,
+        original_tribute_item: item, // Store original tribute item data
+      }));
+      
+      setSelectedGalleryItems(transformedItems);
       setGalleryCurrentIndex(0); // Reset index to first item
       setShowGalleryCarousel(true);
       return;
@@ -610,7 +626,18 @@ export function Profile3DSpacePage() {
               galleryItems={selectedGalleryItems} 
               onClose={() => setShowGalleryCarousel(false)}
               onItemSelect={(item) => {
-                setSelectedItem({ type: 'gallery', data: [item] });
+                // Check if this is a tribute item that was transformed for the carousel
+                if (item.original_tribute_item) {
+                  setSelectedItem({ 
+                    type: 'ai_tribute_images', 
+                    data: [item.original_tribute_item]
+                  });
+                } else {
+                  setSelectedItem({ 
+                    type: 'gallery', 
+                    data: [item]
+                  });
+                }
                 setShowDetailModal(true);
                 setShowGalleryCarousel(false);
               }}
@@ -695,6 +722,33 @@ export function Profile3DSpacePage() {
           title="View Gallery"
         >
           <Image className="w-5 h-5" />
+        </button>
+      )}
+
+      {/* AI Tribute Gallery Button - Show for profiles with tribute images */}
+      {profileData?.profile_data?.tribute_images?.length > 0 && (
+        <button 
+          onClick={() => {
+            // Get tribute images from profile data
+            const tributeImages = profileData.profile_data.tribute_images;
+            
+            // Transform tribute images for the carousel
+            const transformedItems = tributeImages.map((item: any) => ({
+              id: item.id,
+              file_path: item.url, // Map url to file_path for the carousel
+              media_type: item.isVideo ? 'video' : 'image', // Add media_type
+              title: `AI Tribute ${item.style || ''}`,
+              original_tribute_item: item, // Store original item for later use
+            }));
+            
+            setSelectedGalleryItems(transformedItems);
+            setGalleryCurrentIndex(0); // Reset to first image
+            setShowGalleryCarousel(true);
+          }}
+          className="fixed top-52 right-8 p-3 bg-amber-500/20 backdrop-blur-sm rounded-full border border-amber-500/30 text-amber-400 hover:text-amber-300 transition-colors z-40" 
+          title="View AI Tributes"
+        >
+          <Sparkles className="w-5 h-5" />
         </button>
       )}
       
