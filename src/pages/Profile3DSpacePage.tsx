@@ -456,8 +456,8 @@ export function Profile3DSpacePage() {
   
   // Get the appropriate camera position based on settings
   const cameraPosition = useMemo(() => {
-    return [0, 10, 40 * (1 / Math.max(customizationSettings.itemSizeMultiplier, 0.5))];
-  }, [customizationSettings.itemSizeMultiplier]);
+    return [0, 25, 0];
+  }, []);
   
   // Calculate star count based on density setting
   const starCount = Math.floor(8000 * customizationSettings.particleDensity);
@@ -675,6 +675,7 @@ export function Profile3DSpacePage() {
                 item.metadata.isTribute === true ||
                 (item.metadata.type === 'tribute') ||
                 (item.tags && item.tags.includes('tribute')) ||
+                (item.folder === 'Tribute Images') ||
                 (item.title && item.title.toLowerCase().includes('tribute'));
               
               return !isTribute;

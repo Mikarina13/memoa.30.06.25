@@ -20,7 +20,7 @@ export const MODEL_SCALE_HOVER = 1.2;
 export const CAMERA_POSITION_INITIAL: [number, number, number] = [0, 2, 20];
 export const CAMERA_POSITION_DEFAULT: [number, number, number] = [0, 1, 10];
 export const CAMERA_POSITION_MEMENTO: [number, number, number] = [0, 1, 15];
-export const CAMERA_POSITION_PROFILE_SPACE: [number, number, number] = [0, 10, 40];
+export const CAMERA_POSITION_PROFILE_SPACE: [number, number, number] = [0, 25, 0];
 
 /**
  * Camera field of view constants
