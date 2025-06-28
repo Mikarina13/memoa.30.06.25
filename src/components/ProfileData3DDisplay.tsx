@@ -124,8 +124,13 @@ const THEME_COLORS = {
 export function ProfileData3DDisplay({ profileData, onItemClick, customizationSettings }: ProfileData3DDisplayProps) {
   const groupRef = useRef<Group>(null);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null); 
+  const [clickedItem, setClickedItem] = useState<string | null>(null);
   const lastClickTime = useRef<{[key: string]: number}>({});
   const { camera } = useThree();
+  const [doubleTapInProgress, setDoubleTapInProgress] = useState(false);
+  
+  // Lower double click threshold for more responsive interactions
+  const DOUBLE_CLICK_THRESHOLD = 300; // ms
   
   // Logging for debugging
   useEffect(() => {
@@ -257,7 +262,12 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
             onLeave={() => setHoveredItem(null)} 
             lastClickTime={lastClickTime.current}
             isHovered={hoveredItem === "personal-favorites"}
-            onClick={() => onItemClick('personal_favorites', personalData)}
+            isClicked={clickedItem === "personal-favorites"}
+            onClick={() => {
+              setClickedItem("personal-favorites");
+              setTimeout(() => setClickedItem(null), 200); // Reset after animation
+              handleItemClick("personal_favorites", personalData);
+            }}
             glowIntensity={settings.backgroundIntensity}
           />
         ); 
@@ -290,7 +300,12 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           onLeave={() => setHoveredItem(null)}
           lastClickTime={lastClickTime.current}
           isHovered={hoveredItem === "digital-presence"}
-          onClick={() => onItemClick('digital_presence', digitalPresence)}
+          isClicked={clickedItem === "digital-presence"}
+          onClick={() => {
+            setClickedItem("digital-presence");
+            setTimeout(() => setClickedItem(null), 200);
+            handleItemClick("digital_presence", digitalPresence);
+          }}
           glowIntensity={settings.backgroundIntensity}
         />
       );
@@ -317,7 +332,12 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           onLeave={() => setHoveredItem(null)}
           lastClickTime={lastClickTime.current}
           isHovered={hoveredItem === "gaming-preferences"}
-          onClick={() => onItemClick('gaming_preferences', gamingPreferences)}
+          isClicked={clickedItem === "gaming-preferences"}
+          onClick={() => {
+            setClickedItem("gaming-preferences");
+            setTimeout(() => setClickedItem(null), 200);
+            handleItemClick("gaming_preferences", gamingPreferences);
+          }}
           glowIntensity={settings.backgroundIntensity}
         />
       );
@@ -343,10 +363,16 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           onLeave={() => setHoveredItem(null)}
           lastClickTime={lastClickTime.current}
           isHovered={hoveredItem === "voice"}
-          onClick={() => onItemClick('voice', { 
-            voiceId: profileData.elevenlabs_voice_id,
-            status: profileData.integration_status?.elevenlabs?.status
-          })}
+          isClicked={clickedItem === "voice"}
+          onClick={() => {
+            setClickedItem("voice");
+            setTimeout(() => setClickedItem(null), 200);
+            handleItemClick("voice", { 
+              voiceId: profileData.elevenlabs_voice_id,
+              status: profileData.integration_status?.elevenlabs?.status,
+              memoriaProfileId: isMemoriaProfile ? currentProfileId : undefined
+            });
+          }}
           glowIntensity={settings.backgroundIntensity}
         />
       );
@@ -372,10 +398,15 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           onLeave={() => setHoveredItem(null)}
           lastClickTime={lastClickTime.current}
           isHovered={hoveredItem === "tavus-avatar"}
-          onClick={() => onItemClick('tavus_avatar', { 
-            avatarId: profileData.tavus_avatar_id,
-            status: profileData.integration_status?.tavus?.status
-          })}
+          isClicked={clickedItem === "tavus-avatar"}
+          onClick={() => {
+            setClickedItem("tavus-avatar");
+            setTimeout(() => setClickedItem(null), 200);
+            handleItemClick("tavus_avatar", { 
+              avatarId: profileData.tavus_avatar_id,
+              status: profileData.integration_status?.tavus?.status
+            });
+          }}
           glowIntensity={settings.backgroundIntensity}
         />
       );
@@ -404,7 +435,12 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           onLeave={() => setHoveredItem(null)}
           lastClickTime={lastClickTime.current}
           isHovered={hoveredItem === "avaturn-avatars"}
-          onClick={() => onItemClick('avaturn_avatars', avaturnAvatars)}
+          isClicked={clickedItem === "avaturn-avatars"}
+          onClick={() => {
+            setClickedItem("avaturn-avatars");
+            setTimeout(() => setClickedItem(null), 200);
+            handleItemClick("avaturn_avatars", avaturnAvatars);
+          }}
           glowIntensity={settings.backgroundIntensity}
         />
       );
@@ -433,7 +469,12 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           onLeave={() => setHoveredItem(null)}
           lastClickTime={lastClickTime.current}
           isHovered={hoveredItem === "narratives"}
-          onClick={() => onItemClick('narratives', narratives)}
+          isClicked={clickedItem === "narratives"}
+          onClick={() => {
+            setClickedItem("narratives");
+            setTimeout(() => setClickedItem(null), 200);
+            handleItemClick("narratives", narratives);
+          }}
           glowIntensity={settings.backgroundIntensity}
         />
       );
@@ -459,7 +500,12 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           onLeave={() => setHoveredItem(null)}
           lastClickTime={lastClickTime.current}
           isHovered={hoveredItem === "gallery"}
-          onClick={() => onItemClick('gallery', profileData.gallery_items)}
+          isClicked={clickedItem === "gallery"}
+          onClick={() => {
+            setClickedItem("gallery");
+            setTimeout(() => setClickedItem(null), 200);
+            handleItemClick("gallery", profileData.gallery_items);
+          }}
           glowIntensity={settings.backgroundIntensity}
         />
       );
@@ -488,7 +534,12 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           onLeave={() => setHoveredItem(null)}
           lastClickTime={lastClickTime.current}
           isHovered={hoveredItem === "personality"}
-          onClick={() => onItemClick('personality', personalityTest)}
+          isClicked={clickedItem === "personality"}
+          onClick={() => {
+            setClickedItem("personality");
+            setTimeout(() => setClickedItem(null), 200);
+            handleItemClick("personality", personalityTest);
+          }}
           glowIntensity={settings.backgroundIntensity}
         />
       );
@@ -517,7 +568,12 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           onLeave={() => setHoveredItem(null)}
           lastClickTime={lastClickTime.current}
           isHovered={hoveredItem === "family-tree"}
-          onClick={() => onItemClick('family_tree', familyTree)}
+          isClicked={clickedItem === "family-tree"}
+          onClick={() => {
+            setClickedItem("family-tree");
+            setTimeout(() => setClickedItem(null), 200);
+            handleItemClick("family_tree", familyTree);
+          }}
           glowIntensity={settings.backgroundIntensity}
         />
       );
@@ -546,7 +602,12 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           onLeave={() => setHoveredItem(null)}
           lastClickTime={lastClickTime.current}
           isHovered={hoveredItem === "media-links"}
-          onClick={() => onItemClick('media_links', mediaLinks)}
+          isClicked={clickedItem === "media-links"}
+          onClick={() => {
+            setClickedItem("media-links");
+            setTimeout(() => setClickedItem(null), 200);
+            handleItemClick("media_links", mediaLinks);
+          }}
           glowIntensity={settings.backgroundIntensity}
         />
       );
@@ -574,9 +635,14 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           onLeave={() => setHoveredItem(null)}
           lastClickTime={lastClickTime.current}
           isHovered={hoveredItem === "documents"}
-          onClick={() => onItemClick('documents', {
-            documents: documents
-          })}
+          isClicked={clickedItem === "documents"}
+          onClick={() => {
+            setClickedItem("documents");
+            setTimeout(() => setClickedItem(null), 200);
+            handleItemClick("documents", {
+              documents: documents
+            });
+          }}
           glowIntensity={settings.backgroundIntensity}
         />
       );
@@ -604,7 +670,12 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           onLeave={() => setHoveredItem(null)}
           lastClickTime={lastClickTime.current}
           isHovered={hoveredItem === "ai-tribute-images"}
-          onClick={() => onItemClick('ai_tribute_images', tributeImages)}
+          isClicked={clickedItem === "ai-tribute-images"}
+          onClick={() => {
+            setClickedItem("ai-tribute-images");
+            setTimeout(() => setClickedItem(null), 200);
+            handleItemClick("ai_tribute_images", tributeImages);
+          }}
           glowIntensity={settings.backgroundIntensity}
         />
       );
@@ -642,6 +713,43 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
     const isVisible = settings.itemVisible[itemId] !== false;
     console.log(`Visibility check for ${itemId}:`, isVisible);
     return isVisible;
+  };
+  
+  // Process item clicks with improved double-click detection
+  const handleItemClick = (itemType: string, itemData: any) => {
+    const itemId = `item-${itemType}`;
+    const now = Date.now();
+    const lastClick = lastClickTime.current[itemId] || 0;
+    const timeDiff = now - lastClick;
+    
+    // If double click is already in progress, ignore additional clicks
+    if (doubleTapInProgress) return;
+    
+    console.log(`Click on ${itemType}, time since last click: ${timeDiff}ms`);
+    
+    // More responsive double-click detection with visual feedback
+    if (timeDiff < DOUBLE_CLICK_THRESHOLD) {
+      // Double click detected, send to the detail view
+      console.log(`Double click detected on ${itemType}`);
+      setDoubleTapInProgress(true);
+      
+      // Update the UI immediately for better feedback
+      setClickedItem(itemType);
+      
+      // Wait for animation to complete, then process the click
+      setTimeout(() => {
+        onItemClick(itemType, itemData);
+        setClickedItem(null);
+        setDoubleTapInProgress(false);
+        // Reset the timer
+        lastClickTime.current[itemId] = 0;
+      }, 300);
+    } else {
+      // Single click - give visual feedback and update last click time
+      setClickedItem(itemType);
+      setTimeout(() => setClickedItem(null), 200);
+      lastClickTime.current[itemId] = now;
+    }
   };
   
   // Count how many items we'll display - check both memoir_data and profile_data paths
@@ -771,38 +879,59 @@ interface ItemProps {
   onLeave: () => void;
   lastClickTime: Record<string, number>;
   isHovered: boolean;
+  isClicked: boolean;
   onClick: (e: ThreeEvent<MouseEvent>) => void;
   glowIntensity?: number;
 }
 
-function Item({ id, position, icon, label, color, scale, onHover, onLeave, lastClickTime, isHovered, onClick, glowIntensity = 0.5 }: ItemProps) {
+function Item({ 
+  id, 
+  position, 
+  icon, 
+  label, 
+  color, 
+  scale, 
+  onHover, 
+  onLeave, 
+  lastClickTime, 
+  isHovered, 
+  isClicked,
+  onClick, 
+  glowIntensity = 0.5 
+}: ItemProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const itemId = `item-${id}`;
-  const DOUBLE_CLICK_THRESHOLD = 250; // ms
+  const DOUBLE_CLICK_THRESHOLD = 300; // ms - reduced threshold for more responsive interaction
   const { camera } = useThree();
+  const [pulseAnimation, setPulseAnimation] = useState(0);
+  const pulseSpeed = 4; // Speed of the pulse animation
   
-  // Animate the item
+  // Handle pulse animation
   useFrame(({ clock }) => {
     if (meshRef.current) {
-      // Only apply floating animation, no rotation
+      // Floating animation
       meshRef.current.position.y = position.y + Math.sin(clock.getElapsedTime() * 0.5) * 0.6;
+      
+      // Pulse animation when clicked
+      if (pulseAnimation > 0) {
+        // Apply a quick scale pulse
+        const pulseFactor = 1 + 0.2 * Math.sin(pulseAnimation * Math.PI);
+        meshRef.current.scale.set(scale * pulseFactor, scale * pulseFactor, scale * pulseFactor);
+        
+        // Decrement pulse animation counter
+        setPulseAnimation(prev => Math.max(0, prev - 0.1 * pulseSpeed));
+      }
     }
   });
   
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
-    const now = Date.now();
-    const lastClick = lastClickTime[itemId] || 0;
     
-    if (now - lastClick < DOUBLE_CLICK_THRESHOLD) {
-      // Double click detected
-      // Look at the item before opening details
-      camera.lookAt(position);
-      onClick(e);
-    } else {
-      // Single click - update last click time
-      lastClickTime[itemId] = now;
-    }
+    // Start pulse animation
+    setPulseAnimation(1);
+    
+    // Trigger the click handler immediately for responsive feel
+    onClick(e);
   };
 
   // Create a THREE.Color from the color string
@@ -840,6 +969,7 @@ function Item({ id, position, icon, label, color, scale, onHover, onLeave, lastC
           }}
         >
           {label}
+          <div className="text-xs mt-1 opacity-70">Double-click to view</div>
         </div>
       </Html>
       
@@ -849,16 +979,18 @@ function Item({ id, position, icon, label, color, scale, onHover, onLeave, lastC
           onMouseEnter={onHover}
           onMouseLeave={onLeave}
           onClick={handleClick}
+          onTouchEnd={handleClick}
           className={`rounded-full p-8 transition-all duration-150 cursor-pointer ${
-            isHovered ? 'scale-125' : 'scale-100'
-          }`} 
+            isClicked ? 'scale-90' : isHovered ? 'scale-125' : 'scale-100'
+          } active:scale-90`} 
           style={{ 
-            transform: `scale(${scale})`,
+            transform: `scale(${scale * (isClicked ? 0.9 : isHovered ? 1.25 : 1)})`,
             backgroundColor: `${color}20`,
             border: `2px solid ${color}60`,
             boxShadow: isHovered ? `0 0 20px ${color}` : glowIntensity > 0.2 ? `0 0 ${Math.floor(glowIntensity * 10)}px ${glowColor}` : 'none',
             userSelect: 'none',
-            WebkitUserSelect: 'none'
+            WebkitUserSelect: 'none',
+            transition: 'all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)'
           }}
         >
           {icon}

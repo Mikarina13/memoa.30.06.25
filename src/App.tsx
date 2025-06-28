@@ -67,10 +67,14 @@ export function Model({ position, modelPath, text, description, setIsLoading, on
   const [showModal, setShowModal] = useState(false);
   const [rotation, setRotation] = useState(initialRotation);
   const [isSpinning, setIsSpinning] = useState(false);
+  const [isClicked, setIsClicked] = useState(false);
   const spinStartTime = useRef(0);
   const lastClickTime = useRef(0);
   const { camera } = useThree();
   const modelRef = useRef();
+
+  // Double-click timing - make it more responsive (200ms instead of 250ms)
+  const DOUBLE_CLICK_THRESHOLD = 200;
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -153,17 +157,22 @@ export function Model({ position, modelPath, text, description, setIsLoading, on
     // Stop event propagation to prevent OrbitControls from capturing it
     e.stopPropagation();
     
+    // Visual feedback for click
+    setIsClicked(true);
+    setTimeout(() => setIsClicked(false), 150); // Short pulse animation
+    
     const currentTime = Date.now();
     const timeDiff = currentTime - lastClickTime.current;
     
-    if (timeDiff < ANIMATION_DURATION_VERY_SHORT) { // Double click detected
+    // More responsive double click detection
+    if (timeDiff < DOUBLE_CLICK_THRESHOLD) { // Double click detected with lower threshold
       if (isSpinning) {
         setIsSpinning(false);
         spinStartTime.current = 0;
       }
       handleAccess();
     } else if (!showModal && !isSpinning) {
-      // Single click - start spinning
+      // Single click - start spinning with clear visual feedback
       setIsSpinning(true);
     }
     
@@ -174,7 +183,7 @@ export function Model({ position, modelPath, text, description, setIsLoading, on
     <group
       ref={modelRef}
       position={position}
-      scale={isHovering || showModal ? MODEL_SCALE_HOVER : MODEL_SCALE_DEFAULT}
+      scale={isClicked ? MODEL_SCALE_HOVER * 1.1 : isHovering || showModal ? MODEL_SCALE_HOVER : MODEL_SCALE_DEFAULT}
       rotation={rotation}
       onPointerEnter={() => !showModal && setIsHovering(true)}
       onPointerLeave={() => !showModal && setIsHovering(false)}
@@ -333,6 +342,16 @@ function MainScene() {
                 </button>
                 {!user ? (
                   <>
+                    <a 
+                      href="https://www.youtube.com/watch?v=tT0fwMpRTcI"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-amber-400 hover:text-amber-300 transition-colors"
+                      onClick={() => setShowMenu(false)}
+                    >
+                      <PlayCircle className="w-5 h-5" />
+                      <span className="text-amber-400/90 font-[Rajdhani]">Intro</span>
+                    </a>
                     <button 
                       onClick={() => {
                         navigate('/memento');
@@ -356,16 +375,6 @@ function MainScene() {
                   </>
                 ) : (
                   <>
-                    <a 
-                      href="https://www.youtube.com/watch?v=tT0fwMpRTcI"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 text-amber-400 hover:text-amber-300 transition-colors"
-                      onClick={() => setShowMenu(false)}
-                    >
-                      <PlayCircle className="w-5 h-5" />
-                      <span className="text-amber-400/90 font-[Rajdhani]">Intro</span>
-                    </a>
                     <button 
                       onClick={() => {
                         navigate('/profile');
