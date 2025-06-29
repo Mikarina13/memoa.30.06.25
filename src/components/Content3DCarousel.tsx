@@ -4,7 +4,7 @@ import { Html, useTexture } from '@react-three/drei';
 import { Vector3, Group, MathUtils } from 'three';
 import React from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
-import { AlertCircle, Loader, RefreshCw, XCircle, FileText, FileVideo, Mic, Newspaper, Link as LinkIcon, Facebook, Instagram, Twitter, Linkedin, Youtube, Github, Twitch, AlignJustify as Spotify, Rss, Mail, Globe2, MessageSquare, ExternalLink, Play } from 'lucide-react';
+import { AlertCircle, Loader, RefreshCw, XCircle, FileText, FileVideo, Mic, Newspaper, Link as LinkIcon, Facebook, Instagram, Twitter, Linkedin, Youtube, Github, Twitch, AlignJustify as Spotify, Rss, Mail, Globe2, MessageSquare, ExternalLink, Play, ArrowLeft, ArrowRight, X } from 'lucide-react';
 
 interface ContentItem {
   id: string;
@@ -158,6 +158,7 @@ export function Content3DCarousel({
   
   // Set up keyboard navigation
   useEffect(() => {
+    // Handle key navigation with improved event handling
     const handleKeyDown = (e: KeyboardEvent) => {
       // Prevent default browser behavior for navigation keys
       if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "a", "d", "w", "s", "A", "D", "W", "S", "Space", " "].includes(e.key)) {
@@ -184,11 +185,12 @@ export function Content3DCarousel({
     
     // Focus the window/document to ensure keyboard events are captured
     window.focus();
+    document.body.focus();
     
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [onClose, onItemSelect, items, currentIndex]);
+  }, [onClose, onItemSelect, items, currentIndex, navigateCarousel]);
   
   // Handle manual navigation
   const navigateCarousel = useCallback((direction: number) => {
@@ -305,25 +307,25 @@ export function Content3DCarousel({
         })}
       </group>
       
-      <CarouselCameraControls />
-      
-      {/* Add navigation controls */}
+      {/* Add keyboard navigation hints */}
       <Html position={[0, -6, 0]} center>
-        <div className="flex items-center gap-4 bg-black/60 px-4 py-2 rounded-full">
+        <div className="flex items-center gap-4 bg-black/60 backdrop-blur-sm px-4 py-2 rounded-full text-white text-sm">
           <button 
             onClick={() => navigateCarousel(1)}
-            className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white"
+            className="flex items-center justify-center gap-1 hover:text-blue-400 transition-colors"
           >
-            ◀
+            <kbd className="px-2 py-1 bg-black/40 rounded mr-1 border border-white/20"><ArrowLeft className="w-4 h-4" /></kbd>
+            <span className="hidden sm:inline">Previous</span>
           </button>
-          <span className="text-white">
-            {currentIndex + 1} / {items.length}
-          </span>
+          
+          <span className="text-white/70">{currentIndex + 1} / {items.length}</span>
+          
           <button 
             onClick={() => navigateCarousel(-1)}
-            className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white"
+            className="flex items-center justify-center gap-1 hover:text-blue-400 transition-colors"
           >
-            ▶
+            <span className="hidden sm:inline">Next</span>
+            <kbd className="px-2 py-1 bg-black/40 rounded ml-1 border border-white/20"><ArrowRight className="w-4 h-4" /></kbd>
           </button>
         </div>
       </Html>
@@ -332,11 +334,14 @@ export function Content3DCarousel({
       <Html position={[0, 6, 0]} center>
         <button 
           onClick={onClose}
-          className="p-3 bg-black/60 hover:bg-black/80 rounded-full text-white"
+          className="p-3 bg-black/60 hover:bg-black/80 rounded-full text-white transition-colors"
+          aria-label="Close carousel"
         >
-          ✕
+          <X className="w-6 h-6" />
         </button>
       </Html>
+      
+      <CarouselCameraControls />
     </ErrorBoundary>
   );
 }
@@ -649,7 +654,6 @@ function CarouselItem({
               style={{
                 boxShadow: '0 0 20px rgba(255, 255, 255, 0.5)',
                 border: '2px solid rgba(255, 255, 255, 0.3)',
-                animation: 'pulse 2s infinite',
               }}
             />
           </Html>

@@ -79,6 +79,7 @@ export function useKeyboardControls(speed = 0.2, enabled = true) {
       requestAnimationFrame(updateCamera);
     };
 
+    // Use { passive: false } to allow preventDefault to work
     window.addEventListener('keydown', handleKeyDown, { passive: false });
     window.addEventListener('keyup', handleKeyUp);
     window.addEventListener('blur', handleBlur);
