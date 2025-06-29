@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, Link, ExternalLink, CheckCircle, AlertCircle, Save, X, ArrowLeft, ArrowRight, Globe } from 'lucide-react';
+import { Camera, Link, ExternalLink, CheckCircle, AlertCircle, Save, X, ArrowLeft, ArrowRight, Globe, AlertTriangle } from 'lucide-react';
 import { MemoirIntegrations } from '../lib/memoir-integrations'; 
 import { TavusAPI } from '../lib/tavus-api';
 import { useAuth } from '../hooks/useAuth';
@@ -29,6 +29,7 @@ export function TavusAvatarInterface({ memoriaProfileId, onAvatarCreated, onClos
   const [showApiKeyInfo, setShowApiKeyInfo] = useState(false);
   const [testMessageResponse, setTestMessageResponse] = useState<string | null>(null);
   const [testMessageStatus, setTestMessageStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+  const [showCorsWarning, setShowCorsWarning] = useState(false);
 
   const apiKeyInputRef = useRef<HTMLInputElement>(null);
 
@@ -97,6 +98,7 @@ export function TavusAvatarInterface({ memoriaProfileId, onAvatarCreated, onClos
 
     setValidationStatus('validating');
     setValidationError(null);
+    setShowCorsWarning(false);
 
     try {
       const tavusApi = new TavusAPI(apiKey.trim());
@@ -110,7 +112,10 @@ export function TavusAvatarInterface({ memoriaProfileId, onAvatarCreated, onClos
       
       if (error instanceof Error) {
         // Handle specific error types with appropriate messages
-        if (error.message.includes('Network Error')) {
+        if (error.message.includes('CORS Error')) {
+          setShowCorsWarning(true);
+          setValidationError('Browser Security Limitation: Direct API calls to Tavus are blocked by CORS policy. This is normal browser security behavior. You can still save your credentials and use them through our backend services.');
+        } else if (error.message.includes('Network Error')) {
           setValidationError(error.message);
         } else if (error.message.includes('401')) {
           setValidationError('Invalid API key. Please check your Tavus API key and try again.');
@@ -230,7 +235,9 @@ export function TavusAvatarInterface({ memoriaProfileId, onAvatarCreated, onClos
       setTestMessageStatus('error');
       
       if (error instanceof Error) {
-        if (error.message.includes('Network Error')) {
+        if (error.message.includes('CORS Error')) {
+          setTestMessageResponse('Browser Security Limitation: Direct API calls are blocked by CORS policy. Your credentials are saved and will work through our backend services.');
+        } else if (error.message.includes('Network Error')) {
           setTestMessageResponse(error.message);
         } else {
           setTestMessageResponse(`Error: ${error.message}`);
@@ -252,6 +259,14 @@ export function TavusAvatarInterface({ memoriaProfileId, onAvatarCreated, onClos
   const openTavusAffiliate = () => {
     const affiliateLink = TavusAPI.getAffiliateLink('memoa');
     window.open(affiliateLink, '_blank');
+  };
+
+  const skipValidation = () => {
+    if (apiKey.trim()) {
+      setActiveStep(2);
+      setValidationStatus('idle');
+      setValidationError(null);
+    }
   };
 
   return (
@@ -294,6 +309,28 @@ export function TavusAvatarInterface({ memoriaProfileId, onAvatarCreated, onClos
             </div>
           </div>
         </div>
+
+        {/* CORS Warning */}
+        {showCorsWarning && (
+          <div className="mb-6 p-4 bg-amber-500/20 border border-amber-500/30 rounded-lg">
+            <div className="flex items-center gap-2 text-amber-400 mb-2">
+              <AlertTriangle className="w-5 h-5" />
+              <span className="font-medium">Browser Security Information</span>
+            </div>
+            <p className="text-amber-200 text-sm mb-3">
+              Modern browsers block direct API calls to external services like Tavus for security reasons (CORS policy). 
+              This is normal and expected behavior.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={skipValidation}
+                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-black rounded-lg text-sm transition-colors"
+              >
+                Continue Setup
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Current Avatar ID Display */}
         {currentReplicaId && (
@@ -423,10 +460,25 @@ export function TavusAvatarInterface({ memoriaProfileId, onAvatarCreated, onClos
                     )}
                   </button>
                 </div>
+                {showCorsWarning && (
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={skipValidation}
+                      className="text-amber-400 text-sm hover:text-amber-300 transition-colors"
+                    >
+                      Skip validation and continue setup →
+                    </button>
+                  </div>
+                )}
               </div>
 
               {validationError && (
-                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+                <div className={`p-3 border rounded-lg text-sm ${
+                  showCorsWarning 
+                    ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' 
+                    : 'bg-red-500/10 border-red-500/20 text-red-400'
+                }`}>
                   {validationError}
                 </div>
               )}

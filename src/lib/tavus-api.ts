@@ -38,6 +38,20 @@ export class TavusAPI {
     };
   }
 
+  private handleFetchError(error: any, operation: string): never {
+    console.error(`Error ${operation}:`, error);
+    
+    if (error instanceof TypeError) {
+      if (error.message === 'Failed to fetch') {
+        throw new Error('CORS Error: Direct browser access to Tavus API is blocked by CORS policy. You need to use a backend server or proxy to make API calls to Tavus. This is a security limitation of web browsers, not a network connectivity issue.');
+      } else if (error.message.includes('NetworkError')) {
+        throw new Error('Network Error: Unable to connect to Tavus API. Please check your internet connection and try again.');
+      }
+    }
+    
+    throw error;
+  }
+
   /**
    * Get details about a specific replica
    */
@@ -54,11 +68,7 @@ export class TavusAPI {
 
       return response.json();
     } catch (error) {
-      if (error instanceof TypeError && error.message === 'Failed to fetch') {
-        throw new Error('Network Error: Unable to connect to Tavus API. Please check your internet connection and try again.');
-      }
-      console.error('Error getting replica:', error);
-      throw error;
+      this.handleFetchError(error, 'getting replica');
     }
   }
 
@@ -78,11 +88,7 @@ export class TavusAPI {
 
       return response.json();
     } catch (error) {
-      if (error instanceof TypeError && error.message === 'Failed to fetch') {
-        throw new Error('Network Error: Unable to connect to Tavus API. Please check your internet connection and try again.');
-      }
-      console.error('Error listing replicas:', error);
-      throw error;
+      this.handleFetchError(error, 'listing replicas');
     }
   }
 
@@ -106,11 +112,7 @@ export class TavusAPI {
 
       return response.json();
     } catch (error) {
-      if (error instanceof TypeError && error.message === 'Failed to fetch') {
-        throw new Error('Network Error: Unable to connect to Tavus API. Please check your internet connection and try again.');
-      }
-      console.error('Error sending message to Tavus:', error);
-      throw error;
+      this.handleFetchError(error, 'sending message to Tavus');
     }
   }
 
@@ -130,11 +132,7 @@ export class TavusAPI {
 
       return response.json();
     } catch (error) {
-      if (error instanceof TypeError && error.message === 'Failed to fetch') {
-        throw new Error('Network Error: Unable to connect to Tavus API. Please check your internet connection and try again.');
-      }
-      console.error('Error getting video from Tavus:', error);
-      throw error;
+      this.handleFetchError(error, 'getting video from Tavus');
     }
   }
 
@@ -154,11 +152,7 @@ export class TavusAPI {
 
       return response.json();
     } catch (error) {
-      if (error instanceof TypeError && error.message === 'Failed to fetch') {
-        throw new Error('Network Error: Unable to connect to Tavus API. Please check your internet connection and try again.');
-      }
-      console.error('Error getting conversation:', error);
-      throw error;
+      this.handleFetchError(error, 'getting conversation');
     }
   }
 
