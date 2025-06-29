@@ -283,7 +283,7 @@ function CarouselItem({
   const meshRef = useRef<THREE.Mesh>(null);
   const loadedRef = useRef(false);
   const [textureError, setTextureError] = useState(false);
-  const [currentTextureUrl, setCurrentTextureUrl] = useState(item.file_path);
+  const [currentTextureUrl, setCurrentTextureUrl] = useState(item.file_path || '');
   const [hasAttemptedFallback, setHasAttemptedFallback] = useState(false);
   const [loadStarted, setLoadStarted] = useState(false);
   
