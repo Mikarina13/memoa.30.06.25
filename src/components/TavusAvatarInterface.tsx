@@ -414,7 +414,7 @@ export function TavusAvatarInterface({ memoriaProfileId, onAvatarCreated, onClos
               <h4 className="text-blue-400 font-medium mb-2">Where to find your Tavus API Key:</h4>
               <ol className="text-white/70 text-sm space-y-1 list-decimal pl-5">
                 <li>Log in to your <a href="https://tavus.io/dashboard" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">Tavus Dashboard</a></li>
-                <li>Go to Settings > Developer</li>
+                <li>{'Go to Settings > Developer'}</li>
                 <li>Create a new API Key or copy your existing one</li>
                 <li>Paste it into the field above</li>
               </ol>
