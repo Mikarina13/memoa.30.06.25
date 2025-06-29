@@ -67,43 +67,115 @@ const checkAuth = async () => {
   }
 };
 
-// Enhanced test connection function with better error handling
-export const testSupabaseConnection = async () => {
-  try {
-    console.log('🧪 Testing Supabase connection...');
-    console.log('🔗 URL:', supabaseUrl);
-    
-    // Test basic connection
-    const { data, error } = await supabase.auth.getSession();
-    if (error) {
-      console.error('❌ Supabase connection error:', error);
-      return false;
-    }
-    
-    // Test database connection
-    const { data: testData, error: dbError } = await supabase
-      .from('profiles')
-      .select('count')
-      .limit(1);
-      
-    if (dbError) {
-      console.error('❌ Database connection error:', dbError);
-      return false;
-    }
-    
-    console.log('✅ Supabase connection successful!');
-    return true;
-  } catch (err) {
-    console.error('❌ Supabase connection failed:', err);
-    if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
-      console.error('🔧 This appears to be a network connectivity issue. Please check:');
-      console.error('   1. Your internet connection');
-      console.error('   2. That the Supabase URL is correct and accessible');
-      console.error('   3. That your development server has been restarted');
-    }
-    return false;
+// Helper function to provide detailed error diagnosis
+const diagnoseConnectionError = (error: any) => {
+  if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+    return {
+      type: 'NETWORK_ERROR',
+      message: 'Network connectivity issue detected',
+      suggestions: [
+        'Check your internet connection',
+        'Verify the Supabase URL is accessible',
+        'Ensure your Supabase project is not paused',
+        'Try restarting your development server',
+        'Check if you\'re behind a firewall or proxy'
+      ]
+    };
   }
+  
+  if (error?.message?.includes('CORS')) {
+    return {
+      type: 'CORS_ERROR', 
+      message: 'CORS policy error',
+      suggestions: [
+        'Check your Supabase project CORS settings',
+        'Verify your domain is allowed in Supabase dashboard'
+      ]
+    };
+  }
+  
+  if (error?.status === 401 || error?.status === 403) {
+    return {
+      type: 'AUTH_ERROR',
+      message: 'Authentication/authorization error',
+      suggestions: [
+        'Verify your Supabase anon key is correct',
+        'Check if your Supabase project is active',
+        'Ensure RLS policies are properly configured'
+      ]
+    };
+  }
+  
+  return {
+    type: 'UNKNOWN_ERROR',
+    message: error?.message || 'Unknown connection error',
+    suggestions: [
+      'Check the browser console for more details',
+      'Verify all environment variables are set correctly'
+    ]
+  };
 };
 
-// Initialize connection test on module load
-testSupabaseConnection();
+// Enhanced test connection function with better error handling and retry logic
+export const testSupabaseConnection = async (retries = 3) => {
+  let lastError: any = null;
+  
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      console.log(`🧪 Testing Supabase connection (attempt ${attempt}/${retries})...`);
+      console.log('🔗 URL:', supabaseUrl);
+      
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Connection timeout after 10 seconds')), 10000);
+      });
+      
+      // Test basic connection with timeout
+      const connectionPromise = supabase.auth.getSession();
+      const { data, error } = await Promise.race([connectionPromise, timeoutPromise]) as any;
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Test database connection with a simple query
+      const dbPromise = supabase
+        .from('profiles')
+        .select('count')
+        .limit(1);
+        
+      const { data: testData, error: dbError } = await Promise.race([dbPromise, timeoutPromise]) as any;
+        
+      if (dbError) {
+        throw dbError;
+      }
+      
+      console.log('✅ Supabase connection successful!');
+      return true;
+    } catch (err) {
+      lastError = err;
+      console.error(`❌ Supabase connection attempt ${attempt} failed:`, err);
+      
+      // If this isn't the last attempt, wait before retrying
+      if (attempt < retries) {
+        const waitTime = attempt * 1000; // Exponential backoff
+        console.log(`⏳ Waiting ${waitTime}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+    }
+  }
+  
+  // All attempts failed, provide detailed diagnosis
+  const diagnosis = diagnoseConnectionError(lastError);
+  console.error('🔧 Connection diagnosis:', diagnosis.type);
+  console.error('📝 Error details:', diagnosis.message);
+  console.error('💡 Suggestions:');
+  diagnosis.suggestions.forEach((suggestion, index) => {
+    console.error(`   ${index + 1}. ${suggestion}`);
+  });
+  
+  return false;
+};
+
+// Don't automatically test connection on module load to avoid blocking
+// Let components handle testing when needed
