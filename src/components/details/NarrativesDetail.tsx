@@ -50,10 +50,22 @@ interface NarrativesDetailProps {
       processed_at: string;
     };
   };
+  initialTab?: string; // Add this prop to control initial tab selection
 }
 
-export function NarrativesDetail({ data }: NarrativesDetailProps) {
-  const [activeTab, setActiveTab] = useState<string>(data.documents?.length ? 'documents' : 'personal_stories');
+export function NarrativesDetail({ data, initialTab }: NarrativesDetailProps) {
+  // Initialize activeTab based on initialTab prop or use a smart default
+  const getInitialTab = () => {
+    if (initialTab) {
+      return initialTab; // Use explicitly provided tab if available
+    } else if (data.documents?.length) {
+      return 'documents'; // Default to documents if available
+    } else {
+      return 'personal_stories'; // Otherwise default to personal stories
+    }
+  };
+  
+  const [activeTab, setActiveTab] = useState<string>(getInitialTab());
   const [selectedNarrative, setSelectedNarrative] = useState<any | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   
@@ -125,10 +137,10 @@ export function NarrativesDetail({ data }: NarrativesDetailProps) {
 
   // Determine if we should show the documents tab first
   useEffect(() => {
-    if (data.documents?.length) {
+    if (data.documents?.length && activeTab !== 'documents' && !initialTab) {
       setActiveTab('documents');
     }
-  }, [data.documents]);
+  }, [data.documents, initialTab]);
 
   return (
     <div className="space-y-6 pt-4">

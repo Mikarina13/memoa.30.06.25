@@ -417,6 +417,17 @@ export function Profile3DSpacePage() {
       return;
     }
     
+    // Handle narratives vs documents distinction
+    if (itemType === 'narratives' || itemType === 'documents') {
+      setSelectedItem({ 
+        type: itemType, 
+        data: itemData
+      });
+      setShowDetailModal(true);
+      return;
+    }
+    
+    // Default behavior for other item types
     setSelectedItem({ type: itemType, data: itemData });
     setShowDetailModal(true);
   };
@@ -801,6 +812,7 @@ export function Profile3DSpacePage() {
               }}
               currentIndex={galleryCurrentIndex}
               onIndexChange={setGalleryCurrentIndex}
+              isLoading={galleryLoadError} // Pass loading state to show loading indicator
             />
           )}
           
@@ -966,13 +978,13 @@ export function Profile3DSpacePage() {
               {selectedItem.type === 'voice' && <VoiceDetail data={selectedItem.data} memoriaProfileId={memoriaProfileId} />}
               {selectedItem.type === 'tavus_avatar' && <TavusAvatarDetail data={selectedItem.data} />}
               {selectedItem.type === 'avaturn_avatars' && <AvaturnAvatarDetail data={selectedItem.data} />}
-              {selectedItem.type === 'narratives' && <NarrativesDetail data={selectedItem.data} />}
+              {selectedItem.type === 'narratives' && <NarrativesDetail data={selectedItem.data} initialTab="personal_stories" />}
+              {selectedItem.type === 'documents' && <NarrativesDetail data={selectedItem.data} initialTab="documents" />}
               {selectedItem.type === 'gallery' && <GalleryDetail data={selectedItem.data} />}
               {selectedItem.type === 'personality' && <PersonalityDetail data={selectedItem.data} />}
               {selectedItem.type === 'family_tree' && <FamilyTreeDetail data={selectedItem.data} />}
               {selectedItem.type === 'media_links' && <MediaLinksDetail data={selectedItem.data} />}
               {selectedItem.type === 'ai_tribute_images' && <TributeImageDetail data={selectedItem.data} />}
-              {selectedItem.type === 'documents' && <NarrativesDetail data={{ documents: selectedItem.data.documents }} />}
             </motion.div>
           </motion.div>
         )}
