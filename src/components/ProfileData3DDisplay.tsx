@@ -36,7 +36,6 @@ const THEME_COLORS = {
     digital_presence: '#a855f7',
     gaming_preferences: '#06b6d4',
     voice: '#3b82f6',
-    tavus_avatar: '#8b5cf6',
     avaturn_avatars: '#f97316',
     narratives: '#10b981',
     gallery: '#ec4899',
@@ -51,7 +50,6 @@ const THEME_COLORS = {
     digital_presence: '#e11d48',
     gaming_preferences: '#f59e0b',
     voice: '#f97316',
-    tavus_avatar: '#e11d48',
     avaturn_avatars: '#f97316',
     narratives: '#f59e0b',
     gallery: '#f97316',
@@ -66,7 +64,6 @@ const THEME_COLORS = {
     digital_presence: '#0ea5e9',
     gaming_preferences: '#10b981',
     voice: '#0ea5e9',
-    tavus_avatar: '#10b981',
     avaturn_avatars: '#0ea5e9',
     narratives: '#10b981',
     gallery: '#0ea5e9',
@@ -81,7 +78,6 @@ const THEME_COLORS = {
     digital_presence: '#6366f1',
     gaming_preferences: '#10b981',
     voice: '#06b6d4',
-    tavus_avatar: '#f43f5e',
     avaturn_avatars: '#f97316',
     narratives: '#10b981',
     gallery: '#ec4899',
@@ -95,7 +91,6 @@ const THEME_COLORS = {
     digital_presence: '#94a3b8',
     gaming_preferences: '#94a3b8',
     voice: '#94a3b8',
-    tavus_avatar: '#94a3b8',
     avaturn_avatars: '#94a3b8',
     narratives: '#94a3b8',
     gallery: '#94a3b8',
@@ -110,7 +105,6 @@ const THEME_COLORS = {
     digital_presence: '#4f46e5',
     gaming_preferences: '#1e40af',
     voice: '#2563eb',
-    tavus_avatar: '#4f46e5',
     avaturn_avatars: '#1e40af',
     narratives: '#2563eb',
     gallery: '#4f46e5',
@@ -143,7 +137,6 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
         hasPersonalData: !!profileData?.profile_data?.preferences?.personal || 
                         !!profileData?.memoir_data?.preferences?.personal,
         voiceId: profileData.elevenlabs_voice_id,
-        avatarId: profileData.tavus_avatar_id,
         galleryCount: profileData.gallery_items?.length,
         memoriaID: profileData.id,
         isMemoria: !!profileData.profile_data,
@@ -184,7 +177,6 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
       profileType: isMemoriaProfile ? 'memoria' : 'memoir',
       profileId: currentProfileId,
       elevenlabsVoiceId: profileData?.elevenlabs_voice_id,
-      tavusAvatarId: profileData?.tavus_avatar_id,
       hasGalleryItems: profileData?.gallery_items?.length > 0,
       galleryItemCount: profileData?.gallery_items?.length || 0
     });
@@ -873,34 +865,28 @@ function Item({
   const itemId = `item-${id}`;
   const DOUBLE_CLICK_THRESHOLD = 300; // ms - reduced threshold for more responsive interaction
   const { camera } = useThree();
-  const [pulseAnimation, setPulseAnimation] = useState(0);
-  const pulseSpeed = 4; // Speed of the pulse animation
+  const [isAnimating, setIsAnimating] = useState(false);
   
-  // Handle pulse animation
+  // Handle floating animation
   useFrame(({ clock }) => {
     if (meshRef.current) {
       // Floating animation
       meshRef.current.position.y = position.y + Math.sin(clock.getElapsedTime() * 0.5) * 0.6;
-      
-      // Pulse animation when clicked
-      if (pulseAnimation > 0) {
-        // Apply a quick scale pulse
-        const pulseFactor = 1 + 0.2 * Math.sin(pulseAnimation * Math.PI);
-        meshRef.current.scale.set(scale * pulseFactor, scale * pulseFactor, scale * pulseFactor);
-        
-        // Decrement pulse animation counter
-        setPulseAnimation(prev => Math.max(0, prev - 0.1 * pulseSpeed));
-      }
     }
   });
   
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
     
-    // Start pulse animation
-    setPulseAnimation(1);
+    // Trigger animation
+    setIsAnimating(true);
     
-    // Trigger the click handler immediately for responsive feel
+    // Remove the animation class after animation completes
+    setTimeout(() => {
+      setIsAnimating(false);
+    }, 600); // match animation duration
+    
+    // Trigger the click handler
     onClick(e);
   };
 
@@ -950,14 +936,12 @@ function Item({
           onMouseLeave={onLeave}
           onClick={handleClick}
           onTouchEnd={handleClick}
-          className={`rounded-full p-8 transition-all duration-150 cursor-pointer ${
-            isClicked ? 'scale-90' : isHovered ? 'scale-125' : 'scale-100'
-          } active:scale-90`} 
+          className={`rounded-full p-8 cursor-pointer transition-all duration-150 ${isAnimating ? 'click-pulse' : ''}`}
           style={{ 
-            transform: `scale(${scale * (isClicked ? 0.9 : isHovered ? 1.25 : 1)})`,
             backgroundColor: `${color}20`,
             border: `2px solid ${color}60`,
             boxShadow: isHovered ? `0 0 20px ${color}` : glowIntensity > 0.2 ? `0 0 ${Math.floor(glowIntensity * 10)}px ${glowColor}` : 'none',
+            transform: `scale(${scale * (isClicked ? 0.9 : isHovered ? 1.25 : 1)})`,
             userSelect: 'none',
             WebkitUserSelect: 'none',
             transition: 'all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)'
