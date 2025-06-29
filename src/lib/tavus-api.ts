@@ -54,6 +54,9 @@ export class TavusAPI {
 
       return response.json();
     } catch (error) {
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        throw new Error('Network Error: Unable to connect to Tavus API. Please check your internet connection and try again.');
+      }
       console.error('Error getting replica:', error);
       throw error;
     }
@@ -75,6 +78,9 @@ export class TavusAPI {
 
       return response.json();
     } catch (error) {
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        throw new Error('Network Error: Unable to connect to Tavus API. Please check your internet connection and try again.');
+      }
       console.error('Error listing replicas:', error);
       throw error;
     }
@@ -100,6 +106,9 @@ export class TavusAPI {
 
       return response.json();
     } catch (error) {
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        throw new Error('Network Error: Unable to connect to Tavus API. Please check your internet connection and try again.');
+      }
       console.error('Error sending message to Tavus:', error);
       throw error;
     }
@@ -121,6 +130,9 @@ export class TavusAPI {
 
       return response.json();
     } catch (error) {
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        throw new Error('Network Error: Unable to connect to Tavus API. Please check your internet connection and try again.');
+      }
       console.error('Error getting video from Tavus:', error);
       throw error;
     }
@@ -136,7 +148,8 @@ export class TavusAPI {
       return true;
     } catch (error) {
       console.error('Tavus API key validation failed:', error);
-      return false;
+      // Re-throw the error instead of returning false to provide specific error details
+      throw error;
     }
   }
 

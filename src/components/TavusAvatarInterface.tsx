@@ -84,23 +84,24 @@ export function TavusAvatarInterface({ memoriaProfileId, onAvatarCreated, onClos
 
     try {
       const tavusApi = new TavusAPI(apiKey.trim());
-      const isValid = await tavusApi.validateApiKey();
+      await tavusApi.validateApiKey(); // This now throws errors instead of returning false
       
-      if (isValid) {
-        setValidationStatus('success');
-        setActiveStep(2); // Move to next step on success
-      } else {
-        throw new Error('API key validation failed. Please check your Tavus API key and try again.');
-      }
+      setValidationStatus('success');
+      setActiveStep(2); // Move to next step on success
     } catch (error) {
       console.error('Error validating API key:', error);
       setValidationStatus('error');
       
       if (error instanceof Error) {
-        if (error.message.includes('401')) {
+        // Handle specific error types with appropriate messages
+        if (error.message.includes('Network Error')) {
+          setValidationError(error.message);
+        } else if (error.message.includes('401')) {
           setValidationError('Invalid API key. Please check your Tavus API key and try again.');
-        } else if (error.message.includes('Network Error')) {
-          setValidationError('Network error. Please check your internet connection and try again.');
+        } else if (error.message.includes('403')) {
+          setValidationError('Access forbidden. Please check your API key permissions.');
+        } else if (error.message.includes('429')) {
+          setValidationError('Rate limit exceeded. Please wait a moment and try again.');
         } else {
           setValidationError(error.message);
         }
@@ -208,7 +209,11 @@ export function TavusAvatarInterface({ memoriaProfileId, onAvatarCreated, onClos
       setTestMessageStatus('error');
       
       if (error instanceof Error) {
-        setTestMessageResponse(`Error: ${error.message}`);
+        if (error.message.includes('Network Error')) {
+          setTestMessageResponse(error.message);
+        } else {
+          setTestMessageResponse(`Error: ${error.message}`);
+        }
       } else {
         setTestMessageResponse('An unexpected error occurred during testing');
       }
@@ -409,7 +414,7 @@ export function TavusAvatarInterface({ memoriaProfileId, onAvatarCreated, onClos
               <h4 className="text-blue-400 font-medium mb-2">Where to find your Tavus API Key:</h4>
               <ol className="text-white/70 text-sm space-y-1 list-decimal pl-5">
                 <li>Log in to your <a href="https://tavus.io/dashboard" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">Tavus Dashboard</a></li>
-                <li>Go to Settings &gt; Developer</li>
+                <li>Go to Settings > Developer</li>
                 <li>Create a new API Key or copy your existing one</li>
                 <li>Paste it into the field above</li>
               </ol>
