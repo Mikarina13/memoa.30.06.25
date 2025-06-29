@@ -1,7 +1,8 @@
-import { useRef, useState, useEffect, useMemo } from 'react';
+import { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { useFrame, useThree, ThreeEvent } from '@react-three/fiber';
-import { Html } from '@react-three/drei';
-import { Vector3 } from 'three';
+import { Html, useTexture } from '@react-three/drei';
+import { Vector3, Group, MathUtils } from 'three';
+import * as THREE from 'three';
 import React from 'react';
 
 interface Gallery3DCarouselProps {
