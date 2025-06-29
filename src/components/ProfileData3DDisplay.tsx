@@ -247,7 +247,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
             key="personal-favorites"
             id="personal_favorites"
             position={position}
-            icon={<Heart className={`w-12 h-12`} style={{color: getItemColor('personal_favorites', themeColors.personal_favorites)}} />}
+            icon={<Heart className={`w-8 h-8`} style={{color: getItemColor('personal_favorites', themeColors.personal_favorites)}} />}
             label="Personal Favorites" 
             color={getItemColor('personal_favorites', themeColors.personal_favorites)}
             scale={settings.iconScale}
@@ -285,7 +285,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           key="digital-presence"
           id="digital_presence"
           position={position}
-          icon={<Globe className={`w-12 h-12`} style={{color: getItemColor('digital_presence', themeColors.digital_presence)}} />}
+          icon={<Globe className={`w-8 h-8`} style={{color: getItemColor('digital_presence', themeColors.digital_presence)}} />}
           label="Digital Presence" 
           color={getItemColor('digital_presence', themeColors.digital_presence)}
           scale={settings.iconScale}
@@ -317,7 +317,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           key="gaming-preferences"
           id="gaming_preferences"
           position={position}
-          icon={<Gamepad2 className={`w-12 h-12`} style={{color: getItemColor('gaming_preferences', themeColors.gaming_preferences)}} />}
+          icon={<Gamepad2 className={`w-8 h-8`} style={{color: getItemColor('gaming_preferences', themeColors.gaming_preferences)}} />}
           label="Gaming Preferences" 
           color={getItemColor('gaming_preferences', themeColors.gaming_preferences)}
           scale={settings.iconScale}
@@ -348,7 +348,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           key="voice"
           id="voice"
           position={position}
-          icon={<Volume2 className={`w-12 h-12`} style={{color: getItemColor('voice', themeColors.voice)}} />}
+          icon={<Volume2 className={`w-8 h-8`} style={{color: getItemColor('voice', themeColors.voice)}} />}
           label="Voice Clone" 
           color={getItemColor('voice', themeColors.voice)}
           scale={settings.iconScale}
@@ -386,7 +386,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           key="avaturn-avatars"
           id="avaturn_avatars"
           position={position}
-          icon={<Cuboid className={`w-12 h-12`} style={{color: getItemColor('avaturn_avatars', themeColors.avaturn_avatars)}} />}
+          icon={<Cuboid className={`w-8 h-8`} style={{color: getItemColor('avaturn_avatars', themeColors.avaturn_avatars)}} />}
           label="3D Avatars" 
           color={getItemColor('avaturn_avatars', themeColors.avaturn_avatars)}
           scale={settings.iconScale}
@@ -420,7 +420,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           key="narratives"
           id="narratives"
           position={position}
-          icon={<FileText className={`w-12 h-12`} style={{color: getItemColor('narratives', themeColors.narratives)}} />}
+          icon={<FileText className={`w-8 h-8`} style={{color: getItemColor('narratives', themeColors.narratives)}} />}
           label="Narratives" 
           color={getItemColor('narratives', themeColors.narratives)}
           scale={settings.iconScale}
@@ -451,7 +451,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           key="gallery"
           id="gallery"
           position={position}
-          icon={<ImageIcon className={`w-12 h-12`} style={{color: getItemColor('gallery', themeColors.gallery)}} />}
+          icon={<ImageIcon className={`w-8 h-8`} style={{color: getItemColor('gallery', themeColors.gallery)}} />}
           label="Gallery" 
           color={getItemColor('gallery', themeColors.gallery)}
           scale={settings.iconScale}
@@ -485,7 +485,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           key="personality"
           id="personality"
           position={position}
-          icon={<Brain className={`w-12 h-12`} style={{color: getItemColor('personality', themeColors.personality)}} />}
+          icon={<Brain className={`w-8 h-8`} style={{color: getItemColor('personality', themeColors.personality)}} />}
           label="Personality" 
           color={getItemColor('personality', themeColors.personality)}
           scale={settings.iconScale}
@@ -519,7 +519,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           key="family-tree"
           id="family_tree"
           position={position}
-          icon={<User className={`w-12 h-12`} style={{color: getItemColor('family_tree', themeColors.family_tree)}} />}
+          icon={<User className={`w-8 h-8`} style={{color: getItemColor('family_tree', themeColors.family_tree)}} />}
           label="Family Tree" 
           color={getItemColor('family_tree', themeColors.family_tree)}
           scale={settings.iconScale}
@@ -553,7 +553,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           key="media-links"
           id="media_links"
           position={position}
-          icon={<FileVideo className={`w-12 h-12`} style={{color: getItemColor('media_links', themeColors.media_links)}} />}
+          icon={<FileVideo className={`w-8 h-8`} style={{color: getItemColor('media_links', themeColors.media_links)}} />}
           label="Media Links" 
           color={getItemColor('media_links', themeColors.media_links)}
           scale={settings.iconScale}
@@ -586,7 +586,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           key="documents"
           id="documents"
           position={position}
-          icon={<FilePdf className={`w-12 h-12`} style={{color: getItemColor('documents', themeColors.documents)}} />}
+          icon={<FilePdf className={`w-8 h-8`} style={{color: getItemColor('documents', themeColors.documents)}} />}
           label="Documents" 
           color={getItemColor('documents', themeColors.documents)}
           scale={settings.iconScale}
@@ -622,7 +622,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           key="ai-tribute-images"
           id="ai_tribute_images"
           position={position}
-          icon={<Sparkles className={`w-12 h-12`} style={{color: getItemColor('ai_tribute_images', themeColors.ai_tribute_images)}} />}
+          icon={<Sparkles className={`w-8 h-8`} style={{color: getItemColor('ai_tribute_images', themeColors.ai_tribute_images)}} />}
           label="AI Tribute Images" 
           color={getItemColor('ai_tribute_images', themeColors.ai_tribute_images)}
           scale={settings.iconScale}
@@ -936,7 +936,7 @@ function Item({
           onMouseLeave={onLeave}
           onClick={handleClick}
           onTouchEnd={handleClick}
-          className={`rounded-full p-6 cursor-pointer transition-all duration-150 ${isAnimating ? 'click-pulse' : ''}`}
+          className={`rounded-full p-8 cursor-pointer transition-all duration-150 ${isAnimating ? 'click-pulse' : ''}`}
           style={{ 
             backgroundColor: `${color}20`,
             border: `2px solid ${color}60`,
