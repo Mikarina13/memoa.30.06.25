@@ -138,6 +138,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
         hasPersonalData: !!profileData?.profile_data?.preferences?.personal || 
                         !!profileData?.memoir_data?.preferences?.personal,
         voiceId: profileData.elevenlabs_voice_id,
+        avatarId: profileData.tavus_avatar_id,
         galleryCount: profileData.gallery_items?.length,
         memoriaID: profileData.id,
         isMemoria: !!profileData.profile_data,

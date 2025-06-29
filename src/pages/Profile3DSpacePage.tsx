@@ -449,10 +449,14 @@ export function Profile3DSpacePage() {
     setGalleryCurrentIndex(adjustedIndex);
   };
 
-  // Handle return to memento with proper state
+  // Handle return from the 3D space - go back to the appropriate dashboard
   const handleReturnToMemento = () => {
-    // Go back to memento
-    navigate('/memento');
+    // Return to the appropriate dashboard based on profile type
+    if (profileType === 'memoria') {
+      navigate('/memoria/dashboard');
+    } else {
+      navigate('/memoir/dashboard');
+    }
   };
   
   // Handle return from gallery carousel
