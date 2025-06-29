@@ -131,6 +131,13 @@ export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGener
         if (profile?.profile_data?.tribute_images) {
           setGeneratedImages(profile.profile_data.tribute_images || []);
         }
+      } else {
+        // Load from memoir data for personal tributes
+        const profile = await MemoirIntegrations.getMemoirProfile(user.id);
+        
+        if (profile?.memoir_data?.tribute_images) {
+          setGeneratedImages(profile.memoir_data.tribute_images || []);
+        }
       }
     } catch (error) {
       console.error('Error loading tribute images:', error);
@@ -150,7 +157,7 @@ export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGener
       if (personName && personName.trim() !== '') {
         updatedPrompt = updatedPrompt.replace('[PERSON_NAME]', personName);
       } else {
-        updatedPrompt = updatedPrompt.replace('[PERSON_NAME]', 'your loved one');
+        updatedPrompt = updatedPrompt.replace('[PERSON_NAME]', memoriaProfileId ? 'your loved one' : 'yourself');
       }
       setPrompt(updatedPrompt);
     }
@@ -168,7 +175,7 @@ export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGener
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (!files || files.length === 0 || !user || !memoriaProfileId) return;
+    if (!files || files.length === 0 || !user) return;
 
     try {
       setIsLoading(true);
@@ -179,7 +186,7 @@ export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGener
         const newImage = {
           id: `tribute-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
           url: '', // Will be set after upload
-          title: `AI Tribute ${file.type.startsWith('video/') ? 'Video' : 'Image'} - ${personName}`,
+          title: `AI Tribute ${file.type.startsWith('video/') ? 'Video' : 'Image'} - ${memoriaProfileId ? personName : 'Self'}`,
           tribute: true,
           isTribute: true,
           type: 'tribute',
@@ -199,7 +206,7 @@ export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGener
         // Create a gallery item entry
         await MemoirIntegrations.createGalleryItem({
           user_id: user.id,
-          title: `${personName} Tribute ${file.type.startsWith('video/') ? 'Video' : 'Image'}`,
+          title: `${memoriaProfileId ? personName : 'Self'} Tribute ${file.type.startsWith('video/') ? 'Video' : 'Image'}`,
           media_type: file.type.startsWith('video/') ? 'video' : 'image',
           file_path: filePath,
           file_size: file.size,
@@ -208,7 +215,7 @@ export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGener
             tribute: true,
             style: selectedStyle || 'custom',
             prompt: prompt,
-            memoriaProfileId,
+            memoriaProfileId: memoriaProfileId || null,
             isVideo: file.type.startsWith('video/'),
             folder: 'Tribute Images'
           },
@@ -223,9 +230,17 @@ export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGener
       setGeneratedImages(updatedImages);
       
       // Store updated images in the profile
-      await MemoirIntegrations.updateMemoirData(user.id, {
-        tribute_images: updatedImages
-      }, memoriaProfileId);
+      if (memoriaProfileId) {
+        // Store in Memoria profile
+        await MemoirIntegrations.updateMemoirData(user.id, {
+          tribute_images: updatedImages
+        }, memoriaProfileId);
+      } else {
+        // Store in user's Memoir profile
+        await MemoirIntegrations.updateMemoirData(user.id, {
+          tribute_images: updatedImages
+        });
+      }
       
       // Switch to the gallery tab
       setActiveTab('gallery');
@@ -250,16 +265,24 @@ export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGener
 
   const handleDeleteImage = async (imageId: string) => {
     try {
-      if (!user || !memoriaProfileId) return;
+      if (!user) return;
       
       // Filter out the deleted image
       const updatedImages = generatedImages.filter(img => img.id !== imageId);
       setGeneratedImages(updatedImages);
       
       // Update the profile data
-      await MemoirIntegrations.updateMemoirData(user.id, {
-        tribute_images: updatedImages
-      }, memoriaProfileId);
+      if (memoriaProfileId) {
+        // Update Memoria profile
+        await MemoirIntegrations.updateMemoirData(user.id, {
+          tribute_images: updatedImages
+        }, memoriaProfileId);
+      } else {
+        // Update Memoir profile
+        await MemoirIntegrations.updateMemoirData(user.id, {
+          tribute_images: updatedImages
+        });
+      }
       
     } catch (error) {
       console.error('Error deleting tribute image:', error);
@@ -288,7 +311,7 @@ export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGener
         </div>
         
         <p className="text-white/70 mb-6">
-          Create beautiful AI-generated artistic interpretations of your loved one in different styles.
+          Create beautiful AI-generated artistic interpretations {memoriaProfileId ? "of your loved one" : "of yourself"} in different styles.
         </p>
 
         {/* Tab Navigation */}
@@ -426,10 +449,10 @@ export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGener
                       {style.icon}
                       <h4 className="text-white font-medium">{style.name}</h4>
                     </div>
-                    <p className="text-white/70 text-sm mb-2">{style.prompt.replace('[PERSON_NAME]', 'your loved one')}</p>
+                    <p className="text-white/70 text-sm mb-2">{style.prompt.replace('[PERSON_NAME]', memoriaProfileId ? 'your loved one' : 'yourself')}</p>
                     <button 
                       onClick={() => {
-                        navigator.clipboard.writeText(style.prompt.replace('[PERSON_NAME]', 'your loved one'));
+                        navigator.clipboard.writeText(style.prompt.replace('[PERSON_NAME]', memoriaProfileId ? 'your loved one' : 'yourself'));
                         // Show temporary success message
                         const button = document.getElementById(`copy-button-${style.id}`);
                         if (button) {
@@ -473,15 +496,15 @@ export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGener
               
               <div 
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-amber-500/30 rounded-lg p-8 cursor-pointer hover:bg-amber-500/5 transition-colors"
+                className="border-2 border-dashed border-amber-500/30 rounded-lg p-12 cursor-pointer hover:bg-amber-500/5 transition-colors"
               >
-                <div className="flex justify-center gap-4 mb-4">
-                  <ImageIcon className="w-8 h-8 text-amber-400/70" />
-                  <Video className="w-8 h-8 text-amber-400/70" />
+                <div className="flex justify-center gap-6 mb-6">
+                  <ImageIcon className="w-12 h-12 text-amber-400/70" />
+                  <Video className="w-12 h-12 text-amber-400/70" />
                 </div>
                 <div className="text-center">
-                  <p className="text-white text-lg mb-2">Click to upload</p>
-                  <p className="text-white/60 text-sm">Upload images from Midjourney or videos from Sora</p>
+                  <p className="text-white text-xl mb-4 font-bold">Click to upload</p>
+                  <p className="text-white/80 text-lg">Upload images from Midjourney or videos from Sora</p>
                 </div>
               </div>
             </div>
