@@ -1,13 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Camera, Upload, Image as ImageIcon, Sparkles, Download, ExternalLink, Wand2, Copy, X, Play, Video, ArrowUpRight } from 'lucide-react';
+import { Camera, Upload, Image as ImageIcon, Sparkles, Download, Trash2, ExternalLink, Wand2, Grid3X3, X, ArrowUpRight, Video } from 'lucide-react';
 import { MemoirIntegrations } from '../lib/memoir-integrations';
 import { useAuth } from '../hooks/useAuth';
 
 interface TributeImageInterfaceProps {
   memoriaProfileId?: string;
+  onImagesGenerated?: (portraitData: any) => void;
   onClose?: () => void;
-  onImagesGenerated?: (imageData: any) => void;
 }
 
 // Define artistic style options with prompts
@@ -92,13 +92,17 @@ const aiServices = [
 
 export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGenerated }: TributeImageInterfaceProps) {
   const { user } = useAuth();
+  const [sourceImage, setSourceImage] = useState<string | null>(null);
+  const [sourceImageFile, setSourceImageFile] = useState<File | null>(null);
+  const [generatedPortraits, setGeneratedPortraits] = useState<GeneratedPortrait[]>([]);
   const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'create' | 'gallery'>('create');
-  const [prompt, setPrompt] = useState<string>('');
+  const [generateStatus, setGenerateStatus] = useState<'idle' | 'uploading' | 'generating' | 'success' | 'error'>('idle');
+  const [showAffiliatePrompt, setShowAffiliatePrompt] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'upload' | 'generate' | 'gallery'>('upload');
   const [personName, setPersonName] = useState<string>('');
-  const [promptCopied, setPromptCopied] = useState<boolean>(false);
-  const [generatedImages, setGeneratedImages] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [prompt, setPrompt] = useState<string>('');
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -106,6 +110,9 @@ export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGener
       // Load profile info to get the person's name
       loadProfileInfo();
       // Load any previously saved generated images
+      loadSavedImages();
+    } else if (user) {
+      // For memoir, just load images
       loadSavedImages();
     }
   }, [user, memoriaProfileId]);
@@ -123,26 +130,25 @@ export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGener
 
   const loadSavedImages = async () => {
     try {
-      setIsLoading(true);
+      setGenerateStatus('idle');
       
       if (memoriaProfileId) {
+        // Load from Memoria profile
         const profile = await MemoirIntegrations.getMemoirProfile(user.id, memoriaProfileId);
         
         if (profile?.profile_data?.tribute_images) {
-          setGeneratedImages(profile.profile_data.tribute_images || []);
+          setGeneratedPortraits(profile.profile_data.tribute_images || []);
         }
       } else {
         // Load from memoir data for personal tributes
         const profile = await MemoirIntegrations.getMemoirProfile(user.id);
         
         if (profile?.memoir_data?.tribute_images) {
-          setGeneratedImages(profile.memoir_data.tribute_images || []);
+          setGeneratedPortraits(profile.memoir_data.tribute_images || []);
         }
       }
     } catch (error) {
       console.error('Error loading tribute images:', error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -163,23 +169,13 @@ export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGener
     }
   };
 
-  const copyPrompt = () => {
-    navigator.clipboard.writeText(prompt);
-    setPromptCopied(true);
-    
-    // Reset the copied status after 3 seconds
-    setTimeout(() => {
-      setPromptCopied(false);
-    }, 3000);
-  };
-
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0 || !user) return;
 
     try {
-      setIsLoading(true);
-
+      setGenerateStatus('uploading');
+      
       const newImages = [];
       
       for (const file of Array.from(files)) {
@@ -213,21 +209,22 @@ export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGener
           mime_type: file.type,
           metadata: {
             tribute: true,
+            isTribute: true,
             style: selectedStyle || 'custom',
             prompt: prompt,
             memoriaProfileId: memoriaProfileId || null,
             isVideo: file.type.startsWith('video/'),
             folder: 'Tribute Images'
           },
-          tags: ['tribute', 'custom', file.type.startsWith('video/') ? 'video' : 'image']
+          tags: ['tribute', 'ai-generated', 'custom', file.type.startsWith('video/') ? 'video' : 'image']
         }, memoriaProfileId);
         
         newImages.push(newImage);
       }
       
       // Add new images to state
-      const updatedImages = [...generatedImages, ...newImages];
-      setGeneratedImages(updatedImages);
+      const updatedImages = [...generatedPortraits, ...newImages];
+      setGeneratedPortraits(updatedImages);
       
       // Store updated images in the profile
       if (memoriaProfileId) {
@@ -250,12 +247,12 @@ export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGener
         onImagesGenerated(updatedImages);
       }
       
+      setGenerateStatus('success');
     } catch (error) {
       console.error('Error uploading tribute image:', error);
-      alert('Failed to upload image. Please try again.');
+      setGenerateStatus('error');
+      setGenerateError(error instanceof Error ? error.message : 'Failed to upload image. Please try again.');
     } finally {
-      setIsLoading(false);
-      
       // Reset file input
       if (event.target) {
         event.target.value = '';
@@ -268,8 +265,8 @@ export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGener
       if (!user) return;
       
       // Filter out the deleted image
-      const updatedImages = generatedImages.filter(img => img.id !== imageId);
-      setGeneratedImages(updatedImages);
+      const updatedImages = generatedPortraits.filter(img => img.id !== imageId);
+      setGeneratedPortraits(updatedImages);
       
       // Update the profile data
       if (memoriaProfileId) {
@@ -317,8 +314,8 @@ export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGener
         {/* Tab Navigation */}
         <div className="flex rounded-lg overflow-hidden mb-8">
           <button
-            className={`flex-1 py-3 text-center transition-colors ${activeTab === 'create' ? 'bg-amber-500 text-white' : 'bg-black/50 text-white/60 hover:text-white'}`}
-            onClick={() => setActiveTab('create')}
+            className={`flex-1 py-3 text-center transition-colors ${activeTab === 'upload' ? 'bg-amber-500 text-white' : 'bg-black/50 text-white/60 hover:text-white'}`}
+            onClick={() => setActiveTab('upload')}
           >
             Generate AI Images
           </button>
@@ -331,7 +328,7 @@ export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGener
         </div>
 
         {/* Tab Content */}
-        {activeTab === 'create' ? (
+        {activeTab === 'upload' ? (
           <div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <a
@@ -470,7 +467,7 @@ export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGener
                       id={`copy-button-${style.id}`}
                       className="text-xs px-2 py-1 bg-amber-500/20 text-amber-400 rounded hover:bg-amber-500/30 transition-colors flex items-center gap-1 w-fit"
                     >
-                      <Copy className="w-3 h-3" />
+                      <Trash2 className="w-3 h-3" />
                       Copy Prompt
                     </button>
                   </div>
@@ -479,9 +476,9 @@ export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGener
             </div>
 
             {/* Upload Section */}
-            <div className="bg-black/40 border border-amber-500/20 rounded-lg p-6">
-              <h3 className="text-lg font-medium text-white mb-3 flex items-center gap-2">
-                <Upload className="w-5 h-5 text-amber-400" />
+            <div className="bg-black/40 border border-amber-500/20 rounded-lg">
+              <h3 className="text-xl font-medium text-white mb-3 flex items-center gap-2 p-4 pb-0">
+                <Upload className="w-6 h-6 text-amber-400" />
                 Upload Generated Content
               </h3>
               
@@ -496,17 +493,47 @@ export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGener
               
               <div 
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-amber-500/30 rounded-lg p-12 cursor-pointer hover:bg-amber-500/5 transition-colors"
+                className="border-2 border-dashed border-amber-500/30 rounded-lg p-12 cursor-pointer hover:bg-amber-500/5 transition-colors m-4 hover:scale-[1.02] transform duration-200"
               >
                 <div className="flex justify-center gap-6 mb-6">
-                  <ImageIcon className="w-12 h-12 text-amber-400/70" />
-                  <Video className="w-12 h-12 text-amber-400/70" />
+                  <ImageIcon className="w-20 h-20 text-amber-400/70" />
+                  <Video className="w-20 h-20 text-amber-400/70" />
                 </div>
                 <div className="text-center">
-                  <p className="text-white text-xl mb-4 font-bold">Click to upload</p>
-                  <p className="text-white/80 text-lg">Upload images from Midjourney or videos from Sora</p>
+                  <p className="text-white text-2xl mb-4 font-bold">Click to upload</p>
+                  <p className="text-white/80 text-lg mb-2">Upload images from Midjourney or videos from Sora</p>
+                  <p className="text-amber-400/90 text-md">Drag and drop files here or click to browse</p>
                 </div>
               </div>
+              
+              {/* Error Display */}
+              {generateStatus === 'error' && (
+                <div className="m-4 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
+                  <p className="text-red-400 mb-2 font-medium">Upload Error</p>
+                  <p className="text-white/70">{generateError || "There was an error uploading your file. Please try again."}</p>
+                </div>
+              )}
+              
+              {/* Success Display */}
+              {generateStatus === 'success' && (
+                <div className="m-4 p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
+                  <p className="text-green-400 font-medium flex items-center gap-2">
+                    <Sparkles className="w-5 h-5" />
+                    Upload Successful!
+                  </p>
+                  <p className="text-white/70 mt-1">Your AI generated content has been uploaded.</p>
+                </div>
+              )}
+              
+              {/* Loading Display */}
+              {generateStatus === 'uploading' && (
+                <div className="m-4 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-blue-400">Uploading your content...</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         ) : null}
@@ -518,14 +545,9 @@ export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGener
               My Tribute Gallery
             </h3>
             
-            {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="w-6 h-6 border-2 border-amber-300 border-t-transparent rounded-full animate-spin mr-3"></div>
-                <p className="text-white/70">Loading tribute content...</p>
-              </div>
-            ) : generatedImages.length > 0 ? (
+            {generatedPortraits.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {generatedImages.map((item) => (
+                {generatedPortraits.map((item) => (
                   <div 
                     key={item.id} 
                     className="bg-white/5 border border-white/10 rounded-lg overflow-hidden group relative cursor-pointer"
@@ -595,7 +617,7 @@ export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGener
                     Select a style and create your first tribute image to see it here.
                   </p>
                   <button
-                    onClick={() => setActiveTab('create')}
+                    onClick={() => setActiveTab('upload')}
                     className="bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-lg transition-colors"
                    >
                      Upload Tribute Content
@@ -608,4 +630,14 @@ export function TributeImageInterface({ memoriaProfileId, onClose, onImagesGener
       </div>
     </motion.div>
   );
+}
+
+interface GeneratedPortrait {
+  id: string;
+  name: string;
+  sourceImage: string;
+  generatedImages: string[];
+  style: string;
+  timestamp: string | Date;
+  prompt?: string;
 }

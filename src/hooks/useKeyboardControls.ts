@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useThree } from '@react-three/fiber';
-import { Vector3, Matrix4, Euler } from 'three';
+import { Vector3, Matrix4 } from 'three';
 
 export function useKeyboardControls(speed = 0.2, enabled = true) {
   const { camera } = useThree();

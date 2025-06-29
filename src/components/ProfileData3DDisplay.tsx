@@ -1,4 +1,4 @@
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useState, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import { Vector3, Group, Color } from 'three'; 
@@ -36,7 +36,6 @@ const THEME_COLORS = {
     digital_presence: '#a855f7',
     gaming_preferences: '#06b6d4',
     voice: '#3b82f6',
-    tavus_avatar: '#8b5cf6',
     avaturn_avatars: '#f97316',
     narratives: '#10b981',
     gallery: '#ec4899',
@@ -51,7 +50,6 @@ const THEME_COLORS = {
     digital_presence: '#e11d48',
     gaming_preferences: '#f59e0b',
     voice: '#f97316',
-    tavus_avatar: '#e11d48',
     avaturn_avatars: '#f97316',
     narratives: '#f59e0b',
     gallery: '#f97316',
@@ -66,7 +64,6 @@ const THEME_COLORS = {
     digital_presence: '#0ea5e9',
     gaming_preferences: '#10b981',
     voice: '#0ea5e9',
-    tavus_avatar: '#10b981',
     avaturn_avatars: '#0ea5e9',
     narratives: '#10b981',
     gallery: '#0ea5e9',
@@ -81,7 +78,6 @@ const THEME_COLORS = {
     digital_presence: '#6366f1',
     gaming_preferences: '#10b981',
     voice: '#06b6d4',
-    tavus_avatar: '#f43f5e',
     avaturn_avatars: '#f97316',
     narratives: '#10b981',
     gallery: '#ec4899',
@@ -95,7 +91,6 @@ const THEME_COLORS = {
     digital_presence: '#94a3b8',
     gaming_preferences: '#94a3b8',
     voice: '#94a3b8',
-    tavus_avatar: '#94a3b8',
     avaturn_avatars: '#94a3b8',
     narratives: '#94a3b8',
     gallery: '#94a3b8',
@@ -110,7 +105,6 @@ const THEME_COLORS = {
     digital_presence: '#4f46e5',
     gaming_preferences: '#1e40af',
     voice: '#2563eb',
-    tavus_avatar: '#4f46e5',
     avaturn_avatars: '#1e40af',
     narratives: '#2563eb',
     gallery: '#4f46e5',
@@ -143,7 +137,6 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
         hasPersonalData: !!profileData?.profile_data?.preferences?.personal || 
                         !!profileData?.memoir_data?.preferences?.personal,
         voiceId: profileData.elevenlabs_voice_id,
-        avatarId: profileData.tavus_avatar_id,
         galleryCount: profileData.gallery_items?.length,
         memoriaID: profileData.id,
         isMemoria: !!profileData.profile_data,
@@ -184,7 +177,6 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
       profileType: isMemoriaProfile ? 'memoria' : 'memoir',
       profileId: currentProfileId,
       elevenlabsVoiceId: profileData?.elevenlabs_voice_id,
-      tavusAvatarId: profileData?.tavus_avatar_id,
       hasGalleryItems: profileData?.gallery_items?.length > 0,
       galleryItemCount: profileData?.gallery_items?.length || 0
     });
@@ -850,7 +842,7 @@ interface ItemProps {
   lastClickTime: Record<string, number>;
   isHovered: boolean;
   isClicked: boolean;
-  onClick: (e: ThreeEvent<MouseEvent>) => void;
+  onClick: (e: any) => void;
   glowIntensity?: number;
 }
 
@@ -894,7 +886,7 @@ function Item({
     }
   });
   
-  const handleClick = (e: ThreeEvent<MouseEvent>) => {
+  const handleClick = (e: any) => {
     e.stopPropagation();
     
     // Start pulse animation

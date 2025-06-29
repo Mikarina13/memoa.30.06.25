@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useFrame, useThree, ThreeEvent } from '@react-three/fiber';
 import { Html, useTexture } from '@react-three/drei';
-import { Vector3, Group, Color } from 'three';
+import { Vector3, Group, MathUtils } from 'three';
 import React from 'react';
 
 interface GalleryItem {
@@ -48,8 +48,6 @@ export interface PreloadedData {
 
 interface Gallery3DCarouselProps {
   galleryItems: any[];
-  onUploadAsset?: (file: File, type: string) => void;
-  onSelectAsset?: (asset: unknown) => void;
   onClose: () => void;
   onItemSelect?: (item: any) => void;
   currentIndex?: number;
@@ -163,7 +161,6 @@ export function Gallery3DCarousel({
   useFrame(() => {
     if (camera) {
       // Smoothly interpolate camera rotation
-      const { MathUtils } = require('three');
       camera.rotation.y = MathUtils.lerp(camera.rotation.y, targetRotation.current, 0.05);
     }
   });

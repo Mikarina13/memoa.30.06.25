@@ -67,9 +67,17 @@ const checkAuth = async () => {
   }
 };
 
+// Helper function to check if error is a network error
+export const isNetworkError = (error: any) => {
+  return error instanceof TypeError && 
+         (error.message?.includes('Failed to fetch') || 
+          error.message?.includes('Network request failed') ||
+          error.message?.includes('fetch'));
+};
+
 // Helper function to provide detailed error diagnosis
 const diagnoseConnectionError = (error: any) => {
-  if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+  if (isNetworkError(error)) {
     return {
       type: 'NETWORK_ERROR',
       message: 'Network connectivity issue detected',
@@ -176,6 +184,3 @@ export const testSupabaseConnection = async (retries = 3) => {
   
   return false;
 };
-
-// Don't automatically test connection on module load to avoid blocking
-// Let components handle testing when needed
