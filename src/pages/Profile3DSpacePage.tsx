@@ -2,7 +2,7 @@ import { useState, useEffect, Suspense, useMemo } from 'react';
 import { Canvas, useThree, ThreeEvent } from '@react-three/fiber';
 import { OrbitControls, Environment, Html } from '@react-three/drei';
 import { motion, AnimatePresence } from 'framer-motion'; 
-import { ArrowLeft, Loader, X, RefreshCw, Settings, SlidersHorizontal as SliderHorizontal, Undo, CheckCircle, Cog, Image } from 'lucide-react';
+import { X, Loader, RefreshCw, Settings, SlidersHorizontal as SliderHorizontal, Undo, CheckCircle, Cog, Image } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { EnhancedStars } from '../components/EnhancedStars';
 import { ProfileData3DDisplay } from '../components/ProfileData3DDisplay';
@@ -499,10 +499,21 @@ export function Profile3DSpacePage() {
     setMediaLinksCurrentIndex(adjustedIndex);
   };
 
-  // Handle return to memento with proper state
-  const handleReturnToMemento = () => {
-    // Go back to memento
-    navigate('/memento');
+  // Handle returning to profile or memento page
+  const handleCloseView = () => {
+    // If we have an initialUserId and it's different from the current user, 
+    // we're viewing someone else's profile, so go back to memento with appropriate state
+    if (initialUserId && initialUserId !== user?.id) {
+      navigate('/memento', { 
+        state: { 
+          showExplorer: true, 
+          highlightProfileId: memoriaProfileId || initialUserId 
+        }
+      });
+    } else {
+      // Otherwise, just go back to memento
+      navigate('/memento');
+    }
   };
 
   // Handle return to appropriate dashboard based on error type
@@ -717,13 +728,13 @@ export function Profile3DSpacePage() {
       exit={{ opacity: 0 }}
       className="w-full h-screen bg-black relative overflow-hidden"
     >
-      <div className="fixed top-8 left-8 z-50 flex items-center gap-4">
+      <div className="fixed top-8 left-8 z-50">
         <button
-          onClick={handleReturnToMemento}
-          className="flex items-center gap-2 px-3 py-2 bg-black/40 backdrop-blur-sm rounded-lg border border-white/10 text-white/80 hover:text-white transition-colors font-[Orbitron]"
+          onClick={handleCloseView}
+          className="flex items-center gap-2 px-3 py-2 bg-black/40 backdrop-blur-sm rounded-full border border-white/10 text-white/80 hover:text-white transition-colors"
+          title="Close view"
         >
-          <ArrowLeft className="w-6 h-6" />
-          Return
+          <X className="w-6 h-6" />
         </button>
       </div>
       
