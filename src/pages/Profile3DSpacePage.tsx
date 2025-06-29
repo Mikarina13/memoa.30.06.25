@@ -1,8 +1,8 @@
 import { useState, useEffect, Suspense, useMemo } from 'react';
-import { Canvas, useThree, ThreeEvent } from '@react-three/fiber';
+import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Environment, Html } from '@react-three/drei';
 import { motion, AnimatePresence } from 'framer-motion'; 
-import { ArrowLeft, Loader, X, RefreshCw, Settings, SlidersHorizontal as SliderHorizontal, Undo, CheckCircle, Cog, Image } from 'lucide-react';
+import { ArrowLeft, Loader, X, RefreshCw, Settings, Undo, CheckCircle, Cog, Image } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { EnhancedStars } from '../components/EnhancedStars';
 import { ProfileData3DDisplay } from '../components/ProfileData3DDisplay';
@@ -449,19 +449,32 @@ export function Profile3DSpacePage() {
     setGalleryCurrentIndex(adjustedIndex);
   };
 
-  // Handle return from the 3D space - go back to the appropriate dashboard
+  // Handle Return Button - fixed priority handling of overlays
   const handleReturnToMemento = () => {
-    // Return to the appropriate dashboard based on profile type
-    if (profileType === 'memoria') {
-      navigate('/memoria/dashboard');
+    // First check if there are any open overlays to close
+    if (showDetailModal) {
+      // Close the detail modal first
+      handleCloseDetailModal();
+    } else if (showGalleryCarousel) {
+      // If gallery carousel is open, close it
+      setShowGalleryCarousel(false);
+    } else if (showCustomizer) {
+      // If customizer is open, close it
+      setShowCustomizer(false);
+    } else if (showProfileSelector) {
+      // If profile selector is open, close it
+      setShowProfileSelector(false);
+    } else if (showTributeImageInterface) {
+      // If tribute image interface is open, close it
+      setShowTributeImageInterface(false);
     } else {
-      navigate('/memoir/dashboard');
+      // If no overlays are open, then navigate back to the appropriate dashboard
+      if (profileType === 'memoria') {
+        navigate('/memoria/dashboard');
+      } else {
+        navigate('/memoir/dashboard');
+      }
     }
-  };
-  
-  // Handle return from gallery carousel
-  const handleGalleryReturn = () => {
-    setShowGalleryCarousel(false);
   };
 
   // Handle return to appropriate dashboard based on error type
@@ -506,7 +519,7 @@ export function Profile3DSpacePage() {
       
       // Update state
       if (profile) {
-        // Add gallery items to profile data
+        // Add gallery items to profile data for easy access
         profile.gallery_items = galleryItems;
         
         // Ensure we have the correct data object
@@ -813,7 +826,7 @@ export function Profile3DSpacePage() {
           {showGalleryCarousel && selectedGalleryItems.length > 0 && (
             <Gallery3DCarousel 
               galleryItems={selectedGalleryItems} 
-              onClose={handleGalleryReturn} // Use the new dedicated return handler
+              onClose={() => setShowGalleryCarousel(false)} 
               onItemSelect={(item) => {
                 // Check if this is a tribute item that was transformed for the carousel
                 if (item.original_tribute_item) {
