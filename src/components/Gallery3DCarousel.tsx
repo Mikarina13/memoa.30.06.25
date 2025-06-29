@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { useFrame, useThree, ThreeEvent } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import { Html, useTexture } from '@react-three/drei';
 import { Vector3, Group, MathUtils } from 'three';
 import React from 'react';
@@ -156,27 +156,6 @@ export function Gallery3DCarousel({
     }
   });
   
-  // Set up keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Prevent default browser behavior for these keys when in gallery mode
-      if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "a", "d", "w", "s"].includes(e.key.toLowerCase())) {
-        e.preventDefault();
-      }
-      
-      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
-        navigateCarousel(1); // Rotate counterclockwise
-      } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
-        navigateCarousel(-1); // Rotate clockwise
-      } else if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-    
-    window.addEventListener('keydown', handleKeyDown, { passive: false });
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
-  
   // Handle manual navigation
   const navigateCarousel = useCallback((direction: number) => {
     if (isTransitioning || galleryItems.length === 0) return;
@@ -200,6 +179,40 @@ export function Gallery3DCarousel({
       setIsTransitioning(false);
     }, 300);
   }, [angleStep, currentIndex, galleryItems.length, isTransitioning, onIndexChange]);
+  
+  // Set up keyboard navigation - IMPROVED VERSION
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Prevent default browser behavior for navigation keys
+      if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "a", "d", "w", "s", "A", "D", "W", "S", "Space", " "].includes(e.key)) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+        navigateCarousel(1); // Rotate counterclockwise
+      } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+        navigateCarousel(-1); // Rotate clockwise
+      } else if (e.key === 'Escape') {
+        onClose();
+      } else if (e.key === 'Enter' || e.key === ' ' || e.key === 'Space') {
+        // Select current item on Enter or Space
+        if (galleryItems.length > 0 && onItemSelect) {
+          onItemSelect(galleryItems[currentIndex]);
+        }
+      }
+    };
+    
+    // Use { passive: false } to allow preventDefault() to work properly
+    window.addEventListener('keydown', handleKeyDown, { passive: false });
+    
+    // Focus the window/document to ensure keyboard events are captured
+    window.focus();
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [navigateCarousel, onClose, onItemSelect, galleryItems, currentIndex]);
   
   // Update index if controlled externally
   useEffect(() => {
