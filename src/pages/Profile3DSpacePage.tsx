@@ -320,8 +320,17 @@ export function Profile3DSpacePage() {
     }
   }, [navigate, user, loading]);
   
-  // Handle profile change
+  // Handle profile change when selecting from dropdown
   const handleProfileChange = (newProfileId: string) => {
+    // Check if we're currently in a detail modal or gallery view
+    const isInDetailView = showDetailModal || showGalleryCarousel;
+    
+    // Set state to close any open modals or interfaces
+    if (showDetailModal) setShowDetailModal(false);
+    if (showGalleryCarousel) setShowGalleryCarousel(false);
+    if (showCustomizer) setShowCustomizer(false);
+    if (showTributeImageInterface) setShowTributeImageInterface(false);
+    
     // Navigate to the same page but with the new profile ID
     navigate('/memento/profile-space', { 
       state: { 
@@ -331,6 +340,9 @@ export function Profile3DSpacePage() {
       },
       replace: true // Replace current history entry to avoid back button issues
     });
+    
+    // Close the profile selector
+    setShowProfileSelector(false);
   };
 
   // Handle item click
@@ -639,7 +651,7 @@ export function Profile3DSpacePage() {
             item.metadata.isTribute === true ||
             (item.metadata.type === 'tribute') ||
             (item.tags && item.tags.includes('tribute')) ||
-            (item.metadata.folder === 'Tribute Images') ||
+            (item.folder === 'Tribute Images') ||
             (item.title && item.title.toLowerCase().includes('tribute'));
           
           return !isTribute;
