@@ -538,7 +538,8 @@ export function renderGalleryContent(item: any, isActive: boolean, scale: number
 }
 
 // Helper function to get platform icon and color
-function getPlatformIconAndColor(source: string) {
+function getPlatformIconAndColor(item: any) {
+  const source = item.source || '';
   const sourceLower = source.toLowerCase();
   
   if (sourceLower.includes('facebook')) {
@@ -592,7 +593,7 @@ function getPlatformIconAndColor(source: string) {
 // Media links renderer with enhanced visual design
 export function renderMediaLinkContent(item: any, isActive: boolean, scale: number) {
   // Get the platform-specific icon and styling
-  const { icon: IconComponent, color, bgColor, borderColor } = getPlatformIconAndColor(item.source || '');
+  const { icon: IconComponent, color, bgColor, borderColor } = getPlatformIconAndColor(item);
   
   // Determine content type icon and color
   let ContentIcon = FileVideo;
