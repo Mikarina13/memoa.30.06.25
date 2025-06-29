@@ -919,7 +919,7 @@ export function renderMediaLinkContent(item: any, isActive: boolean, scale: numb
           <div className="absolute bottom-3 left-3 right-3">
             <div className="flex items-center justify-between">
               <div className="text-xs bg-black/50 px-2 py-1 rounded-md text-white/60 truncate max-w-[140px]">
-                {new URL(item.url).hostname}
+                {item.url ? (new URL(item.url)).hostname : ''}
               </div>
               <div className="bg-white/10 hover:bg-white/20 p-1.5 rounded-full transition-colors">
                 <ExternalLink className="w-4 h-4 text-white" />
