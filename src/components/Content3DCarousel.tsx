@@ -4,7 +4,7 @@ import { Html, useTexture } from '@react-three/drei';
 import { Vector3, Group, MathUtils } from 'three';
 import React from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
-import { AlertCircle, Loader, RefreshCw, XCircle, FileText, FileVideo, Mic, Newspaper, Link as LinkIcon } from 'lucide-react';
+import { AlertCircle, Loader, RefreshCw, XCircle, FileText, FileVideo, Mic, Newspaper, Link as LinkIcon, Facebook, Instagram, Twitter, Linkedin, Youtube, Github, Twitch, AlignJustify as Spotify, Rss, Mail, Globe2, MessageSquare, ExternalLink } from 'lucide-react';
 
 interface ContentItem {
   id: string;
@@ -537,33 +537,139 @@ export function renderGalleryContent(item: any, isActive: boolean, scale: number
   );
 }
 
-// Media links renderer
-export function renderMediaLinkContent(item: any, isActive: boolean, scale: number) {
-  // Determine the icon based on the type
-  let IconComponent = FileVideo;
-  let iconColor = "text-red-400";
+// Helper function to get platform icon and color
+function getPlatformIconAndColor(source: string) {
+  const sourceLower = source.toLowerCase();
   
-  if (item.type === 'podcast') {
-    IconComponent = Mic;
-    iconColor = "text-purple-400";
-  } else if (item.type === 'article') {
-    IconComponent = Newspaper;
-    iconColor = "text-blue-400";
+  if (sourceLower.includes('facebook')) {
+    return { icon: Facebook, color: 'text-blue-500', bgColor: 'from-blue-500/30 to-blue-700/30', borderColor: 'border-blue-500/50' };
+  }
+  if (sourceLower.includes('instagram')) {
+    return { icon: Instagram, color: 'text-pink-500', bgColor: 'from-pink-500/30 to-purple-600/30', borderColor: 'border-pink-500/50' };
+  }
+  if (sourceLower.includes('twitter') || sourceLower.includes('x.com')) {
+    return { icon: Twitter, color: 'text-blue-400', bgColor: 'from-blue-400/30 to-blue-600/30', borderColor: 'border-blue-400/50' };
+  }
+  if (sourceLower.includes('linkedin')) {
+    return { icon: Linkedin, color: 'text-blue-600', bgColor: 'from-blue-600/30 to-blue-800/30', borderColor: 'border-blue-600/50' };
+  }
+  if (sourceLower.includes('youtube')) {
+    return { icon: Youtube, color: 'text-red-500', bgColor: 'from-red-500/30 to-red-700/30', borderColor: 'border-red-500/50' };
+  }
+  if (sourceLower.includes('github')) {
+    return { icon: Github, color: 'text-white', bgColor: 'from-gray-600/30 to-gray-800/30', borderColor: 'border-gray-400/50' };
+  }
+  if (sourceLower.includes('twitch')) {
+    return { icon: Twitch, color: 'text-purple-500', bgColor: 'from-purple-500/30 to-purple-700/30', borderColor: 'border-purple-500/50' };
+  }
+  if (sourceLower.includes('spotify')) {
+    return { icon: Spotify, color: 'text-green-500', bgColor: 'from-green-500/30 to-green-700/30', borderColor: 'border-green-500/50' };
+  }
+  if (sourceLower.includes('medium') || sourceLower.includes('blog')) {
+    return { icon: Rss, color: 'text-orange-500', bgColor: 'from-orange-500/30 to-orange-700/30', borderColor: 'border-orange-500/50' };
+  }
+  if (sourceLower.includes('mail') || sourceLower.includes('email')) {
+    return { icon: Mail, color: 'text-blue-400', bgColor: 'from-blue-400/30 to-blue-600/30', borderColor: 'border-blue-400/50' };
+  }
+  if (sourceLower.includes('discord') || sourceLower.includes('slack')) {
+    return { icon: MessageSquare, color: 'text-indigo-400', bgColor: 'from-indigo-400/30 to-indigo-600/30', borderColor: 'border-indigo-400/50' };
   }
   
+  // Default for type-based icons if no source match
+  if (item.type === 'video') {
+    return { icon: FileVideo, color: 'text-red-400', bgColor: 'from-red-500/30 to-red-700/30', borderColor: 'border-red-500/50' };
+  } 
+  if (item.type === 'podcast') {
+    return { icon: Mic, color: 'text-purple-400', bgColor: 'from-purple-500/30 to-purple-700/30', borderColor: 'border-purple-500/50' };
+  }
+  if (item.type === 'article') {
+    return { icon: Newspaper, color: 'text-blue-400', bgColor: 'from-blue-500/30 to-blue-700/30', borderColor: 'border-blue-500/50' };
+  }
+  
+  return { icon: Globe2, color: 'text-purple-400', bgColor: 'from-purple-500/30 to-indigo-500/30', borderColor: 'border-purple-500/50' };
+}
+
+// Media links renderer with enhanced visual design
+export function renderMediaLinkContent(item: any, isActive: boolean, scale: number) {
+  // Get the platform-specific icon and styling
+  const { icon: IconComponent, color, bgColor, borderColor } = getPlatformIconAndColor(item.source || '');
+  
+  // Determine content type icon and color
+  let ContentIcon = FileVideo;
+  let contentColor = "text-red-400";
+  let contentLabel = "Video";
+  
+  if (item.type === 'podcast') {
+    ContentIcon = Mic;
+    contentColor = "text-purple-400";
+    contentLabel = "Podcast";
+  } else if (item.type === 'article') {
+    ContentIcon = Newspaper;
+    contentColor = "text-blue-400";
+    contentLabel = "Article";
+  }
+
+  // Animation styles for active state
+  const activeClass = isActive ? 
+    'shadow-lg transform scale-105 border-2' : 
+    'shadow border';
+  
+  // Determine if we should make plane transparent
+  const meshOpacity = 0.0; // Fully transparent 3D plane
+
   return (
     <>
+      {/* Transparent 3D mesh as base */}
       <mesh>
         <planeGeometry args={[6, 4]} />
-        <meshBasicMaterial color={isActive ? "#222222" : "#111111"} />
+        <meshBasicMaterial color="#000000" opacity={meshOpacity} transparent />
       </mesh>
-      <Html center position={[0, 0, 0.1]}>
-        <div className="w-20 h-20 bg-black/70 rounded-full flex items-center justify-center">
-          <IconComponent className={`w-10 h-10 ${iconColor}`} />
-        </div>
-        <div className="mt-4 bg-black/70 px-4 py-2 rounded text-white text-center">
-          <div className="text-sm mb-1 font-bold">{item.source}</div>
-          <div className="text-xs opacity-70">{item.type}</div>
+      
+      {/* HTML content with frame styling */}
+      <Html center position={[0, 0, 0.1]} transform>
+        <div 
+          className={`w-64 h-44 bg-gradient-to-r ${bgColor} backdrop-blur-sm rounded-lg p-4 ${activeClass} ${borderColor} transition-all duration-300 overflow-hidden`}
+          style={{ 
+            boxShadow: isActive ? '0 0 25px rgba(255, 255, 255, 0.3)' : '0 0 15px rgba(0, 0, 0, 0.5)',
+            transform: `scale(${scale})`,
+          }}
+        >
+          {/* Platform Logo & Type Badge */}
+          <div className="flex justify-between items-start mb-2">
+            <div className="p-2 bg-black/40 rounded-lg">
+              <IconComponent className={`w-8 h-8 ${color}`} />
+            </div>
+            <div className={`px-2 py-1 bg-black/40 rounded-full ${contentColor} text-xs font-medium`}>
+              {contentLabel}
+            </div>
+          </div>
+          
+          {/* Media Info */}
+          <div className="mb-3 overflow-hidden">
+            <h3 className="text-white font-bold text-sm truncate mb-1">{item.title}</h3>
+            <div className="text-white/70 text-xs truncate">{item.source}</div>
+          </div>
+          
+          {/* URL Link */}
+          <div className="absolute bottom-3 left-3 right-3">
+            <div className="flex items-center justify-between">
+              <div className="text-xs bg-black/50 px-2 py-1 rounded-md text-white/60 truncate max-w-[140px]">
+                {new URL(item.url).hostname}
+              </div>
+              <div className="bg-white/10 hover:bg-white/20 p-1.5 rounded-full transition-colors">
+                <ExternalLink className="w-4 h-4 text-white" />
+              </div>
+            </div>
+          </div>
+          
+          {/* Interactive Overlay */}
+          <div className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/30 transition-colors cursor-pointer">
+            <div className="opacity-0 hover:opacity-100 transition-opacity text-center">
+              <div className="bg-black/70 px-3 py-1 rounded-lg text-white text-sm">
+                Click to open
+              </div>
+            </div>
+          </div>
         </div>
       </Html>
     </>
