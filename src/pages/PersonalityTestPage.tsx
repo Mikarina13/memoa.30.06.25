@@ -6,12 +6,13 @@ import { Header } from '../components/Header';
 import { useState } from 'react';
 import { MemoirIntegrations } from '../lib/memoir-integrations';
 import { Footer } from '../components/Footer';
+import { PersonalityTestInterface } from '../components/PersonalityTestInterface';
 
 export function PersonalityTestPage() {
   const { user, loading } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const { memoriaProfileId, returnPath } = location.state || {};
+  const { memoriaProfileId, returnPath, ownerUserId } = location.state || {};
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfName, setPdfName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -23,20 +24,23 @@ export function PersonalityTestPage() {
     if (!loading && !user) {
       navigate('/memento');
     }
-    
-    // Load personality test data
-    if (user) {
-      loadPersonalityData();
-    }
   }, [navigate, user, loading, memoriaProfileId]);
+
+  const handleTestCompleted = (testResults: any) => {
+    // Load the updated data
+    loadPersonalityData();
+  };
 
   const loadPersonalityData = async () => {
     try {
       setIsLoading(true);
       
+      // Determine which user ID to use
+      const effectiveUserId = ownerUserId || user.id;
+      
       if (memoriaProfileId) {
         // Load personality test results for Memoria profile
-        const profile = await MemoirIntegrations.getMemoirProfile(user.id, memoriaProfileId);
+        const profile = await MemoirIntegrations.getMemoirProfile(effectiveUserId, memoriaProfileId);
         
         if (profile?.profile_data?.personality_test) {
           setPdfUrl(profile.profile_data.personality_test.pdfUrl || null);
@@ -44,7 +48,7 @@ export function PersonalityTestPage() {
         }
       } else {
         // Load personality test results for user profile
-        const profile = await MemoirIntegrations.getMemoirProfile(user.id);
+        const profile = await MemoirIntegrations.getMemoirProfile(effectiveUserId);
         
         if (profile?.memoir_data?.personality_test) {
           setPdfUrl(profile.memoir_data.personality_test.pdfUrl || null);
@@ -58,6 +62,10 @@ export function PersonalityTestPage() {
     }
   };
 
+  const handleGoBack = () => {
+    navigate(returnPath || '/memento');
+  };
+
   if (loading) {
     return (
       <div className="w-full h-screen bg-black flex items-center justify-center">
@@ -69,10 +77,6 @@ export function PersonalityTestPage() {
   if (!user) {
     return null;
   }
-
-  const handleGoBack = () => {
-    navigate(returnPath || '/memento');
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black to-gray-900 text-white p-8 font-[Orbitron]">
@@ -104,46 +108,12 @@ export function PersonalityTestPage() {
           </div>
         ) : (
           <div>
-            {/* PDF Display Section */}
-            <div className="bg-white/5 rounded-lg p-6 mb-6">
-              <div className="flex items-center gap-3 mb-4">
-                <FileText className="w-6 h-6 text-indigo-400" />
-                <h3 className="text-lg font-semibold text-white">Test Results</h3>
-              </div>
-              
-              {pdfUrl ? (
-                <div className="bg-black/60 rounded-lg p-4 border border-white/20">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="text-white font-medium">{pdfName || '16 Personalities Test Results.pdf'}</div>
-                    </div>
-                    <div className="flex gap-2">
-                      <a 
-                        href={pdfUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-3 py-1.5 bg-indigo-500/20 text-indigo-400 rounded-lg hover:bg-indigo-500/30 transition-colors"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                        View
-                      </a>
-                      <a 
-                        href={pdfUrl} 
-                        download
-                        className="flex items-center gap-2 px-3 py-1.5 bg-indigo-500/20 text-indigo-400 rounded-lg hover:bg-indigo-500/30 transition-colors"
-                      >
-                        <Download className="w-4 h-4" />
-                        Download
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-white/60">No personality test results available.</p>
-                </div>
-              )}
-            </div>
+            <PersonalityTestInterface
+              memoriaProfileId={memoriaProfileId}
+              onTestCompleted={handleTestCompleted}
+              onClose={handleGoBack}
+              ownerUserId={ownerUserId}
+            />
           </div>
         )}
       </div>

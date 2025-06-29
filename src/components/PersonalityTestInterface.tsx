@@ -9,6 +9,7 @@ interface PersonalityTestProps {
   memoriaProfileId?: string;
   onTestCompleted?: (results: any) => void;
   onClose?: () => void;
+  ownerUserId?: string; // Add this prop to allow loading data from a different user
 }
 
 // Define personality types and their descriptions
@@ -149,7 +150,7 @@ const sampleQuestions = [
   }
 ];
 
-export function PersonalityTestInterface({ memoriaProfileId: propMemoriaProfileId, onTestCompleted, onClose }: PersonalityTestProps) {
+export function PersonalityTestInterface({ memoriaProfileId, onTestCompleted, onClose, ownerUserId }: PersonalityTestProps) {
   const { user, loading } = useAuth();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
@@ -166,47 +167,58 @@ export function PersonalityTestInterface({ memoriaProfileId: propMemoriaProfileI
   const [pdfUploadSuccess, setPdfUploadSuccess] = useState(false);
   const [showTypeSelector, setShowTypeSelector] = useState(false);
   const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [isViewMode, setIsViewMode] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  // Get memoriaProfileId from props
-  const memoriaProfileId = propMemoriaProfileId;
   
   // Tooltip for date input format guide
   const [showTooltip, setShowTooltip] = useState(false);
   
   // Get today's date in YYYY-MM-DD format for max date constraint
   const today = new Date().toISOString().split('T')[0];
-  
+
   useEffect(() => {
     if (user) {
       loadExistingResults();
     }
-  }, [user, memoriaProfileId]);
+    
+    // If ownerUserId is provided and it's different from the current user,
+    // we're in view mode (viewing someone else's profile)
+    if (ownerUserId && user && ownerUserId !== user.id) {
+      setIsViewMode(true);
+    }
+  }, [user, memoriaProfileId, ownerUserId]);
 
   const loadExistingResults = async () => {
     try {
       setIsLoading(true);
       
+      // Determine which user ID to use for fetching the data
+      // If ownerUserId is provided, use that (when viewing someone else's profile)
+      // Otherwise use the current user ID (when viewing own profile)
+      const effectiveUserId = ownerUserId || user.id;
+      
       if (memoriaProfileId) {
         // Load personality test results for Memoria profile
-        const profile = await MemoirIntegrations.getMemoirProfile(user.id, memoriaProfileId);
+        const profile = await MemoirIntegrations.getMemoirProfile(effectiveUserId, memoriaProfileId);
         
         if (profile?.profile_data?.personality_test) {
           setExistingResults(profile.profile_data.personality_test);
           setPersonalityType(profile.profile_data.personality_test.type);
           setSelectedType(profile.profile_data.personality_test.type);
           setPdfUrl(profile.profile_data.personality_test.pdfUrl || null);
+          setTestCompleted(true);
         }
       } else {
         // Load personality test results for user profile
-        const profile = await MemoirIntegrations.getMemoirProfile(user.id);
+        const profile = await MemoirIntegrations.getMemoirProfile(effectiveUserId);
         
         if (profile?.memoir_data?.personality_test) {
           setExistingResults(profile.memoir_data.personality_test);
           setPersonalityType(profile.memoir_data.personality_test.type);
           setSelectedType(profile.memoir_data.personality_test.type);
           setPdfUrl(profile.memoir_data.personality_test.pdfUrl || null);
+          setTestCompleted(true);
         }
       }
     } catch (error) {
@@ -282,6 +294,9 @@ export function PersonalityTestInterface({ memoriaProfileId: propMemoriaProfileI
   const saveResults = async (type: string) => {
     if (!user) return;
     
+    // Don't attempt to save if we're in view mode
+    if (isViewMode) return;
+    
     setIsSaving(true);
     setSaveError(null);
     
@@ -312,6 +327,9 @@ export function PersonalityTestInterface({ memoriaProfileId: propMemoriaProfileI
   };
 
   const restartTest = () => {
+    // Don't allow restarting the test in view mode
+    if (isViewMode) return;
+    
     setCurrentQuestionIndex(0);
     setAnswers({});
     setTestCompleted(false);
@@ -321,7 +339,7 @@ export function PersonalityTestInterface({ memoriaProfileId: propMemoriaProfileI
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file || isViewMode) return;
     
     try {
       setUploadingPdf(true);
@@ -358,7 +376,7 @@ export function PersonalityTestInterface({ memoriaProfileId: propMemoriaProfileI
   };
 
   const handleTypeChange = async (type: string) => {
-    if (!user) return;
+    if (!user || isViewMode) return;
     
     setIsSaving(true);
     setSaveError(null);
@@ -404,10 +422,7 @@ export function PersonalityTestInterface({ memoriaProfileId: propMemoriaProfileI
     >
       <div className="bg-black border border-white/20 rounded-xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
         <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-3">
-            <Brain className="w-8 h-8 text-indigo-400" />
-            <h2 className="text-2xl font-bold text-white font-[Orbitron]">Personality Profile</h2>
-          </div>
+          <h2 className="text-2xl font-bold text-white font-[Orbitron]">Personality Profile</h2>
           <button
             onClick={onClose}
             className="text-white/60 hover:text-white transition-colors"
@@ -456,18 +471,22 @@ export function PersonalityTestInterface({ memoriaProfileId: propMemoriaProfileI
               </div>
               
               <div className="flex flex-col md:flex-row gap-3">
-                <button
-                  onClick={restartTest}
-                  className="flex-1 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 py-3 rounded-lg transition-colors"
-                >
-                  Retake Test
-                </button>
-                <button
-                  onClick={() => setShowTypeSelector(true)}
-                  className="flex-1 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 py-3 rounded-lg transition-colors"
-                >
-                  Change Type
-                </button>
+                {!isViewMode && (
+                  <>
+                    <button
+                      onClick={restartTest}
+                      className="flex-1 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 py-3 rounded-lg transition-colors"
+                    >
+                      Retake Test
+                    </button>
+                    <button
+                      onClick={() => setShowTypeSelector(true)}
+                      className="flex-1 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 py-3 rounded-lg transition-colors"
+                    >
+                      Change Type
+                    </button>
+                  </>
+                )}
                 <a
                   href={`https://www.16personalities.com/${existingResults.type.toLowerCase()}-personality`}
                   target="_blank"
@@ -484,12 +503,8 @@ export function PersonalityTestInterface({ memoriaProfileId: propMemoriaProfileI
             <div className="bg-white/5 rounded-lg p-6">
               <div className="flex items-center gap-3 mb-4">
                 <FileText className="w-6 h-6 text-rose-400" />
-                <h3 className="text-lg font-semibold text-white">Upload Test Results</h3>
+                <h3 className="text-lg font-semibold text-white">Test Results</h3>
               </div>
-              
-              <p className="text-white/70 mb-4">
-                If you've taken a more comprehensive personality test elsewhere, you can upload the PDF results here to enhance your digital legacy.
-              </p>
               
               {pdfUrl ? (
                 <div className="bg-white/10 rounded-lg p-4 border border-white/20">
@@ -519,42 +534,52 @@ export function PersonalityTestInterface({ memoriaProfileId: propMemoriaProfileI
                         <Download className="w-4 h-4" />
                         Download
                       </a>
-                      <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-colors"
-                      >
-                        <Upload className="w-4 h-4" />
-                        Replace
-                      </button>
+                      {!isViewMode && (
+                        <button
+                          onClick={() => fileInputRef.current?.click()}
+                          className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-colors"
+                        >
+                          <Upload className="w-4 h-4" />
+                          Replace
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
               ) : (
                 <>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".pdf,application/pdf"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-full bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
-                    disabled={uploadingPdf}
-                  >
-                    {uploadingPdf ? (
-                      <>
-                        <div className="w-5 h-5 border-2 border-rose-400/30 border-t-rose-400 rounded-full animate-spin" />
-                        Uploading...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="w-5 h-5" />
-                        Select PDF File
-                      </>
-                    )}
-                  </button>
+                  {!isViewMode ? (
+                    <>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".pdf,application/pdf"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                      />
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                        disabled={uploadingPdf}
+                      >
+                        {uploadingPdf ? (
+                          <>
+                            <div className="w-5 h-5 border-2 border-rose-400/30 border-t-rose-400 rounded-full animate-spin" />
+                            Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-5 h-5" />
+                            Select PDF File
+                          </>
+                        )}
+                      </button>
+                    </>
+                  ) : (
+                    <div className="text-center py-4">
+                      <p className="text-white/60">No personality test results PDF available.</p>
+                    </div>
+                  )}
                 </>
               )}
               
@@ -611,20 +636,24 @@ export function PersonalityTestInterface({ memoriaProfileId: propMemoriaProfileI
                 )}
                 
                 <div className="flex flex-col md:flex-row gap-3 mt-4">
-                  <button
-                    onClick={restartTest}
-                    className="flex-1 bg-indigo-500 hover:bg-indigo-600 text-white py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
-                  >
-                    <RefreshCw className="w-5 h-5" />
-                    Retake Test
-                  </button>
-                  <button
-                    onClick={() => setShowTypeSelector(true)}
-                    className="flex-1 bg-purple-500 hover:bg-purple-600 text-white py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Brain className="w-5 h-5" />
-                    Change Type
-                  </button>
+                  {!isViewMode && (
+                    <>
+                      <button
+                        onClick={restartTest}
+                        className="flex-1 bg-indigo-500 hover:bg-indigo-600 text-white py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                      >
+                        <RefreshCw className="w-5 h-5" />
+                        Retake Test
+                      </button>
+                      <button
+                        onClick={() => setShowTypeSelector(true)}
+                        className="flex-1 bg-purple-500 hover:bg-purple-600 text-white py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                      >
+                        <Brain className="w-5 h-5" />
+                        Change Type
+                      </button>
+                    </>
+                  )}
                   {personalityType && (
                     <a
                       href={`https://www.16personalities.com/${personalityType.toLowerCase()}-personality`}
@@ -689,35 +718,52 @@ export function PersonalityTestInterface({ memoriaProfileId: propMemoriaProfileI
                         <Download className="w-4 h-4" />
                         Download
                       </a>
+                      {!isViewMode && (
+                        <button
+                          onClick={() => fileInputRef.current?.click()}
+                          className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-colors"
+                        >
+                          <Upload className="w-4 h-4" />
+                          Replace
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
               ) : (
                 <>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".pdf,application/pdf"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-full bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
-                    disabled={uploadingPdf}
-                  >
-                    {uploadingPdf ? (
-                      <>
-                        <div className="w-5 h-5 border-2 border-rose-400/30 border-t-rose-400 rounded-full animate-spin" />
-                        Uploading...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="w-5 h-5" />
-                        Select PDF File
-                      </>
-                    )}
-                  </button>
+                  {!isViewMode ? (
+                    <>
+                      <input 
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".pdf,application/pdf"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                      />
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                        disabled={uploadingPdf}
+                      >
+                        {uploadingPdf ? (
+                          <>
+                            <div className="w-5 h-5 border-2 border-rose-400/30 border-t-rose-400 rounded-full animate-spin" />
+                            Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-5 h-5" />
+                            Select PDF File
+                          </>
+                        )}
+                      </button>
+                    </>
+                  ) : (
+                    <div className="text-center py-4">
+                      <p className="text-white/60">No personality test results PDF available.</p>
+                    </div>
+                  )}
                 </>
               )}
               

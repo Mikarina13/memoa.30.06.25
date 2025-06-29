@@ -70,6 +70,7 @@ export function Profile3DSpacePage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [errorType, setErrorType] = useState<'generic' | 'profile_not_found' | 'permission_denied'>('generic');
   const [profileName, setProfileName] = useState<string | null>(null);
+  const [galleryLoadError, setGalleryLoadError] = useState<boolean>(false);
   
   // State for detail modal
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -81,7 +82,6 @@ export function Profile3DSpacePage() {
   const [showGalleryCarousel, setShowGalleryCarousel] = useState(false);
   const [selectedGalleryItems, setSelectedGalleryItems] = useState<any[]>([]);
   const [galleryCurrentIndex, setGalleryCurrentIndex] = useState(0);
-  const [galleryLoadError, setGalleryLoadError] = useState<boolean>(false);
   
   // State for customization
   const [memoriaProfiles, setMemoriaProfiles] = useState<MemoriaProfile[]>([]);
@@ -410,7 +410,8 @@ export function Profile3DSpacePage() {
         state: { 
           memoriaProfileId: memoriaProfileId,
           returnPath: '/memento/profile-space',
-          profileType
+          profileType,
+          ownerUserId: initialUserId // Pass the profile owner's ID
         }
       });
       return;
