@@ -132,12 +132,11 @@ export function Gallery3DCarousel({
     }
   });
   
-  // Set up keyboard navigation with improved event handling
+  // Set up keyboard navigation
   useEffect(() => {
-    // Handle key navigation with proper event handling
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Prevent default browser behavior for arrow keys to avoid page scrolling
-      if (["ArrowLeft", "ArrowRight", "a", "d", "A", "D", "Space", " "].includes(e.key)) {
+      // Prevent default browser behavior for navigation keys
+      if (["ArrowLeft", "ArrowRight", "a", "d", "A", "D"].includes(e.key)) {
         e.preventDefault();
         e.stopPropagation();
       }
@@ -148,24 +147,14 @@ export function Gallery3DCarousel({
         navigateCarousel(-1); // Rotate clockwise
       } else if (e.key === 'Escape') {
         onClose();
-      } else if (e.key === 'Enter' || e.key === ' ' || e.key === 'Space') {
-        if (galleryItems.length > 0 && onItemSelect) {
-          onItemSelect(galleryItems[currentIndex]);
-        }
       }
     };
     
     // Use { passive: false } to allow preventDefault() to work properly
     window.addEventListener('keydown', handleKeyDown, { passive: false });
     
-    // Focus the window to ensure keyboard events work immediately
-    window.focus();
-    document.body.focus();
-    
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [onClose, navigateCarousel, onItemSelect, galleryItems, currentIndex]);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
   
   // Handle manual navigation
   const navigateCarousel = useCallback((direction: number) => {
@@ -283,14 +272,6 @@ export function Gallery3DCarousel({
         })}
       </group>
       
-      {/* Add keyboard navigation hints */}
-      <Html position={[0, -5, 0]} center>
-        <div className="bg-black/60 backdrop-blur-sm px-4 py-2 rounded-full text-white text-sm">
-          <span className="mr-4"><kbd className="px-2 py-1 bg-white/20 rounded">◀</kbd> / <kbd className="px-2 py-1 bg-white/20 rounded">▶</kbd> or <kbd className="px-2 py-1 bg-white/20 rounded">A</kbd> / <kbd className=\"px-2 py-1 bg-white/20 rounded">D</kbd> to navigate</span>
-          <span><kbd className="px-2 py-1 bg-white/20 rounded">Enter</kbd> to select</span>
-        </div>
-      </Html>
-      
       <CarouselCameraControls />
     </>
   );
@@ -320,7 +301,6 @@ function CarouselItem({
   const meshRef = useRef<THREE.Mesh>(null);
   const loadedRef = useRef(false);
   const [textureError, setTextureError] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
   
   // Always call useTexture hook, but conditionally use the result
   // This ensures the hook is called the same number of times on each render
@@ -346,31 +326,18 @@ function CarouselItem({
     }
   }, [scale]);
   
-  // Floating animation
-  useFrame(({ clock }) => {
-    if (meshRef.current) {
-      // Floating animation
-      meshRef.current.position.y = position.y + Math.sin(clock.getElapsedTime() * 0.5) * 0.3;
-    }
-  });
-  
   // Set material based on media type and error state
   const materialProps = item.media_type === 'image' && !textureError
     ? { map: texture } 
     : { color: textureError ? '#666666' : '#111111' };
   
-  // Render content based on state
+  // Render content based on state - no early returns
   return (
     <group position={position} rotation={rotation}>
       {/* Image plane */}
       <mesh
         ref={meshRef}
-        onPointerEnter={() => setIsHovered(true)}
-        onPointerLeave={() => setIsHovered(false)}
-        onClick={(e) => {
-          e.stopPropagation();
-          onClick();
-        }}
+        onClick={onClick}
       >
         <planeGeometry args={[6, 4]} />
         <meshBasicMaterial 
@@ -396,30 +363,6 @@ function CarouselItem({
           <div className="w-16 h-16 bg-black/50 rounded-full flex items-center justify-center">
             <div className="w-0 h-0 border-t-[15px] border-t-transparent border-b-[15px] border-b-transparent border-l-[25px] border-l-white ml-1"></div>
           </div>
-        </Html>
-      )}
-      
-      {/* Active item indicator */}
-      {isActive && (
-        <Html center>
-          <div className="absolute inset-0 rounded-lg animate-pulse" 
-            style={{
-              boxShadow: '0 0 20px rgba(255, 255, 255, 0.4)',
-              border: '2px solid rgba(255, 255, 255, 0.4)'
-            }} 
-          />
-        </Html>
-      )}
-      
-      {/* Hover effect */}
-      {isHovered && !isActive && (
-        <Html center>
-          <div className="absolute inset-0 rounded-lg" 
-            style={{
-              boxShadow: '0 0 15px rgba(255, 255, 255, 0.3)',
-              border: '1px solid rgba(255, 255, 255, 0.3)'
-            }} 
-          />
         </Html>
       )}
     </group>
