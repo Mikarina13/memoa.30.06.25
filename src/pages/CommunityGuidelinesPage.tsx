@@ -31,9 +31,11 @@ export function CommunityGuidelinesPage() {
         <div className="space-y-12 pb-12">
           <section className="bg-black/40 backdrop-blur-sm p-8 rounded-xl border border-white/10">
             <h2 className="text-2xl font-semibold mb-6 text-amber-400 font-[Orbitron]">Our Philosophy</h2>
-            <p className="text-lg text-white/80 leading-relaxed font-[Rajdhani] space-y-4">
-              Welcome to MEMOĀ, a portal to digital eternity designed for crafting legacies, reviving cherished presences, and walking among echoes. Our community is built on the principles of empathy, respect, and the shared human need for remembrance and connection. These guidelines help us create and maintain a space where everyone feels safe, supported, and valued as they engage with memories and legacies. By using MEMOĀ, you agree to uphold these principles and guidelines.
-            </p>
+            <div className="space-y-4 font-[Rajdhani] text-white/80">
+              <p>
+                Welcome to MEMOĀ, a portal to digital eternity designed for crafting legacies, reviving cherished presences, and walking among echoes. Our community is built on the principles of empathy, respect, and the shared human need for remembrance and connection. These guidelines help us create and maintain a space where everyone feels safe, supported, and valued as they engage with memories and legacies. By using MEMOĀ, you agree to uphold these principles and guidelines.
+              </p>
+            </div>
           </section>
 
           <section className="bg-black/40 backdrop-blur-sm p-8 rounded-xl border border-white/10">
@@ -42,7 +44,7 @@ export function CommunityGuidelinesPage() {
               <ul className="list-disc list-inside space-y-2">
                 <li>Be Kind and Considerate: Interact with others and the legacies shared on MEMOĀ with the utmost respect and sensitivity. Remember that many topics and profiles may involve deep personal emotions, grief, and remembrance.</li>
                 <li>No Harassment or Bullying: Zero tolerance for harassment, threats, hate speech, shaming, or any form of bullying directed at other users, or in the representation of any individual within a MEMOIR or MEMORIA.</li>
-                <li>Constructive Interaction: When leaving messages in Guestbooks or interacting in MEMENTO, aim for comments that are supportive, reflective, or add positive value to the shared space.</li>
+                <li>Constructive Interaction: When interacting on MEMOĀ, aim for supportive, reflective interactions that add positive value to the shared space.</li>
               </ul>
             </div>
           </section>
@@ -84,10 +86,9 @@ export function CommunityGuidelinesPage() {
               </div>
               
               <div>
-                <h3 className="text-xl font-semibold mb-3 text-cyan-300">MEMENTO (Walking Among Echoes & Guestbooks):</h3>
+                <h3 className="text-xl font-semibold mb-3 text-cyan-300">MEMENTO (Walking Among Echoes):</h3>
                 <ul className="list-disc list-inside space-y-2 text-white/70">
                   <li>Respectful Exploration: When exploring MEMENTO spaces, treat each legacy with respect.</li>
-                  <li>Guestbook Conduct: Comments should be considerate, supportive, and relevant.</li>
                   <li>No Defacement: Do not attempt to disrupt, deface, or negatively impact the MEMENTO spaces created by others.</li>
                 </ul>
               </div>
