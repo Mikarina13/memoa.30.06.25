@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useMemo } from 'react';
-import { useFrame, useThree, ThreeEvent } from '@react-three/fiber';
+import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import { Vector3, Group, Color } from 'three'; 
 import { Heart, Volume2, User, Brain, Image as ImageIcon, FileText, Gamepad2, Globe, Camera, Cuboid, FileVideo, File as FilePdf, Sparkles } from 'lucide-react';
@@ -255,7 +255,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
             key="personal-favorites"
             id="personal_favorites"
             position={position}
-            icon={<Heart className={`w-8 h-8`} style={{color: getItemColor('personal_favorites', themeColors.personal_favorites)}} />}
+            icon={<Heart className={`w-14 h-14`} style={{color: getItemColor('personal_favorites', themeColors.personal_favorites)}} />}
             label="Personal Favorites" 
             color={getItemColor('personal_favorites', themeColors.personal_favorites)}
             scale={settings.iconScale}
@@ -293,7 +293,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           key="digital-presence"
           id="digital_presence"
           position={position}
-          icon={<Globe className={`w-8 h-8`} style={{color: getItemColor('digital_presence', themeColors.digital_presence)}} />}
+          icon={<Globe className={`w-14 h-14`} style={{color: getItemColor('digital_presence', themeColors.digital_presence)}} />}
           label="Digital Presence" 
           color={getItemColor('digital_presence', themeColors.digital_presence)}
           scale={settings.iconScale}
@@ -325,7 +325,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           key="gaming-preferences"
           id="gaming_preferences"
           position={position}
-          icon={<Gamepad2 className={`w-8 h-8`} style={{color: getItemColor('gaming_preferences', themeColors.gaming_preferences)}} />}
+          icon={<Gamepad2 className={`w-14 h-14`} style={{color: getItemColor('gaming_preferences', themeColors.gaming_preferences)}} />}
           label="Gaming Preferences" 
           color={getItemColor('gaming_preferences', themeColors.gaming_preferences)}
           scale={settings.iconScale}
@@ -356,7 +356,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           key="voice"
           id="voice"
           position={position}
-          icon={<Volume2 className={`w-8 h-8`} style={{color: getItemColor('voice', themeColors.voice)}} />}
+          icon={<Volume2 className={`w-14 h-14`} style={{color: getItemColor('voice', themeColors.voice)}} />}
           label="Voice Clone" 
           color={getItemColor('voice', themeColors.voice)}
           scale={settings.iconScale}
@@ -394,7 +394,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           key="avaturn-avatars"
           id="avaturn_avatars"
           position={position}
-          icon={<Cuboid className={`w-8 h-8`} style={{color: getItemColor('avaturn_avatars', themeColors.avaturn_avatars)}} />}
+          icon={<Cuboid className={`w-14 h-14`} style={{color: getItemColor('avaturn_avatars', themeColors.avaturn_avatars)}} />}
           label="3D Avatars" 
           color={getItemColor('avaturn_avatars', themeColors.avaturn_avatars)}
           scale={settings.iconScale}
@@ -428,7 +428,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           key="narratives"
           id="narratives"
           position={position}
-          icon={<FileText className={`w-8 h-8`} style={{color: getItemColor('narratives', themeColors.narratives)}} />}
+          icon={<FileText className={`w-14 h-14`} style={{color: getItemColor('narratives', themeColors.narratives)}} />}
           label="Narratives" 
           color={getItemColor('narratives', themeColors.narratives)}
           scale={settings.iconScale}
@@ -459,7 +459,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           key="gallery"
           id="gallery"
           position={position}
-          icon={<ImageIcon className={`w-8 h-8`} style={{color: getItemColor('gallery', themeColors.gallery)}} />}
+          icon={<ImageIcon className={`w-14 h-14`} style={{color: getItemColor('gallery', themeColors.gallery)}} />}
           label="Gallery" 
           color={getItemColor('gallery', themeColors.gallery)}
           scale={settings.iconScale}
@@ -493,7 +493,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           key="personality"
           id="personality"
           position={position}
-          icon={<Brain className={`w-8 h-8`} style={{color: getItemColor('personality', themeColors.personality)}} />}
+          icon={<Brain className={`w-14 h-14`} style={{color: getItemColor('personality', themeColors.personality)}} />}
           label="Personality" 
           color={getItemColor('personality', themeColors.personality)}
           scale={settings.iconScale}
@@ -527,7 +527,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           key="family-tree"
           id="family_tree"
           position={position}
-          icon={<User className={`w-8 h-8`} style={{color: getItemColor('family_tree', themeColors.family_tree)}} />}
+          icon={<User className={`w-14 h-14`} style={{color: getItemColor('family_tree', themeColors.family_tree)}} />}
           label="Family Tree" 
           color={getItemColor('family_tree', themeColors.family_tree)}
           scale={settings.iconScale}
@@ -561,7 +561,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           key="media-links"
           id="media_links"
           position={position}
-          icon={<FileVideo className={`w-8 h-8`} style={{color: getItemColor('media_links', themeColors.media_links)}} />}
+          icon={<FileVideo className={`w-14 h-14`} style={{color: getItemColor('media_links', themeColors.media_links)}} />}
           label="Media Links" 
           color={getItemColor('media_links', themeColors.media_links)}
           scale={settings.iconScale}
@@ -594,7 +594,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           key="documents"
           id="documents"
           position={position}
-          icon={<FilePdf className={`w-8 h-8`} style={{color: getItemColor('documents', themeColors.documents)}} />}
+          icon={<FilePdf className={`w-14 h-14`} style={{color: getItemColor('documents', themeColors.documents)}} />}
           label="Documents" 
           color={getItemColor('documents', themeColors.documents)}
           scale={settings.iconScale}
@@ -629,7 +629,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           key="ai-tribute-images"
           id="ai_tribute_images"
           position={position}
-          icon={<Sparkles className={`w-8 h-8`} style={{color: getItemColor('ai_tribute_images', themeColors.ai_tribute_images)}} />}
+          icon={<Sparkles className={`w-14 h-14`} style={{color: getItemColor('ai_tribute_images', themeColors.ai_tribute_images)}} />}
           label="AI Tribute Images" 
           color={getItemColor('ai_tribute_images', themeColors.ai_tribute_images)}
           scale={settings.iconScale}
@@ -913,30 +913,29 @@ function Item({
       <mesh
         ref={meshRef}
         position={position}
-        // Larger invisible mesh for better click detection - 4x larger than before
-        // This significantly increases the hit area for better interaction
+        // Larger invisible mesh for better click detection
       >
-        <sphereGeometry args={[3.2, 32, 32]} />
+        <sphereGeometry args={[3.5, 32, 32]} />
         <meshBasicMaterial opacity={0.01} transparent />
       </mesh>
       
       {/* Label */}
-      <Html center position={[position.x, position.y + 3, position.z]}>
+      <Html center position={[position.x, position.y + 3.5, position.z]}>
         <div 
-          className={`px-5 py-3 rounded-lg text-white text-center transition-all duration-200 font-[Orbitron] ${
+          className={`px-6 py-3 rounded-lg text-white text-center transition-all duration-200 font-[Orbitron] ${
             isHovered 
-              ? 'opacity-100 transform scale-110 bg-black/60' 
+              ? 'opacity-100 transform scale-110 bg-black/40' 
               : 'opacity-0 transform scale-90 bg-transparent'
           }`} 
           style={{ 
             borderColor: color,
             borderWidth: '2px',
-            minWidth: '200px',
-            maxWidth: '280px',
-            boxShadow: isHovered ? `0 0 20px ${color}90` : 'none',
+            minWidth: '220px',
+            maxWidth: '300px',
+            boxShadow: isHovered ? `0 0 25px ${color}90` : 'none',
             userSelect: 'none',
             WebkitUserSelect: 'none',
-            fontSize: '16px',
+            fontSize: '18px',
             lineHeight: '1.2'
           }}
         >
@@ -952,31 +951,26 @@ function Item({
           onMouseLeave={onLeave}
           onClick={handleClick}
           onTouchEnd={handleClick}
-          className={`rounded-full p-10 transition-all duration-150 cursor-pointer ${
+          className={`rounded-full p-12 transition-all duration-150 cursor-pointer ${
             isClicked ? 'scale-90' : isHovered ? 'scale-125' : 'scale-100'
           } active:scale-90`} 
           style={{ 
             transform: `scale(${scale * (isClicked ? 0.9 : isHovered ? 1.25 : 1)})`,
-            backgroundColor: `${color}15`, // Very transparent background
-            border: `3px solid ${color}80`, // Thicker border for better visibility
+            backgroundColor: 'transparent', // Fully transparent background
+            border: `3px solid ${color}90`, // Slightly transparent border
             boxShadow: isHovered 
-              ? `0 0 25px ${color}, 0 0 10px ${color}` 
-              : glowIntensity > 0.2 
-                ? `0 0 ${Math.floor(glowIntensity * 15)}px ${glowColor}` 
-                : `0 0 8px ${color}40`, // Always some glow for visibility
+              ? `0 0 30px ${color}, 0 0 15px ${color}` 
+              : `0 0 25px ${color}60, 0 0 10px ${color}30`,
             userSelect: 'none',
             WebkitUserSelect: 'none',
             transition: 'all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)',
-            // Add pulse effect to make items more noticeable
-            animation: !isHovered ? 'pulse 3s infinite ease-in-out' : 'none',
-            width: '100px', // Fixed size for bigger hit area
-            height: '100px',
+            width: '120px',
+            height: '120px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: isHovered ? 10 : 1, // Bring hovered items forward
-            // Add subtle shadow for better visibility against dark background
-            filter: 'drop-shadow(0 0 8px rgba(0,0,0,0.8))'
+            zIndex: isHovered ? 10 : 1,
+            animation: !isHovered ? 'pulse 3s infinite ease-in-out' : 'none',
           }}
         >
           {icon}

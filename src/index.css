@@ -34,14 +34,14 @@ html, body, #root {
 @keyframes pulse {
   0% {
     transform: scale(1);
-    box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
   }
   50% {
     transform: scale(1.05);
-    box-shadow: 0 0 15px rgba(255, 255, 255, 0.6); 
+    box-shadow: 0 0 25px rgba(255, 255, 255, 0.6); 
   }
   100% {
     transform: scale(1);
-    box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
   }
 }
