@@ -230,20 +230,14 @@ function Model({ url, onLoadingComplete, onError }: {
   const handleLoadError = useCallback((error: any) => {
     if (!mountedRef.current) return;
     
-    // Format specific error for Promise objects
-    if (error && typeof error === 'object' && typeof error.then === 'function') {
-      const enhancedError = new Error(
-        `Async loading error for model: ${url}. The 3D model loader encountered an unexpected asynchronous error. This may indicate a network issue, corrupted model file, or missing dependencies.`
-      );
-      
-      onError?.(enhancedError);
-      return enhancedError;
-    }
-    
-    // Try to extract useful information from the error
     let enhancedError: Error;
     
-    if (error instanceof Error) {
+    // Format specific error for Promise objects
+    if (error && typeof error === 'object' && typeof error.then === 'function') {
+      enhancedError = new Error(
+        `Async loading error for model: ${url}. The 3D model loader encountered an unexpected asynchronous error. This may indicate a network issue, corrupted model file, or missing dependencies.`
+      );
+    } else if (error instanceof Error) {
       if (error.message.includes('404') || error.message.includes('Not Found')) {
         enhancedError = new Error(`Model file not found: ${url}. The file may have been deleted or the URL is incorrect.`);
       } else if (error.message.includes('CORS')) {
@@ -259,139 +253,103 @@ function Model({ url, onLoadingComplete, onError }: {
       enhancedError = new Error(`Unknown error loading 3D model: ${String(error)}`);
     }
     
+    setLoadingState('error');
     onError?.(enhancedError);
-    return enhancedError;
   }, [url, onError]);
+
+  // Handle GLTF loading errors through onError callback
+  const handleGLTFError = useCallback((errorEvent: ErrorEvent) => {
+    const error = errorEvent.error || new Error(`Failed to load 3D model: ${url}`);
+    handleLoadError(error);
+  }, [handleLoadError, url]);
   
-  try {
-    if (!isValidUrl()) {
-      throw new Error(`Invalid model URL provided: ${url}`);
+  if (!isValidUrl()) {
+    const error = new Error(`Invalid model URL provided: ${url}`);
+    handleLoadError(error);
+    return null;
+  }
+  
+  // Use useGLTF with error handling callback instead of try-catch
+  const gltf = useGLTF(url, true, undefined, handleGLTFError); // draco support enabled, no preload, error callback
+  
+  if (!gltf || !gltf.scene) {
+    const error = new Error('Model scene could not be loaded - invalid GLTF/GLB file');
+    handleLoadError(error);
+    return null;
+  }
+  
+  // Call loading complete callback when model successfully loads
+  useEffect(() => {
+    if (gltf.scene && mountedRef.current && loadingState !== 'loaded') {
+      setLoadingState('loaded');
+      onLoadingComplete?.();
+      
+      // Clear cache to help with memory management
+      return () => {
+        try {
+          useGLTF.clear(url);
+        } catch (e) {
+          console.warn('Error clearing GLTF cache:', e);
+        }
+      };
     }
-    
-    // Use useGLTF with error handling
-    const gltf = useGLTF(url, true); // draco support enabled
-    
-    if (!gltf || !gltf.scene) {
-      throw new Error('Model scene could not be loaded - invalid GLTF/GLB file');
-    }
-    
-    // Call loading complete callback when model successfully loads
-    useEffect(() => {
-      if (gltf.scene && mountedRef.current && loadingState !== 'loaded') {
-        setLoadingState('loaded');
-        onLoadingComplete?.();
-        
-        // Clear cache to help with memory management
-        return () => {
-          try {
-            useGLTF.clear(url);
-          } catch (e) {
-            console.warn('Error clearing GLTF cache:', e);
-          }
-        };
-      }
-    }, [gltf.scene, onLoadingComplete, loadingState, url]);
-    
-    // Check for common issues with the loaded model
-    useEffect(() => {
-      if (gltf.scene) {
-        // Check if model has materials and textures
-        let hasTextures = false;
-        let hasMaterials = false;
-        let geometryCount = 0;
-        
-        gltf.scene.traverse((child) => {
-          if (child instanceof THREE.Mesh) {
-            geometryCount++;
-            
-            if (child.material) {
-              hasMaterials = true;
-              if (Array.isArray(child.material)) {
-                child.material.forEach(mat => {
-                  if (mat.map || mat.normalMap || mat.roughnessMap) {
-                    hasTextures = true;
-                  }
-                });
-              } else {
-                if (child.material.map || child.material.normalMap || child.material.roughnessMap) {
+  }, [gltf.scene, onLoadingComplete, loadingState, url]);
+  
+  // Check for common issues with the loaded model
+  useEffect(() => {
+    if (gltf.scene) {
+      // Check if model has materials and textures
+      let hasTextures = false;
+      let hasMaterials = false;
+      let geometryCount = 0;
+      
+      gltf.scene.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          geometryCount++;
+          
+          if (child.material) {
+            hasMaterials = true;
+            if (Array.isArray(child.material)) {
+              child.material.forEach(mat => {
+                if (mat.map || mat.normalMap || mat.roughnessMap) {
                   hasTextures = true;
                 }
+              });
+            } else {
+              if (child.material.map || child.material.normalMap || child.material.roughnessMap) {
+                hasTextures = true;
               }
             }
           }
-        });
-        
-        // Log warning if GLTF has no textures (might indicate missing texture files)
-        if (!hasTextures && url.toLowerCase().endsWith('.gltf')) {
-          console.warn('GLTF model loaded but no textures found - this might indicate missing texture files');
         }
-        
-        // Log statistics to help with debugging
-        console.log(`Model stats - Geometry count: ${geometryCount}, Has materials: ${hasMaterials}, Has textures: ${hasTextures}`);
-      }
-    }, [gltf.scene, url]);
-    
-    return (
-      <Stage
-        shadows
-        environment="city"
-        intensity={0.5}
-        adjustCamera={false}
-        preset="rembrandt"
-      >
-        <primitive 
-          object={gltf.scene} 
-          scale={1.8} 
-          position={[0, -1.8, 0]} 
-          rotation={[0, 0, 0]} 
-        />
-      </Stage>
-    );
-  } catch (e) {
-    // Check if this is an attempt to handle a Promise
-    if (e && typeof e === 'object' && typeof (e as any).then === 'function') {
-      // Handle Promise objects specifically
-      const promiseError = new Error(`Async loading error for model: ${url}. The 3D model loader encountered an unexpected asynchronous error. This may indicate a network issue, corrupted model file, or missing dependencies.`);
+      });
       
-      // Try to get more information from the Promise
-      const promise = e as Promise<any>;
-      promise
-        .then(value => {
-          console.warn('Async model loading eventually succeeded with:', value);
-          if (mountedRef.current && loadAttemptRef.current < MAX_LOAD_ATTEMPTS) {
-            loadAttemptRef.current++;
-            // Potentially retry loading here
-          }
-        })
-        .catch(error => {
-          console.error('Async model loading failed with:', error);
-          handleLoadError(error);
-        });
-      
-      // Use the error handler to format the error
-      const enhancedError = handleLoadError(promiseError);
-      throw enhancedError;
-    } 
-    else if (e instanceof Error) {
-      // Handle standard errors
-      const enhancedError = handleLoadError(e);
-      throw enhancedError;
-    } 
-    else {
-      // Handle unknown error types
-      const errorString = String(e);
-      let enhancedError: Error;
-      
-      if (errorString === '[object Promise]') {
-        enhancedError = new Error(`Unhandled Promise in 3D model loading for: ${url}. This indicates an async operation that wasn't properly awaited. Try refreshing the page or check the model file integrity.`);
-      } else {
-        enhancedError = new Error(`Unknown error loading 3D model: ${errorString}`);
+      // Log warning if GLTF has no textures (might indicate missing texture files)
+      if (!hasTextures && url.toLowerCase().endsWith('.gltf')) {
+        console.warn('GLTF model loaded but no textures found - this might indicate missing texture files');
       }
       
-      const formattedError = handleLoadError(enhancedError);
-      throw formattedError;
+      // Log statistics to help with debugging
+      console.log(`Model stats - Geometry count: ${geometryCount}, Has materials: ${hasMaterials}, Has textures: ${hasTextures}`);
     }
-  }
+  }, [gltf.scene, url]);
+  
+  return (
+    <Stage
+      shadows
+      environment="city"
+      intensity={0.5}
+      adjustCamera={false}
+      preset="rembrandt"
+    >
+      <primitive 
+        object={gltf.scene} 
+        scale={1.8} 
+        position={[0, -1.8, 0]} 
+        rotation={[0, 0, 0]} 
+      />
+    </Stage>
+  );
 }
 
 // Fallback 3D scene when no model is available
