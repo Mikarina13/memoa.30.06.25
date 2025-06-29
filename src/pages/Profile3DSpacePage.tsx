@@ -7,7 +7,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { EnhancedStars } from '../components/EnhancedStars';
 import { ProfileData3DDisplay } from '../components/ProfileData3DDisplay';
 import { SpaceCustomizer, SpaceCustomizationSettings } from '../components/SpaceCustomizer'; 
-import { Gallery3DCarousel, CarouselCameraControls } from '../components/Gallery3DCarousel';
+import { Gallery3DCarousel, CarouselCameraControls, renderGalleryContent } from '../components/Gallery3DCarousel';
+import { Content3DCarousel, renderMediaLinkContent, renderGalleryContent as renderContentGallery } from '../components/Content3DCarousel';
 import { GalleryNavigationFooter } from '../components/GalleryNavigationFooter';
 import { useKeyboardControls } from '../hooks/useKeyboardControls';
 import { useAuth } from '../hooks/useAuth';
@@ -79,8 +80,12 @@ export function Profile3DSpacePage() {
   } | null>(null);
   const [showTributeImageInterface, setShowTributeImageInterface] = useState(false);
   const [showGalleryCarousel, setShowGalleryCarousel] = useState(false);
+  const [showContentCarousel, setShowContentCarousel] = useState(false);
+  const [carouselContentType, setCarouselContentType] = useState<string>('');
   const [selectedGalleryItems, setSelectedGalleryItems] = useState<any[]>([]);
+  const [selectedContentItems, setSelectedContentItems] = useState<any[]>([]);
   const [galleryCurrentIndex, setGalleryCurrentIndex] = useState(0);
+  const [contentCurrentIndex, setContentCurrentIndex] = useState(0);
   
   // State for customization
   const [memoriaProfiles, setMemoriaProfiles] = useState<MemoriaProfile[]>([]);
@@ -322,12 +327,13 @@ export function Profile3DSpacePage() {
   
   // Handle profile change when selecting from dropdown
   const handleProfileChange = (newProfileId: string) => {
-    // Check if we're currently in a detail modal or gallery view
-    const isInDetailView = showDetailModal || showGalleryCarousel;
+    // Check if we're currently in a detail view or gallery view
+    const isInDetailView = showDetailModal || showGalleryCarousel || showContentCarousel;
     
     // Set state to close any open modals or interfaces
     if (showDetailModal) setShowDetailModal(false);
     if (showGalleryCarousel) setShowGalleryCarousel(false);
+    if (showContentCarousel) setShowContentCarousel(false);
     if (showCustomizer) setShowCustomizer(false);
     if (showTributeImageInterface) setShowTributeImageInterface(false);
     
@@ -396,6 +402,33 @@ export function Profile3DSpacePage() {
       return;
     }
     
+    // Special handling for media links to show content carousel
+    if (itemType === 'media_links') {
+      setSelectedContentItems(itemData);
+      setContentCurrentIndex(0);
+      setCarouselContentType('media_links');
+      setShowContentCarousel(true);
+      return;
+    }
+    
+    // Special handling for gaming preferences to show content carousel
+    if (itemType === 'gaming_preferences') {
+      setSelectedContentItems(itemData);
+      setContentCurrentIndex(0);
+      setCarouselContentType('gaming_preferences');
+      setShowContentCarousel(true);
+      return;
+    }
+    
+    // Special handling for digital presence to show content carousel
+    if (itemType === 'digital_presence') {
+      setSelectedContentItems(itemData);
+      setContentCurrentIndex(0);
+      setCarouselContentType('digital_presence');
+      setShowContentCarousel(true);
+      return;
+    }
+    
     if (itemType === 'personality') {
       navigate('/personality-test', { 
         state: { 
@@ -461,6 +494,27 @@ export function Profile3DSpacePage() {
     setGalleryCurrentIndex(adjustedIndex);
   };
 
+  // Handle content carousel navigation
+  const handleContentPrev = () => {
+    setContentCurrentIndex(prev => 
+      prev === 0 ? selectedContentItems.length - 1 : prev - 1
+    );
+  };
+
+  const handleContentNext = () => {
+    setContentCurrentIndex(prev => 
+      prev === selectedContentItems.length - 1 ? 0 : prev + 1
+    );
+  };
+
+  const handleContentSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseFloat(e.target.value);
+    const normalizedValue = value / 100;
+    const targetIndex = Math.floor(normalizedValue * selectedContentItems.length);
+    const adjustedIndex = Math.min(Math.max(0, targetIndex), selectedContentItems.length - 1);
+    setContentCurrentIndex(adjustedIndex);
+  };
+
   // Handle Return Button - fixed priority handling of overlays
   const handleReturnToMemento = () => {
     // First check if there are any open overlays to close
@@ -470,6 +524,9 @@ export function Profile3DSpacePage() {
     } else if (showGalleryCarousel) {
       // If gallery carousel is open, close it
       setShowGalleryCarousel(false);
+    } else if (showContentCarousel) {
+      // If content carousel is open, close it
+      setShowContentCarousel(false);
     } else if (showCustomizer) {
       // If customizer is open, close it
       setShowCustomizer(false);
@@ -826,7 +883,7 @@ export function Profile3DSpacePage() {
             </div>
           </Html>
         }>
-          <ProfileSpaceControls settings={customizationSettings} isGalleryActive={showGalleryCarousel} />
+          <ProfileSpaceControls settings={customizationSettings} isGalleryActive={showGalleryCarousel || showContentCarousel} />
           <EnhancedStars 
             count={starCount}
             size={customizationSettings.particleSize}
@@ -861,9 +918,40 @@ export function Profile3DSpacePage() {
             />
           )}
           
+          {/* 3D Content Carousel */}
+          {showContentCarousel && selectedContentItems.length > 0 && (
+            <Content3DCarousel 
+              items={selectedContentItems}
+              onClose={() => setShowContentCarousel(false)}
+              onItemSelect={(item) => {
+                setSelectedItem({
+                  type: carouselContentType,
+                  data: carouselContentType === 'media_links' || carouselContentType === 'digital_presence' 
+                    ? [item] 
+                    : item
+                });
+                setShowDetailModal(true);
+                setShowContentCarousel(false);
+              }}
+              currentIndex={contentCurrentIndex}
+              onIndexChange={setContentCurrentIndex}
+              renderItemContent={
+                carouselContentType === 'media_links' ? renderMediaLinkContent : 
+                carouselContentType === 'gallery' ? renderContentGallery : 
+                undefined
+              }
+              title={
+                carouselContentType === 'media_links' ? 'Media Links' : 
+                carouselContentType === 'digital_presence' ? 'Digital Presence' : 
+                carouselContentType === 'gaming_preferences' ? 'Gaming Preferences' : 
+                'Content'
+              }
+            />
+          )}
+          
           {/* Only render 3D icons when modal is NOT visible to prevent them from showing through */}
           <Suspense fallback={null}>
-            {profileData && !showDetailModal && !showGalleryCarousel && (
+            {profileData && !showDetailModal && !showGalleryCarousel && !showContentCarousel && (
               <ProfileData3DDisplay 
                 profileData={profileData} 
                 onItemClick={handleItemClick}
@@ -874,11 +962,11 @@ export function Profile3DSpacePage() {
           
           {/* Always render OrbitControls but disable when gallery carousel is active */}
           <OrbitControls 
-            enabled={!showGalleryCarousel}
-            enablePan={!showGalleryCarousel}
-            enableZoom={!showGalleryCarousel}
-            enableRotate={!showGalleryCarousel}
-            autoRotate={customizationSettings.autoRotate && !showGalleryCarousel} 
+            enabled={!showGalleryCarousel && !showContentCarousel}
+            enablePan={!showGalleryCarousel && !showContentCarousel}
+            enableZoom={!showGalleryCarousel && !showContentCarousel}
+            enableRotate={!showGalleryCarousel && !showContentCarousel}
+            autoRotate={customizationSettings.autoRotate && !showGalleryCarousel && !showContentCarousel} 
             autoRotateSpeed={customizationSettings.rotationSpeed * 50}
             rotateSpeed={0.5}
             zoomSpeed={0.8}
@@ -983,6 +1071,17 @@ export function Profile3DSpacePage() {
           onPrev={handleGalleryPrev}
           onNext={handleGalleryNext}
           onSliderChange={handleGallerySliderChange}
+        />
+      )}
+      
+      {/* Content Navigation Footer - Only shown when content carousel is active */}
+      {showContentCarousel && selectedContentItems.length > 0 && (
+        <GalleryNavigationFooter
+          currentIndex={contentCurrentIndex}
+          totalItems={selectedContentItems.length}
+          onPrev={handleContentPrev}
+          onNext={handleContentNext}
+          onSliderChange={handleContentSliderChange}
         />
       )}
       
