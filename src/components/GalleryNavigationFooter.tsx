@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Keyboard } from 'lucide-react';
 
 interface GalleryNavigationFooterProps {
   currentIndex: number;
@@ -23,6 +23,7 @@ export function GalleryNavigationFooter({
           <button
             onClick={onPrev}
             className="w-10 h-10 flex items-center justify-center bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
+            aria-label="Previous item"
           >
             <ChevronLeft className="w-6 h-6" />
           </button>
@@ -35,15 +36,18 @@ export function GalleryNavigationFooter({
               value={totalItems <= 1 ? 0 : (currentIndex / (totalItems - 1)) * 100}
               onChange={onSliderChange}
               className="w-full h-2 bg-white/20 rounded appearance-none cursor-pointer accent-blue-500"
+              aria-label="Gallery position"
             />
-            <div className="text-center text-white/80 text-sm mt-2">
-              Use Arrow Keys or A/D to Navigate • {currentIndex + 1} of {totalItems}
+            <div className="flex items-center justify-center text-white/80 text-sm mt-2">
+              <Keyboard className="w-4 h-4 mr-2" />
+              <span>Use <kbd className="px-1.5 py-0.5 bg-white/10 rounded mr-1">◀</kbd><kbd className="px-1.5 py-0.5 bg-white/10 rounded">▶</kbd> or <kbd className=\"px-1.5 py-0.5 bg-white/10 rounded mr-1">A</kbd><kbd className=\"px-1.5 py-0.5 bg-white/10 rounded">D</kbd> to Navigate • {currentIndex + 1} of {totalItems}</span>
             </div>
           </div>
           
           <button
             onClick={onNext}
             className="w-10 h-10 flex items-center justify-center bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
+            aria-label="Next item"
           >
             <ChevronRight className="w-6 h-6" />
           </button>
