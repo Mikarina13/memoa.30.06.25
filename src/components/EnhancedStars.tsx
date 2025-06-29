@@ -92,7 +92,7 @@ export function EnhancedStars({
 
   return (
     <points ref={pointsRef}>
-      <bufferGeometry key={count}>
+      <bufferGeometry key={`stars-${count}`}>
         <bufferAttribute
           attach="attributes-position"
           count={count}

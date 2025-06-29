@@ -4,6 +4,7 @@ import { Html } from '@react-three/drei';
 import { Vector3, Group, Color } from 'three'; 
 import { Heart, Volume2, User, Brain, Image as ImageIcon, FileText, Gamepad2, Globe, Camera, Cuboid, FileVideo, File as FilePdf, Sparkles } from 'lucide-react';
 import { SpaceCustomizationSettings } from './SpaceCustomizer';
+import { ChevronDown } from 'lucide-react';
 
 interface ProfileData3DDisplayProps {
   profileData: any;
@@ -1003,6 +1004,3 @@ function Item({
     </group>
   );
 }
-
-// Import this here to avoid circular dependencies
-import { ChevronDown } from 'lucide-react';
