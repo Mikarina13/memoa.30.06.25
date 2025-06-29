@@ -247,13 +247,6 @@ export class MemoirIntegrations {
       const validatedData = validateMemoirData(data);
       
       // Store in the appropriate profile
-      const dataPath = memoriaProfileId ? 'profile_data' : 'memoir_data';
-      const dataToUpdate = {
-        [dataPath]: {
-          ...validatedData
-        }
-      };
-      
       if (memoriaProfileId) {
         // Update a specific MEMORIA profile
         const { data: profile, error } = await supabase
@@ -331,11 +324,7 @@ export class MemoirIntegrations {
       // Validate the preferences data
       const validatedPreferences = validatePersonalPreferences(preferences);
       
-      // Get the right path for storing preferences
-      const path = memoriaProfileId 
-        ? 'profile_data.preferences.personal' 
-        : 'memoir_data.preferences.personal';
-      
+      // Create the data to update based on profile type
       const dataToUpdate = memoriaProfileId
         ? { profile_data: { preferences: { personal: validatedPreferences } } }
         : { memoir_data: { preferences: { personal: validatedPreferences } } };
@@ -375,6 +364,8 @@ export class MemoirIntegrations {
    */
   static async getPersonalPreferences(userId: string, memoriaProfileId?: string): Promise<any> {
     try {
+      console.log(`Getting personal preferences for user ${userId}${memoriaProfileId ? ` and memoria profile ${memoriaProfileId}` : ''}`);
+      
       if (memoriaProfileId) {
         // Get from MEMORIA profile
         const { data, error } = await supabase
@@ -588,6 +579,7 @@ export class MemoirIntegrations {
         : `${userId}/memoir`;
       
       const filePath = `${folderPath}/${Date.now()}-${file.name.replace(/\s+/g, '_')}`;
+      console.log(`Uploading file to path: ${filePath}`);
       
       // Upload the file to the 'gallery' bucket
       const { data, error } = await supabase.storage
@@ -601,6 +593,7 @@ export class MemoirIntegrations {
         .from('gallery')
         .getPublicUrl(filePath);
       
+      console.log(`File uploaded successfully, public URL: ${publicUrl}`);
       return publicUrl;
     } catch (error) {
       console.error('Error uploading gallery file:', error);
@@ -613,6 +606,8 @@ export class MemoirIntegrations {
    */
   static async createGalleryItem(item: GalleryItemCreate, memoriaProfileId?: string): Promise<any> {
     try {
+      console.log(`Creating gallery item for ${memoriaProfileId ? 'memoria profile: ' + memoriaProfileId : 'memoir profile'}`);
+      
       // Add a sort_order based on a timestamp (negative for reverse chronological)
       // This uses the current Unix timestamp in seconds as a negative number
       // so newer items will have a lower (more negative) number and appear first
@@ -695,6 +690,7 @@ export class MemoirIntegrations {
    */
   static async getGalleryItems(userId: string, memoriaProfileId?: string): Promise<any[]> {
     try {
+      console.log(`Getting gallery items for ${userId}${memoriaProfileId ? ' and memoria profile: ' + memoriaProfileId : ''}`);
       let query = supabase
         .from('gallery_items')
         .select('*')
@@ -703,15 +699,18 @@ export class MemoirIntegrations {
       
       // Filter by memoria profile ID if provided
       if (memoriaProfileId) {
+        console.log(`Filtering by memoria profile ID: ${memoriaProfileId}`);
         query = query.filter('metadata->>memoriaProfileId', 'eq', memoriaProfileId);
       } else {
         // For memoir, only get items without a memoriaProfileId
+        console.log('Filtering to exclude items with memoriaProfileId');
         query = query.or('metadata->>memoriaProfileId.is.null,metadata->>memoriaProfileId.eq.');
       }
       
       const { data, error } = await query;
       
       if (error) throw error;
+      console.log(`Found ${data?.length || 0} gallery items`);
       return data || [];
     } catch (error) {
       console.error('Error getting gallery items:', error);
@@ -993,15 +992,7 @@ export class MemoirIntegrations {
     try {
       // Validate media links
       const validatedMediaLinks = validateMediaLinks(mediaLinks);
-      
-      // Store in the appropriate profile
-      const dataPath = memoriaProfileId ? 'profile_data' : 'memoir_data';
-      const dataToUpdate = {
-        [dataPath]: {
-          media_links: validatedMediaLinks,
-          last_updated: new Date().toISOString()
-        }
-      };
+      console.log(`Storing ${validatedMediaLinks.length} media links for ${memoriaProfileId ? 'memoria' : 'memoir'} profile`);
       
       if (memoriaProfileId) {
         // Update a specific MEMORIA profile
@@ -1077,6 +1068,8 @@ export class MemoirIntegrations {
    */
   static async getMediaLinks(userId: string, memoriaProfileId?: string): Promise<any[]> {
     try {
+      console.log(`Getting media links for ${userId}${memoriaProfileId ? ` and memoria profile ${memoriaProfileId}` : ''}`);
+      
       if (memoriaProfileId) {
         // Get from MEMORIA profile
         const { data, error } = await supabase
@@ -1112,11 +1105,6 @@ export class MemoirIntegrations {
     try {
       // Validate the test results
       const validatedResults = validatePersonalityTestData(testResults);
-      
-      // Create the data to update based on profile type
-      const dataToUpdate = memoriaProfileId
-        ? { profile_data: { personality_test: validatedResults } }
-        : { memoir_data: { personality_test: validatedResults } };
       
       if (memoriaProfileId) {
         // Update a specific MEMORIA profile
