@@ -10,11 +10,6 @@ Add the following environment variables to your `.env` file:
 # Use code: WORLDSLARGESTHACKATHON-0bb0fa21 for 3 months Creator Tier free
 VITE_ELEVENLABS_API_KEY=your_elevenlabs_api_key_here
 
-# Tavus API Key  
-# Get this from: https://tavus.io/
-# Sign up for $150 in free credits (250 free conversational video minutes)
-VITE_TAVUS_API_KEY=your_tavus_api_key_here
-
 # Google Gemini API Key
 # Get this from: https://makersuite.google.com/app/apikey
 VITE_GEMINI_API_KEY=your_gemini_api_key_here
@@ -39,15 +34,7 @@ npm install
    - Get 3 months free (100k credits/month, pro voice cloning, 192 kbps audio)
    - Copy your API key to the environment variable
 
-2. **Tavus Setup:**
-   - Visit https://tavus.io/ or use the provided hackathon link
-   - Sign up for a new account or use existing account
-   - Get 250 free conversational video minutes
-   - Up to 3 concurrent CVI streams
-   - 3 free replica generations
-   - Copy your API key to the environment variable
-
-3. **Google Gemini Setup:**
+2. **Google Gemini Setup:**
    - Visit https://makersuite.google.com/app/apikey
    - Create a new API key
    - Copy the key to the environment variable
@@ -63,7 +50,6 @@ The database schema has been updated to support these integrations. Run the migr
 ## Integration Features Enabled
 
 - **ElevenLabs Voice Cloning:** Users can clone their voice for AI voice synthesis
-- **Tavus Avatar Creation:** Users can create visual avatars from their photos/videos
 - **Gemini AI Narratives:** AI-powered processing of user stories and memories
 - **Digital Asset Management:** Store and organize photos, videos, music playlists
 - **Social Media Integration:** Import data from Facebook, Instagram, etc.
@@ -77,4 +63,3 @@ After setting up these environment variables and running the migration:
 2. Implement the affiliate link system for seamless user experience
 3. Add direct upload capabilities for processed content
 4. Integrate with additional AI content generation services
-```

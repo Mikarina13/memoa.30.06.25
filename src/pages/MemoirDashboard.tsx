@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Settings, User, LogOut, Mic, PenTool, Image, Brain, Heart, Volume2, ExternalLink, Gamepad2, RefreshCw, Clipboard, Users, FileVideo, Newspaper, BookOpen, Upload, Globe } from 'lucide-react';
+import { ArrowLeft, Settings, User, LogOut, Mic, PenTool, Image, Brain, Heart, Volume2, ExternalLink, Gamepad2, RefreshCw, Clipboard, Users, FileVideo, Newspaper, BookOpen, Upload } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Header } from '../components/Header';
 import { useRequireTermsAcceptance } from '../hooks/useRequireTermsAcceptance';
 import { VoiceRecordingInterface } from '../components/VoiceRecordingInterface';
-import { TavusAvatarInterface } from '../components/TavusAvatarInterface';
 import { AvaturnAvatarInterface } from '../components/AvaturnAvatarInterface';
 import { GeminiNarrativesInterface } from '../components/GeminiNarrativesInterface';
 import { GamingPreferencesInterface } from '../components/GamingPreferencesInterface';
@@ -14,7 +13,6 @@ import { PersonalPreferencesInterface } from '../components/PersonalPreferencesI
 import { GalleryInterface } from '../components/GalleryInterface';
 import { FamilyTreeInterface } from '../components/FamilyTreeInterface';
 import { MediaLinksInterface } from '../components/MediaLinksInterface';
-import { PortraitGenerationInterface } from '../components/PortraitGenerationInterface';
 import { MemoirIntegrations } from '../lib/memoir-integrations';
 import { Footer } from '../components/Footer';
 import { PersonalityTestInterface } from '../components/PersonalityTestInterface';
@@ -24,7 +22,6 @@ export function MemoirDashboard() {
   const { user, loading, logout } = useAuth();
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [showVoiceRecording, setShowVoiceRecording] = useState(false);
-  const [showTavusCreation, setShowTavusCreation] = useState(false);
   const [showAvaturnCreation, setShowAvaturnCreation] = useState(false);
   const [showGeminiNarratives, setShowGeminiNarratives] = useState(false);
   const [showGamingPreferences, setShowGamingPreferences] = useState(false);
@@ -34,7 +31,6 @@ export function MemoirDashboard() {
   const [showFamilyTree, setShowFamilyTree] = useState(false);
   const [showMediaLinks, setShowMediaLinks] = useState(false);
   const [showGallery, setShowGallery] = useState(false);
-  const [showPortraitGeneration, setShowPortraitGeneration] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [galleryData, setGalleryData] = useState<any>(null);
@@ -107,11 +103,6 @@ export function MemoirDashboard() {
     setShowVoiceRecording(false);
   };
 
-  const handleTavusAvatarCreated = async (avatarId: string) => {
-    await loadUserProfile();
-    setShowTavusCreation(false);
-  };
-
   const handleAvaturnAvatarCreated = async (avatarData: any) => {
     await loadUserProfile();
     setShowAvaturnCreation(false);
@@ -142,11 +133,6 @@ export function MemoirDashboard() {
 
   const handleFamilyTreeSaved = async (treeData: any) => {
     await loadUserProfile();
-  };
-  
-  const handlePortraitsGenerated = async (portraitData: any) => {
-    await loadUserProfile();
-    setShowPortraitGeneration(false);
   };
   
   const handlePersonalityTestCompleted = async (testResults: any) => {
@@ -312,51 +298,6 @@ export function MemoirDashboard() {
                 )}
               </div>
 
-              {/* Visual Avatar */}
-              <div 
-                className={`p-6 bg-white/5 rounded-lg cursor-pointer transition-all ${expandedSection === 'tavus' ? 'ring-2 ring-purple-400' : 'hover:bg-white/10'}`}
-                onClick={() => setExpandedSection(expandedSection === 'tavus' ? null : 'tavus')}
-              >
-                <div className="flex items-start gap-4">
-                  <User className="w-6 h-6 text-purple-400 flex-shrink-0 mt-1" />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="font-semibold text-lg">Visual Avatar</h3>
-                      <a
-                        href="https://tavus.io/?ref=memoa"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-xs bg-purple-500/20 text-purple-400 px-2 py-1 rounded-full hover:bg-purple-500/30 transition-colors"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <ExternalLink className="w-3 h-3" />
-                        Tavus Pro
-                      </a>
-                      {userProfile?.tavus_avatar_id && (
-                        <div className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">
-                          ✓ Avatar Created
-                        </div>
-                      )}
-                    </div>
-                    <p className="text-white/70">Create a realistic visual avatar that can speak and interact with future viewers. Preserve your likeness and expressions.</p>
-                  </div>
-                </div>
-                {expandedSection === 'tavus' && (
-                  <div className="mt-6 pt-6 border-t border-white/10">
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowTavusCreation(true);
-                      }}
-                      className="w-full bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
-                    >
-                      <User className="w-5 h-5" />
-                      {userProfile?.tavus_avatar_id ? 'Manage Tavus Avatar' : 'Create Tavus Avatar'}
-                    </button>
-                  </div>
-                )}
-              </div>
-
               {/* 3D Avatar */}
               <div 
                 className={`p-6 bg-white/5 rounded-lg cursor-pointer transition-all ${expandedSection === 'avaturn' ? 'ring-2 ring-orange-400' : 'hover:bg-white/10'}`}
@@ -398,86 +339,6 @@ export function MemoirDashboard() {
                       <User className="w-5 h-5" />
                       {userProfile?.memoir_data?.avaturn_avatars?.avatars?.length > 0 ? 'Manage 3D Avatar' : 'Create 3D Avatar'}
                     </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Portrait Generation */}
-              <div 
-                className={`p-6 bg-white/5 rounded-lg cursor-pointer transition-all ${expandedSection === 'portraits' ? 'ring-2 ring-amber-400' : 'hover:bg-white/10'}`}
-                onClick={() => setExpandedSection(expandedSection === 'portraits' ? null : 'portraits')}
-              >
-                <div className="flex items-start gap-4">
-                  <Image className="w-6 h-6 text-amber-400 flex-shrink-0 mt-1" />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="font-semibold text-lg">AI Portrait Generation</h3>
-                      <div className="flex gap-1">
-                        <a
-                          href="https://www.midjourney.com"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-xs bg-amber-500/20 text-amber-400 px-2 py-1 rounded-full hover:bg-amber-500/30 transition-colors"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <ExternalLink className="w-3 h-3" />
-                          Midjourney
-                        </a>
-                      </div>
-                      {userProfile?.memoir_data?.portraits?.generated?.length > 0 && (
-                        <div className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">
-                          ✓ Portraits Created
-                        </div>
-                      )}
-                    </div>
-                    <p className="text-white/70">Generate artistic AI portraits in various styles to preserve your likeness in creative ways.</p>
-                  </div>
-                </div>
-                {expandedSection === 'portraits' && (
-                  <div className="mt-6 pt-6 border-t border-white/10">
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowPortraitGeneration(true);
-                      }}
-                      className="w-full bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
-                    >
-                      <Image className="w-5 h-5" />
-                      Generate AI Portraits
-                    </button>
-                    
-                    <div className="grid grid-cols-3 gap-2 mt-3">
-                      <a
-                        href="https://www.midjourney.com"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-1 px-3 py-2 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-lg transition-colors text-sm"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <ExternalLink className="w-3 h-3" />
-                        Midjourney
-                      </a>
-                      <a
-                        href="https://openai.com/sora"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-1 px-3 py-2 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-lg transition-colors text-sm"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <ExternalLink className="w-3 h-3" />
-                        Sora
-                      </a>
-                      <a
-                        href="https://remini.ai/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-1 px-3 py-2 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-lg transition-colors text-sm"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <ExternalLink className="w-3 h-3" />
-                        Remini
-                      </a>
-                    </div>
                   </div>
                 )}
               </div>
@@ -853,13 +714,6 @@ export function MemoirDashboard() {
             />
           )}
           
-          {showTavusCreation && (
-            <TavusAvatarInterface
-              onClose={() => setShowTavusCreation(false)}
-              onAvatarCreated={handleTavusAvatarCreated}
-            />
-          )}
-          
           {showAvaturnCreation && (
             <AvaturnAvatarInterface
               onClose={() => setShowAvaturnCreation(false)}
@@ -908,13 +762,6 @@ export function MemoirDashboard() {
             <FamilyTreeInterface
               onClose={() => setShowFamilyTree(false)}
               onFamilyTreeSaved={handleFamilyTreeSaved}
-            />
-          )}
-          
-          {showPortraitGeneration && (
-            <PortraitGenerationInterface
-              onClose={() => setShowPortraitGeneration(false)}
-              onPortraitsGenerated={handlePortraitsGenerated}
             />
           )}
           

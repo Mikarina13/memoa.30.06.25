@@ -626,24 +626,9 @@ export function validateIntegrationStatus(data: any): MemoirIntegrationStatus {
         voice_cloned: false,
         last_updated: null
       },
-      tavus: {
-        status: 'not_started',
-        avatar_created: false,
-        last_updated: null
-      },
       gemini: {
         status: 'not_started',
         narratives_processed: false,
-        last_updated: null
-      },
-      avaturn: {
-        status: 'not_started',
-        avatar_created: false,
-        last_updated: null
-      },
-      portrait_generation: {
-        status: 'not_started',
-        portraits_generated: false,
         last_updated: null
       }
     };
@@ -654,11 +639,6 @@ export function validateIntegrationStatus(data: any): MemoirIntegrationStatus {
       status: validateString(data.elevenlabs?.status, 'not_started') as any,
       voice_cloned: validateBoolean(data.elevenlabs?.voice_cloned, false),
       last_updated: data.elevenlabs?.last_updated || null
-    },
-    tavus: {
-      status: validateString(data.tavus?.status, 'not_started') as any,
-      avatar_created: validateBoolean(data.tavus?.avatar_created, false),
-      last_updated: data.tavus?.last_updated || null
     },
     gemini: {
       status: validateString(data.gemini?.status, 'not_started') as any,

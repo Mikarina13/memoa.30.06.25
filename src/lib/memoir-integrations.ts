@@ -27,7 +27,6 @@ export interface MemoriaProfile {
   is_public?: boolean;
   profile_data?: Record<string, any>;
   elevenlabs_voice_id?: string;
-  tavus_avatar_id?: string;
   integration_status?: MemoirIntegrationStatus;
   created_at?: string;
   updated_at?: string;
@@ -59,18 +58,9 @@ interface IntegrationStatusEntry {
 
 export interface MemoirIntegrationStatus {
   elevenlabs: IntegrationStatusEntry & { voice_cloned: boolean };
-  tavus: IntegrationStatusEntry & { avatar_created: boolean };
   gemini: IntegrationStatusEntry & { narratives_processed: boolean };
   avaturn?: IntegrationStatusEntry & { avatar_created: boolean };
   portrait_generation?: IntegrationStatusEntry & { portraits_generated: boolean };
-}
-
-export interface TavusCredentials {
-  tavus_avatar_id: string; // replica_id
-  tavus_persona_id?: string;
-  tavus_api_key?: string;
-  tavus_conversation_id?: string;
-  tavus_conversation_name?: string;
 }
 
 export interface GalleryItemCreate {
@@ -180,11 +170,6 @@ export class MemoirIntegrations {
               voice_cloned: false,
               last_updated: null
             },
-            tavus: {
-              status: 'not_started',
-              avatar_created: false,
-              last_updated: null
-            },
             gemini: {
               status: 'not_started',
               narratives_processed: false,
@@ -260,6 +245,14 @@ export class MemoirIntegrations {
     try {
       // Validate the data
       const validatedData = validateMemoirData(data);
+      
+      // Store in the appropriate profile
+      const dataPath = memoriaProfileId ? 'profile_data' : 'memoir_data';
+      const dataToUpdate = {
+        [dataPath]: {
+          ...validatedData
+        }
+      };
       
       if (memoriaProfileId) {
         // Update a specific MEMORIA profile
@@ -485,163 +478,6 @@ export class MemoirIntegrations {
     } catch (error) {
       console.error('Error storing ElevenLabs voice ID:', error);
       throw error;
-    }
-  }
-
-  /**
-   * Store Tavus credentials (API key, Replica ID, Persona ID, Conversation ID, Conversation Name)
-   */
-  static async storeTavusCredentials(userId: string, credentials: TavusCredentials, memoriaProfileId?: string): Promise<any> {
-    try {
-      // Update integration status to mark avatar as created
-      const integrationStatus = {
-        status: 'completed',
-        avatar_created: true,
-        last_updated: new Date().toISOString()
-      };
-      
-      await this.updateIntegrationStatus(userId, 'tavus', integrationStatus, memoriaProfileId);
-      
-      const { tavus_avatar_id, tavus_persona_id, tavus_api_key, tavus_conversation_id, tavus_conversation_name } = credentials;
-
-      // Store tavus avatar ID in the main profile columns
-      // Store API key and other IDs in the JSON data field
-      const dataField = memoriaProfileId ? 'profile_data' : 'memoir_data';
-      const dataUpdate = {
-        tavus_credentials: {
-          persona_id: tavus_persona_id,
-          api_key: tavus_api_key,
-          conversation_id: tavus_conversation_id,
-          conversation_name: tavus_conversation_name,
-          last_updated: new Date().toISOString()
-        }
-      };
-
-      if (memoriaProfileId) {
-        // Get current profile_data
-        const { data: profile, error: fetchError } = await supabase
-          .from('memoria_profiles')
-          .select('profile_data')
-          .eq('id', memoriaProfileId)
-          .eq('user_id', userId)
-          .single();
-
-        if (fetchError) throw fetchError;
-
-        // Update the profile with the avatar ID and credentials
-        const updatedData = {
-          tavus_avatar_id,
-          profile_data: {
-            ...(profile?.profile_data || {}),
-            ...dataUpdate
-          }
-        };
-
-        const { data, error } = await supabase
-          .from('memoria_profiles')
-          .update(updatedData)
-          .eq('id', memoriaProfileId)
-          .eq('user_id', userId)
-          .select('*')
-          .single();
-          
-        if (error) throw error;
-        return data;
-      } else {
-        // Get current memoir_data
-        const { data: profile, error: fetchError } = await supabase
-          .from('profiles')
-          .select('memoir_data')
-          .eq('user_id', userId)
-          .single();
-
-        if (fetchError) throw fetchError;
-
-        // Update the profile with the avatar ID and credentials
-        const updatedData = {
-          tavus_avatar_id,
-          memoir_data: {
-            ...(profile?.memoir_data || {}),
-            ...dataUpdate
-          }
-        };
-
-        const { data, error } = await supabase
-          .from('profiles')
-          .update(updatedData)
-          .eq('user_id', userId)
-          .select('*')
-          .single();
-          
-        if (error) throw error;
-        return data;
-      }
-    } catch (error) {
-      console.error('Error storing Tavus credentials:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get Tavus credentials
-   */
-  static async getTavusCredentials(userId: string, memoriaProfileId?: string): Promise<TavusCredentials | null> {
-    try {
-      if (memoriaProfileId) {
-        // Get from MEMORIA profile
-        const { data, error } = await supabase
-          .from('memoria_profiles')
-          .select('tavus_avatar_id, profile_data')
-          .eq('id', memoriaProfileId)
-          .eq('user_id', userId)
-          .single();
-          
-        if (error) throw error;
-        
-        const tavus_avatar_id = data?.tavus_avatar_id;
-        const tavus_persona_id = data?.profile_data?.tavus_credentials?.persona_id;
-        const tavus_api_key = data?.profile_data?.tavus_credentials?.api_key;
-        const tavus_conversation_id = data?.profile_data?.tavus_credentials?.conversation_id;
-        const tavus_conversation_name = data?.profile_data?.tavus_credentials?.conversation_name;
-        
-        if (!tavus_avatar_id) return null;
-        
-        return {
-          tavus_avatar_id,
-          tavus_persona_id,
-          tavus_api_key,
-          tavus_conversation_id,
-          tavus_conversation_name
-        };
-      } else {
-        // Get from MEMOIR profile
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('tavus_avatar_id, memoir_data')
-          .eq('user_id', userId)
-          .single();
-          
-        if (error) throw error;
-        
-        const tavus_avatar_id = data?.tavus_avatar_id;
-        const tavus_persona_id = data?.memoir_data?.tavus_credentials?.persona_id;
-        const tavus_api_key = data?.memoir_data?.tavus_credentials?.api_key;
-        const tavus_conversation_id = data?.memoir_data?.tavus_credentials?.conversation_id;
-        const tavus_conversation_name = data?.memoir_data?.tavus_credentials?.conversation_name;
-        
-        if (!tavus_avatar_id) return null;
-        
-        return {
-          tavus_avatar_id,
-          tavus_persona_id,
-          tavus_api_key,
-          tavus_conversation_id,
-          tavus_conversation_name
-        };
-      }
-    } catch (error) {
-      console.error('Error getting Tavus credentials:', error);
-      return null;
     }
   }
 

@@ -22,7 +22,6 @@ import { PersonalFavoritesDetail } from '../components/details/PersonalFavorites
 import { DigitalPresenceDetail } from '../components/details/DigitalPresenceDetail';
 import { GamingPreferencesDetail } from '../components/details/GamingPreferencesDetail';
 import { VoiceDetail } from '../components/details/VoiceDetail';
-import { TavusAvatarDetail } from '../components/details/TavusAvatarDetail';
 import { AvaturnAvatarDetail } from '../components/details/AvaturnAvatarDetail';
 import { NarrativesDetail } from '../components/details/NarrativesDetail';
 import { GalleryDetail } from '../components/details/GalleryDetail';
@@ -101,7 +100,6 @@ export function Profile3DSpacePage() {
     { id: 'digital_presence', name: 'Digital Presence', color: '#a855f7' },
     { id: 'gaming_preferences', name: 'Gaming Preferences', color: '#06b6d4' },
     { id: 'voice', name: 'Voice Clone', color: '#3b82f6' },
-    { id: 'tavus_avatar', name: 'Video Avatar', color: '#8b5cf6' },
     { id: 'avaturn_avatars', name: '3D Avatars', color: '#f97316' },
     { id: 'narratives', name: 'Narratives', color: '#10b981' },
     { id: 'gallery', name: 'Gallery', color: '#ec4899' },
@@ -193,7 +191,6 @@ export function Profile3DSpacePage() {
                 tributeImagesCount: dataObject.tribute_images?.length || 0,
                 hasNarratives: !!dataObject.narratives,
                 hasVoiceId: !!profile.elevenlabs_voice_id,
-                hasAvatarId: !!profile.tavus_avatar_id,
                 hasAvaturnAvatars: !!dataObject.avaturn_avatars?.avatars?.length,
                 avaturnAvatarsCount: dataObject.avaturn_avatars?.avatars?.length || 0,
                 hasMediaLinks: !!dataObject.media_links?.length,
@@ -212,7 +209,7 @@ export function Profile3DSpacePage() {
             
             setProfileData(profile);
             
-            // Load gallery items in a separate try-catch to prevent entire profile load failure
+            // Load gallery items in a separate try-catch
             try {
               console.log(`Loading gallery items for ${initialUserId || user.id}${memoriaProfileId ? ` with memoria ID: ${memoriaProfileId}` : ''}`);
               const galleryItems = await MemoirIntegrations.getGalleryItems(
@@ -376,7 +373,7 @@ export function Profile3DSpacePage() {
           item.metadata.isTribute === true ||
           (item.metadata.type === 'tribute') ||
           (item.tags && item.tags.includes('tribute')) ||
-          (item.metadata.folder === 'Tribute Images') ||
+          (item.folder === 'Tribute Images') ||
           (item.title && item.title.toLowerCase().includes('tribute'));
         
         return !isTribute;
@@ -472,7 +469,7 @@ export function Profile3DSpacePage() {
 
   // Handle return to memento with proper state
   const handleReturnToMemento = () => {
-    // Go back to the correct context based on whether we're viewing someone else's profile
+    // If we're viewing someone else's profile, go back to the Explorer
     if (initialUserId && initialUserId !== user?.id) {
       navigate('/memento');
     } else {
@@ -525,6 +522,7 @@ export function Profile3DSpacePage() {
       
       // Update state
       if (profile) {
+        // Add gallery items to profile data
         profile.gallery_items = galleryItems;
         
         // Ensure we have the personal preferences data
@@ -739,7 +737,7 @@ export function Profile3DSpacePage() {
                           onClick={() => handleProfileChange(profile.id)}
                           className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
                             profile.id === memoriaProfileId 
-                              ? 'bg-purple-500/20 text-purple-300 ring-1 ring-purple-400'
+                              ? 'bg-purple-500/20 text-purple-300 ring-1 ring-purple-400' 
                               : 'text-white/80 hover:bg-white/10 hover:text-white'
                           }`}
                         >
@@ -882,7 +880,7 @@ export function Profile3DSpacePage() {
                   item.metadata.isTribute === true ||
                   (item.metadata.type === 'tribute') ||
                   (item.tags && item.tags.includes('tribute')) ||
-                  (item.metadata.folder === 'Tribute Images') ||
+                  (item.folder === 'Tribute Images') ||
                   (item.title && item.title.toLowerCase().includes('tribute'));
                 
                 return !isTribute;
@@ -976,7 +974,6 @@ export function Profile3DSpacePage() {
               {selectedItem.type === 'digital_presence' && <DigitalPresenceDetail data={selectedItem.data} />}
               {selectedItem.type === 'gaming_preferences' && <GamingPreferencesDetail data={selectedItem.data} />}
               {selectedItem.type === 'voice' && <VoiceDetail data={selectedItem.data} memoriaProfileId={memoriaProfileId} />}
-              {selectedItem.type === 'tavus_avatar' && <TavusAvatarDetail data={selectedItem.data} />}
               {selectedItem.type === 'avaturn_avatars' && <AvaturnAvatarDetail data={selectedItem.data} />}
               {selectedItem.type === 'narratives' && <NarrativesDetail data={selectedItem.data} initialTab="personal_stories" />}
               {selectedItem.type === 'documents' && <NarrativesDetail data={selectedItem.data} initialTab="documents" />}
