@@ -79,6 +79,12 @@ export interface GalleryItemCreate {
   sort_order?: number;
 }
 
+export interface TavusCredentials {
+  tavus_avatar_id: string; // replica_id
+  tavus_persona_id?: string;
+  tavus_api_key?: string;
+}
+
 export class MemoirIntegrations {
   /**
    * Get a user's MEMOIR profile
@@ -481,9 +487,9 @@ export class MemoirIntegrations {
   }
 
   /**
-   * Store a Tavus avatar ID
+   * Store Tavus credentials (API key, Replica ID, Persona ID)
    */
-  static async storeTavusAvatarId(userId: string, avatarId: string): Promise<any> {
+  static async storeTavusCredentials(userId: string, credentials: TavusCredentials, memoriaProfileId?: string): Promise<any> {
     try {
       // Update integration status to mark avatar as created
       const integrationStatus = {
@@ -492,21 +498,138 @@ export class MemoirIntegrations {
         last_updated: new Date().toISOString()
       };
       
-      await this.updateIntegrationStatus(userId, 'tavus', integrationStatus);
+      await this.updateIntegrationStatus(userId, 'tavus', integrationStatus, memoriaProfileId);
       
-      // Update the profile with the avatar ID
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({ tavus_avatar_id: avatarId })
-        .eq('user_id', userId)
-        .select('*')
-        .single();
-        
-      if (error) throw error;
-      return data;
+      const { tavus_avatar_id, tavus_persona_id, tavus_api_key } = credentials;
+
+      // Store tavus avatar ID in the main profile columns
+      // Store API key and Persona ID in the JSON data field
+      const dataField = memoriaProfileId ? 'profile_data' : 'memoir_data';
+      const dataUpdate = {
+        tavus_credentials: {
+          persona_id: tavus_persona_id,
+          api_key: tavus_api_key,
+          last_updated: new Date().toISOString()
+        }
+      };
+
+      if (memoriaProfileId) {
+        // Get current profile_data
+        const { data: profile, error: fetchError } = await supabase
+          .from('memoria_profiles')
+          .select('profile_data')
+          .eq('id', memoriaProfileId)
+          .eq('user_id', userId)
+          .single();
+
+        if (fetchError) throw fetchError;
+
+        // Update the profile with the avatar ID and credentials
+        const updatedData = {
+          tavus_avatar_id,
+          profile_data: {
+            ...(profile?.profile_data || {}),
+            ...dataUpdate
+          }
+        };
+
+        const { data, error } = await supabase
+          .from('memoria_profiles')
+          .update(updatedData)
+          .eq('id', memoriaProfileId)
+          .eq('user_id', userId)
+          .select('*')
+          .single();
+          
+        if (error) throw error;
+        return data;
+      } else {
+        // Get current memoir_data
+        const { data: profile, error: fetchError } = await supabase
+          .from('profiles')
+          .select('memoir_data')
+          .eq('user_id', userId)
+          .single();
+
+        if (fetchError) throw fetchError;
+
+        // Update the profile with the avatar ID and credentials
+        const updatedData = {
+          tavus_avatar_id,
+          memoir_data: {
+            ...(profile?.memoir_data || {}),
+            ...dataUpdate
+          }
+        };
+
+        const { data, error } = await supabase
+          .from('profiles')
+          .update(updatedData)
+          .eq('user_id', userId)
+          .select('*')
+          .single();
+          
+        if (error) throw error;
+        return data;
+      }
     } catch (error) {
-      console.error('Error storing Tavus avatar ID:', error);
+      console.error('Error storing Tavus credentials:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Get Tavus credentials
+   */
+  static async getTavusCredentials(userId: string, memoriaProfileId?: string): Promise<TavusCredentials | null> {
+    try {
+      if (memoriaProfileId) {
+        // Get from MEMORIA profile
+        const { data, error } = await supabase
+          .from('memoria_profiles')
+          .select('tavus_avatar_id, profile_data')
+          .eq('id', memoriaProfileId)
+          .eq('user_id', userId)
+          .single();
+          
+        if (error) throw error;
+        
+        const tavus_avatar_id = data?.tavus_avatar_id;
+        const tavus_persona_id = data?.profile_data?.tavus_credentials?.persona_id;
+        const tavus_api_key = data?.profile_data?.tavus_credentials?.api_key;
+        
+        if (!tavus_avatar_id) return null;
+        
+        return {
+          tavus_avatar_id,
+          tavus_persona_id,
+          tavus_api_key
+        };
+      } else {
+        // Get from MEMOIR profile
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('tavus_avatar_id, memoir_data')
+          .eq('user_id', userId)
+          .single();
+          
+        if (error) throw error;
+        
+        const tavus_avatar_id = data?.tavus_avatar_id;
+        const tavus_persona_id = data?.memoir_data?.tavus_credentials?.persona_id;
+        const tavus_api_key = data?.memoir_data?.tavus_credentials?.api_key;
+        
+        if (!tavus_avatar_id) return null;
+        
+        return {
+          tavus_avatar_id,
+          tavus_persona_id,
+          tavus_api_key
+        };
+      }
+    } catch (error) {
+      console.error('Error getting Tavus credentials:', error);
+      return null;
     }
   }
 

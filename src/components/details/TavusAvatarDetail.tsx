@@ -1,28 +1,95 @@
-import { useState } from 'react';
-import { Camera, ExternalLink, Play, Pause, Send, Loader, AlertCircle, MessageSquare, RefreshCw } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Camera, ExternalLink, Play, Pause, Send, Loader, AlertCircle, MessageSquare, RefreshCw, Info, X } from 'lucide-react';
+import { MemoirIntegrations } from '../../lib/memoir-integrations';
+import { TavusAPI } from '../../lib/tavus-api';
+import { useAuth } from '../../hooks/useAuth';
 
 interface TavusAvatarDetailProps {
   data: {
     avatarId: string;
     status: string;
+    memoriaProfileId?: string;
   };
 }
 
 export function TavusAvatarDetail({ data }: TavusAvatarDetailProps) {
+  const { user } = useAuth();
   const [isPlaying, setIsPlaying] = useState(false);
   const [message, setMessage] = useState('');
-  const [chatHistory, setChatHistory] = useState<{text: string, isUser: boolean}[]>([]);
+  const [chatHistory, setChatHistory] = useState<{text: string, isUser: boolean, videoUrl?: string}[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [videoVisible, setVideoVisible] = useState(false);
+  const [currentVideoUrl, setCurrentVideoUrl] = useState<string | null>(null);
+  const [credentials, setCredentials] = useState<{ apiKey?: string, replicaId: string, personaId?: string } | null>(null);
+  const [isLoadingCredentials, setIsLoadingCredentials] = useState(true);
+  const [showInfoBox, setShowInfoBox] = useState(false);
   
-  // Use a more appropriate sample video that looks like a person talking
-  const mockVideoUrl = 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
-  // Poster image for the video
-  const posterImage = 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1';
+  // Reference to the chat container for scrolling
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   
+  // Video element reference
+  const videoRef = useRef<HTMLVideoElement>(null);
+  
+  // Default avatar image for placeholder
+  const defaultAvatarImage = 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1';
+  
+  // Reference for polling interval
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Load Tavus credentials on component mount
+  useEffect(() => {
+    loadTavusCredentials();
+    
+    return () => {
+      // Clean up polling interval on unmount
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, []);
+  
+  // Scroll to bottom of chat when chat history changes
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [chatHistory]);
+
+  const loadTavusCredentials = async () => {
+    if (!user) return;
+    
+    setIsLoadingCredentials(true);
+    try {
+      // Load Tavus credentials from the user's profile
+      const tavsCredentials = await MemoirIntegrations.getTavusCredentials(
+        user.id, 
+        data.memoriaProfileId
+      );
+      
+      if (tavsCredentials) {
+        setCredentials({
+          apiKey: tavsCredentials.tavus_api_key,
+          replicaId: tavsCredentials.tavus_avatar_id || data.avatarId,
+          personaId: tavsCredentials.tavus_persona_id
+        });
+        console.log('Tavus credentials loaded');
+      } else {
+        console.log('No Tavus credentials found, using avatarId from props', data.avatarId);
+        setCredentials({
+          replicaId: data.avatarId
+        });
+      }
+    } catch (err) {
+      console.error('Error loading Tavus credentials:', err);
+      setError('Failed to load Tavus credentials. Please try again later.');
+    } finally {
+      setIsLoadingCredentials(false);
+    }
+  };
+
   const togglePlayback = () => {
-    const video = document.getElementById('tavus-video') as HTMLVideoElement;
+    const video = videoRef.current;
     if (video) {
       if (isPlaying) {
         video.pause();
@@ -33,7 +100,7 @@ export function TavusAvatarDetail({ data }: TavusAvatarDetailProps) {
       setIsPlaying(!isPlaying);
     }
   };
-  
+
   const sendMessage = async () => {
     if (!message.trim()) return;
     
@@ -47,44 +114,129 @@ export function TavusAvatarDetail({ data }: TavusAvatarDetailProps) {
     setError(null);
     
     try {
-      // Check if we have an API key
-      const apiKey = import.meta.env.VITE_TAVUS_API_KEY;
-      
-      if (!apiKey) {
-        throw new Error('Tavus API key is not configured. Please ensure VITE_TAVUS_API_KEY is set in your .env file and restart the development server.');
+      // Check if we have an API key and replica ID
+      if (!credentials || !credentials.apiKey) {
+        throw new Error('Tavus API key not configured. Please set up your Tavus integration in the dashboard.');
       }
       
-      // In a real implementation, this would call the Tavus API
-      // For now, we'll simulate a response after a delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Show the video element and start playback to simulate a response
-      setVideoVisible(true);
-      const video = document.getElementById('tavus-video') as HTMLVideoElement;
-      if (video) {
-        video.style.opacity = '1';
-        video.play();
-        setIsPlaying(true);
+      if (!credentials.replicaId) {
+        throw new Error('Tavus Replica ID not configured. Please set up your Tavus integration in the dashboard.');
       }
       
-      // Simulate a response
-      const responses = [
-        "Thanks for reaching out! It's great to connect with you in this digital space.",
-        "I appreciate your message. This is a simulated response, but with a real API key, I could generate personalized video responses.",
-        "Hello there! In a fully implemented version, I would respond with a video message that looks and sounds just like me.",
-        "Thanks for your message. With the Tavus API properly configured, you'd see a video response that captures my expressions and voice."
-      ];
+      const tavusApi = new TavusAPI(credentials.apiKey);
       
-      const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+      // Send message to Tavus API
+      const response = await tavusApi.sendMessage({
+        replica_id: credentials.replicaId,
+        persona_id: credentials.personaId,
+        message: userMessage
+      });
       
-      // Add avatar response to chat history
-      setChatHistory(prev => [...prev, {text: randomResponse, isUser: false}]);
+      console.log('Tavus video generation initiated:', response);
+      
+      // Add a placeholder response to chat history
+      setChatHistory(prev => [...prev, {
+        text: "Generating video response...",
+        isUser: false
+      }]);
+      
+      // Start polling for video status
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+      
+      let attempts = 0;
+      const maxAttempts = 30; // Maximum polling attempts (5 minutes at 10-second intervals)
+      
+      pollingIntervalRef.current = setInterval(async () => {
+        attempts++;
+        
+        if (attempts > maxAttempts) {
+          // Stop polling if max attempts reached
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+          }
+          
+          setError('Video generation timed out. Please try again.');
+          setIsProcessing(false);
+          return;
+        }
+        
+        try {
+          const videoStatus = await tavusApi.getVideo(response.id);
+          console.log('Video status:', videoStatus);
+          
+          if (videoStatus.status === 'ready' && videoStatus.url) {
+            // Video is ready
+            if (pollingIntervalRef.current) {
+              clearInterval(pollingIntervalRef.current);
+              pollingIntervalRef.current = null;
+            }
+            
+            // Update the last message with the video URL
+            setChatHistory(prev => {
+              const newHistory = [...prev];
+              const lastMessage = newHistory[newHistory.length - 1];
+              if (!lastMessage.isUser) {
+                newHistory[newHistory.length - 1] = {
+                  ...lastMessage,
+                  text: "Video response ready:",
+                  videoUrl: videoStatus.url
+                };
+              }
+              return newHistory;
+            });
+            
+            // Show the video
+            setCurrentVideoUrl(videoStatus.url);
+            setVideoVisible(true);
+            
+            const video = videoRef.current;
+            if (video) {
+              video.src = videoStatus.url;
+              video.load();
+              video.play().then(() => {
+                setIsPlaying(true);
+              }).catch(error => {
+                console.error('Error playing video:', error);
+              });
+            }
+            
+            setIsProcessing(false);
+          } else if (videoStatus.status === 'failed') {
+            // Video generation failed
+            if (pollingIntervalRef.current) {
+              clearInterval(pollingIntervalRef.current);
+              pollingIntervalRef.current = null;
+            }
+            
+            throw new Error('Video generation failed. Please try again.');
+          }
+          // Continue polling for other statuses (pending, processing)
+        } catch (pollingError) {
+          console.error('Error checking video status:', pollingError);
+          
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+          }
+          
+          setError(pollingError instanceof Error ? pollingError.message : 'Failed to check video status');
+          setIsProcessing(false);
+        }
+      }, 10000); // Check every 10 seconds
       
     } catch (err) {
       console.error('Error sending message to Tavus:', err);
       setError(err instanceof Error ? err.message : 'Failed to send message');
-    } finally {
       setIsProcessing(false);
+      
+      // Add error message to chat
+      setChatHistory(prev => [...prev, {
+        text: "Error: Failed to generate video response. Please check your Tavus configuration.",
+        isUser: false
+      }]);
     }
   };
 
@@ -93,12 +245,62 @@ export function TavusAvatarDetail({ data }: TavusAvatarDetailProps) {
       <h2 className="text-2xl font-bold text-white mb-6 bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">Video Avatar</h2>
       
       <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-lg p-6 border border-purple-500/30">
-        <div className="flex items-center gap-3 mb-4">
-          <Camera className="w-6 h-6 text-purple-400" />
-          <h3 className="text-lg font-semibold text-white">Interactive Video Avatar</h3>
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-3">
+            <Camera className="w-6 h-6 text-purple-400" />
+            <h3 className="text-lg font-semibold text-white">Interactive Video Avatar</h3>
+          </div>
+          
+          <button
+            onClick={() => setShowInfoBox(!showInfoBox)}
+            className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+            title="Information"
+          >
+            <Info className="w-5 h-5 text-white/70" />
+          </button>
         </div>
         
-        <div className="bg-white/10 rounded-lg p-4 mb-6">
+        {/* Information Box */}
+        <AnimatePresence>
+          {showInfoBox && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="bg-black/50 rounded-lg p-4 mb-4 border border-white/10 overflow-hidden"
+            >
+              <div className="flex justify-between items-center mb-2">
+                <h4 className="text-white font-medium">About Tavus Integration</h4>
+                <button
+                  onClick={() => setShowInfoBox(false)}
+                  className="p-1 text-white/60 hover:text-white transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              
+              <p className="text-white/70 text-sm mb-3">
+                Tavus is an AI video platform that creates personalized videos at scale. The integration works as follows:
+              </p>
+              
+              <ol className="text-white/70 text-sm space-y-2 list-decimal pl-5 mb-3">
+                <li>You send a message to your Tavus avatar</li>
+                <li>The message is sent to Tavus API to generate a video response</li>
+                <li>This process takes time (usually 30-60 seconds)</li>
+                <li>Once ready, the video response appears in the chat</li>
+              </ol>
+              
+              <div className="bg-purple-500/20 p-3 rounded-lg">
+                <p className="text-purple-300 text-sm">
+                  <strong>Note:</strong> You need a valid Tavus API key, Replica ID, and optionally a Persona ID for this feature to work. If you haven't set these up yet, go to the Memoir dashboard and set up your Tavus integration.
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        
+        <div className="bg-white/10 rounded-lg p-4 mb-4">
           <div className="flex items-center justify-between mb-2">
             <h4 className="text-white font-medium">Avatar ID</h4>
             <span className="text-xs px-2 py-1 bg-green-500/20 text-green-400 rounded-full">
@@ -106,32 +308,51 @@ export function TavusAvatarDetail({ data }: TavusAvatarDetailProps) {
             </span>
           </div>
           <p className="text-white/70 text-sm font-mono">{data.avatarId}</p>
+          
+          {credentials?.personaId && (
+            <div className="mt-2">
+              <h4 className="text-white font-medium text-sm">Persona ID</h4>
+              <p className="text-white/70 text-sm font-mono">{credentials.personaId}</p>
+            </div>
+          )}
         </div>
         
         <div className="bg-black/30 rounded-lg overflow-hidden mb-6">
           <div className="relative aspect-video bg-black/50">
-            <video 
-              id="tavus-video"
-              src={mockVideoUrl}
-              className={`w-full h-full object-contain transition-opacity duration-300 ${videoVisible ? 'opacity-100' : 'opacity-0'}`}
-              onEnded={() => setIsPlaying(false)}
-              poster={posterImage}
-              preload="auto"
-              loop
-            ></video>
-            
-            <div className={`absolute inset-0 flex items-center justify-center ${videoVisible && isPlaying ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}>
-              <button
-                onClick={togglePlayback}
-                className="w-16 h-16 bg-purple-500/80 hover:bg-purple-500 rounded-full flex items-center justify-center transition-colors"
-              >
-                {isPlaying ? (
-                  <Pause className="w-8 h-8 text-white ml-0" />
-                ) : (
-                  <Play className="w-8 h-8 text-white ml-1" />
-                )}
-              </button>
-            </div>
+            {isLoadingCredentials ? (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="flex flex-col items-center gap-2">
+                  <Loader className="w-8 h-8 text-white/50 animate-spin" />
+                  <p className="text-white/70">Loading Tavus credentials...</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <video 
+                  ref={videoRef}
+                  src={currentVideoUrl || undefined}
+                  className={`w-full h-full object-contain transition-opacity duration-300 ${videoVisible ? 'opacity-100' : 'opacity-0'}`}
+                  onEnded={() => setIsPlaying(false)}
+                  poster={defaultAvatarImage}
+                  preload="auto"
+                ></video>
+                
+                <div className={`absolute inset-0 flex items-center justify-center ${videoVisible && isPlaying ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}>
+                  {!currentVideoUrl && (
+                    <button
+                      onClick={togglePlayback}
+                      className="w-16 h-16 bg-purple-500/80 hover:bg-purple-500 rounded-full flex items-center justify-center transition-colors"
+                    >
+                      {isPlaying ? (
+                        <Pause className="w-8 h-8 text-white ml-0" />
+                      ) : (
+                        <Play className="w-8 h-8 text-white ml-1" />
+                      )}
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
         
@@ -149,7 +370,11 @@ export function TavusAvatarDetail({ data }: TavusAvatarDetailProps) {
           </div>
           
           {/* Chat History */}
-          <div className="p-4 h-64 overflow-y-auto space-y-3 bg-black/30" id="chat-container">
+          <div 
+            id="chat-container" 
+            ref={chatContainerRef}
+            className="p-4 h-64 overflow-y-auto space-y-3 bg-black/30 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent"
+          >
             {chatHistory.length === 0 ? (
               <div className="text-center text-white/50 py-8">
                 <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
@@ -169,6 +394,26 @@ export function TavusAvatarDetail({ data }: TavusAvatarDetailProps) {
                     }`}
                   >
                     {msg.text}
+                    {msg.videoUrl && (
+                      <button
+                        onClick={() => {
+                          setCurrentVideoUrl(msg.videoUrl);
+                          setVideoVisible(true);
+                          const video = videoRef.current;
+                          if (video) {
+                            video.src = msg.videoUrl;
+                            video.load();
+                            video.play().then(() => {
+                              setIsPlaying(true);
+                            }).catch(err => console.error('Error playing video:', err));
+                          }
+                        }}
+                        className="mt-2 px-3 py-1 bg-purple-500/20 text-purple-400 rounded text-sm flex items-center gap-2 hover:bg-purple-500/30 transition-colors"
+                      >
+                        <Play className="w-4 h-4" />
+                        Play Video
+                      </button>
+                    )}
                   </div>
                 </div>
               ))
@@ -178,7 +423,7 @@ export function TavusAvatarDetail({ data }: TavusAvatarDetailProps) {
               <div className="flex justify-start">
                 <div className="bg-white/10 rounded-lg px-4 py-2 text-white/90 flex items-center gap-2">
                   <Loader className="w-4 h-4 animate-spin" />
-                  <span>Generating response...</span>
+                  <span>Generating video response...</span>
                 </div>
               </div>
             )}
@@ -192,6 +437,16 @@ export function TavusAvatarDetail({ data }: TavusAvatarDetailProps) {
             </div>
           )}
           
+          {!credentials?.apiKey && !isLoadingCredentials && (
+            <div className="p-3 bg-yellow-500/10 border-t border-yellow-500/20 text-yellow-400 text-sm flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-medium">Tavus API key not configured</p>
+                <p className="text-yellow-400/80">Please set up your Tavus integration in the dashboard first.</p>
+              </div>
+            </div>
+          )}
+          
           {/* Input Area */}
           <div className="p-3 border-t border-white/10 flex gap-2">
             <input
@@ -199,9 +454,10 @@ export function TavusAvatarDetail({ data }: TavusAvatarDetailProps) {
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Type a message..."
-              className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white placeholder-white/40 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50"
+              disabled={isProcessing || !credentials?.apiKey || isLoadingCredentials}
+              className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white placeholder-white/40 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
               onKeyPress={(e) => {
-                if (e.key === 'Enter' && !isProcessing) {
+                if (e.key === 'Enter' && !isProcessing && credentials?.apiKey) {
                   sendMessage();
                   // Keep focus on input after sending
                   e.currentTarget.focus();
@@ -210,7 +466,7 @@ export function TavusAvatarDetail({ data }: TavusAvatarDetailProps) {
             />
             <button
               onClick={sendMessage}
-              disabled={!message.trim() || isProcessing}
+              disabled={!message.trim() || isProcessing || !credentials?.apiKey || isLoadingCredentials}
               className="px-4 py-2 bg-purple-500 hover:bg-purple-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2"
             >
               {isProcessing ? (
@@ -235,8 +491,8 @@ export function TavusAvatarDetail({ data }: TavusAvatarDetailProps) {
         
         <div className="mt-4 flex justify-between items-center">
           <div className="space-y-1">
-            <h4 className="text-white font-medium">Sample Video Message</h4>
-            <p className="text-white/60 text-sm">Click to play a sample of this avatar</p>
+            <h4 className="text-white font-medium">Video Avatar</h4>
+            <p className="text-white/60 text-sm">Send messages to generate video responses</p>
           </div>
           
           <a

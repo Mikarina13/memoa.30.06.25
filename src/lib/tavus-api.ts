@@ -19,6 +19,7 @@ interface TavusVideoResponse {
 
 interface TavusMessageRequest {
   replica_id: string;
+  persona_id?: string;
   message: string;
   callback_url?: string;
 }
@@ -41,62 +42,88 @@ export class TavusAPI {
    * Get details about a specific replica
    */
   async getReplica(replicaId: string): Promise<TavusReplicaResponse> {
-    const response = await fetch(`${TAVUS_BASE_URL}/replicas/${replicaId}`, {
-      headers: this.getHeaders(),
-    });
+    try {
+      const response = await fetch(`${TAVUS_BASE_URL}/replicas/${replicaId}`, {
+        headers: this.getHeaders(),
+      });
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch replica: ${response.statusText}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to fetch replica: ${response.status} - ${errorText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error getting replica:', error);
+      throw error;
     }
-
-    return response.json();
   }
 
   /**
    * List all replicas
    */
   async listReplicas(): Promise<TavusReplicaResponse[]> {
-    const response = await fetch(`${TAVUS_BASE_URL}/replicas`, {
-      headers: this.getHeaders(),
-    });
+    try {
+      const response = await fetch(`${TAVUS_BASE_URL}/replicas`, {
+        headers: this.getHeaders(),
+      });
 
-    if (!response.ok) {
-      throw new Error(`Failed to list replicas: ${response.statusText}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to list replicas: ${response.status} - ${errorText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error listing replicas:', error);
+      throw error;
     }
-
-    return response.json();
   }
 
   /**
    * Send a message to a replica to generate a video response
    */
   async sendMessage(request: TavusMessageRequest): Promise<TavusVideoResponse> {
-    const response = await fetch(`${TAVUS_BASE_URL}/videos`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify(request),
-    });
+    try {
+      console.log('Sending message to Tavus API:', request);
+      
+      const response = await fetch(`${TAVUS_BASE_URL}/videos`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(request),
+      });
 
-    if (!response.ok) {
-      throw new Error(`Failed to send message: ${response.statusText}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to send message: ${response.status} - ${errorText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error sending message to Tavus:', error);
+      throw error;
     }
-
-    return response.json();
   }
 
   /**
    * Get a generated video by ID
    */
   async getVideo(videoId: string): Promise<TavusVideoResponse> {
-    const response = await fetch(`${TAVUS_BASE_URL}/videos/${videoId}`, {
-      headers: this.getHeaders(),
-    });
+    try {
+      const response = await fetch(`${TAVUS_BASE_URL}/videos/${videoId}`, {
+        headers: this.getHeaders(),
+      });
 
-    if (!response.ok) {
-      throw new Error(`Failed to get video: ${response.statusText}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to get video: ${response.status} - ${errorText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error getting video from Tavus:', error);
+      throw error;
     }
-
-    return response.json();
   }
 
   /**
@@ -104,10 +131,47 @@ export class TavusAPI {
    */
   async validateApiKey(): Promise<boolean> {
     try {
+      // Try to list replicas as a simple API key validation test
       await this.listReplicas();
       return true;
     } catch (error) {
+      console.error('Tavus API key validation failed:', error);
       return false;
+    }
+  }
+
+  /**
+   * Get a conversation URL from a conversation ID
+   */
+  static getConversationUrl(conversationId: string): string {
+    return `https://tavus.io/conversation/${conversationId}`;
+  }
+
+  /**
+   * Extract a conversation ID from a URL
+   */
+  static extractConversationId(url: string): string | null {
+    try {
+      // Handle different URL formats
+      if (url.includes('/conversation/')) {
+        const matches = url.match(/\/conversation\/([a-zA-Z0-9]+)/);
+        return matches?.[1] || null;
+      }
+      
+      if (url.includes('tavus.daily.co/')) {
+        const matches = url.match(/tavus\.daily\.co\/([a-zA-Z0-9]+)/);
+        return matches?.[1] || null;
+      }
+      
+      // If it's already just an ID
+      if (/^[a-zA-Z0-9]{8,}$/.test(url)) {
+        return url;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error extracting conversation ID:', error);
+      return null;
     }
   }
 
