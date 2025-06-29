@@ -162,6 +162,7 @@ export function PersonalityTestInterface({ memoriaProfileId, onTestCompleted, on
   const [saveError, setSaveError] = useState<string | null>(null);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfName, setPdfName] = useState<string | null>(null);
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [pdfUploadError, setPdfUploadError] = useState<string | null>(null);
   const [pdfUploadSuccess, setPdfUploadSuccess] = useState(false);
@@ -207,6 +208,7 @@ export function PersonalityTestInterface({ memoriaProfileId, onTestCompleted, on
           setPersonalityType(profile.profile_data.personality_test.type);
           setSelectedType(profile.profile_data.personality_test.type);
           setPdfUrl(profile.profile_data.personality_test.pdfUrl || null);
+          setPdfName(profile.profile_data.personality_test.pdfName || null);
           setTestCompleted(true);
         }
       } else {
@@ -218,6 +220,7 @@ export function PersonalityTestInterface({ memoriaProfileId, onTestCompleted, on
           setPersonalityType(profile.memoir_data.personality_test.type);
           setSelectedType(profile.memoir_data.personality_test.type);
           setPdfUrl(profile.memoir_data.personality_test.pdfUrl || null);
+          setPdfName(profile.memoir_data.personality_test.pdfName || null);
           setTestCompleted(true);
         }
       }
@@ -360,6 +363,7 @@ export function PersonalityTestInterface({ memoriaProfileId, onTestCompleted, on
       await MemoirIntegrations.storePersonalityTestResults(user.id, updatedTestResults, memoriaProfileId);
       
       setPdfUrl(fileUrl);
+      setPdfName(file.name);
       setPdfUploadSuccess(true);
       
       if (onTestCompleted) {
@@ -683,12 +687,8 @@ export function PersonalityTestInterface({ memoriaProfileId, onTestCompleted, on
             <div className="bg-white/5 rounded-lg p-6">
               <div className="flex items-center gap-3 mb-4">
                 <FileText className="w-6 h-6 text-rose-400" />
-                <h3 className="text-lg font-semibold text-white">Upload Test Results</h3>
+                <h3 className="text-lg font-semibold text-white">Test Results</h3>
               </div>
-              
-              <p className="text-white/70 mb-4">
-                If you've taken a more comprehensive personality test elsewhere, you can upload the PDF results here to enhance your digital legacy.
-              </p>
               
               {pdfUrl ? (
                 <div className="bg-white/10 rounded-lg p-4 border border-white/20">
@@ -696,7 +696,7 @@ export function PersonalityTestInterface({ memoriaProfileId, onTestCompleted, on
                     <div className="flex items-center gap-3">
                       <FileText className="w-5 h-5 text-rose-400" />
                       <div>
-                        <p className="text-white font-medium">{existingResults?.pdfName || 'Personality Test Results.pdf'}</p>
+                        <p className="text-white font-medium">{pdfName || 'Personality Test Results.pdf'}</p>
                         <p className="text-white/60 text-sm">Uploaded on {new Date(existingResults?.pdfUploadedAt || Date.now()).toLocaleDateString()}</p>
                       </div>
                     </div>

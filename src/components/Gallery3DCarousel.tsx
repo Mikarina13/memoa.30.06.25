@@ -10,6 +10,7 @@ interface Gallery3DCarouselProps {
   onItemSelect?: (item: any) => void;
   currentIndex?: number;
   onIndexChange?: (index: number) => void;
+  isLoading?: boolean;
 }
 
 // Error Boundary for individual carousel items
@@ -85,7 +86,8 @@ export function Gallery3DCarousel({
   onClose, 
   onItemSelect,
   currentIndex: externalCurrentIndex,
-  onIndexChange
+  onIndexChange,
+  isLoading = false
 }: Gallery3DCarouselProps) {
   const carouselRef = useRef<Group>(null);
   const targetRotation = useRef(0);
@@ -184,7 +186,19 @@ export function Gallery3DCarousel({
     loadingStatesRef.current[itemId] = true;
   }, []);
   
-  // Check if the carousel is empty
+  // Check if the carousel is empty or loading
+  if (isLoading) {
+    return (
+      <Html center>
+        <div className="bg-black/80 p-8 rounded-lg shadow-xl text-white text-center">
+          <div className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <h3 className="text-xl font-semibold mb-2">Loading Gallery</h3>
+          <p className="text-white/70">Please wait while we load your gallery items...</p>
+        </div>
+      </Html>
+    );
+  }
+  
   if (galleryItems.length === 0) {
     return (
       <Html center>
@@ -271,20 +285,72 @@ function CarouselItem({
   const [textureError, setTextureError] = useState(false);
   const [currentTextureUrl, setCurrentTextureUrl] = useState(item.file_path);
   const [hasAttemptedFallback, setHasAttemptedFallback] = useState(false);
+  const [loadStarted, setLoadStarted] = useState(false);
   
   // Only load texture for image items
   let texture = null;
   const shouldLoadTexture = item.media_type === 'image' && !textureError;
   
+  // Load the texture with error handling
+  useEffect(() => {
+    if (shouldLoadTexture && !loadStarted) {
+      setLoadStarted(true);
+      
+      const loadTexture = async () => {
+        try {
+          const textureLoader = new THREE.TextureLoader();
+          
+          // Create a promise-based texture loader
+          const loadTextureAsync = (url: string) => {
+            return new Promise<THREE.Texture>((resolve, reject) => {
+              textureLoader.load(
+                url,
+                (texture) => resolve(texture),
+                undefined, // onProgress not used
+                (error) => reject(error)
+              );
+            });
+          };
+          
+          const texture = await loadTextureAsync(currentTextureUrl);
+          
+          // Handle successful loading
+          if (loadedRef.current) return; // Prevent duplicate handling
+          
+          loadedRef.current = true;
+          onImageLoaded();
+          setTextureError(false);
+        } catch (error) {
+          console.warn('Texture loading error:', error);
+          
+          // Try fallback if haven't already
+          if (!hasAttemptedFallback) {
+            setCurrentTextureUrl('/placeholder.jpg');
+            setHasAttemptedFallback(true);
+          } else {
+            // Both original and fallback failed
+            setTextureError(true);
+          }
+        }
+      };
+      
+      loadTexture();
+    }
+  }, [shouldLoadTexture, currentTextureUrl, hasAttemptedFallback, onImageLoaded, loadStarted]);
+  
   if (shouldLoadTexture) {
     try {
-      texture = useTexture(
-        currentTextureUrl, 
-        undefined, 
+      texture = useTexture(currentTextureUrl, 
+        (loadedTexture) => {
+          // Texture loaded successfully
+          if (!loadedRef.current) {
+            loadedRef.current = true;
+            onImageLoaded();
+          }
+        },
         (error) => {
           console.warn('Texture loading error:', error);
           if (!hasAttemptedFallback) {
-            // Attempt to load fallback image only once
             setCurrentTextureUrl('/placeholder.jpg');
             setHasAttemptedFallback(true);
           } else {
@@ -299,26 +365,17 @@ function CarouselItem({
     }
   }
   
-  // Call onImageLoaded when texture is available
-  useEffect(() => {
-    if (texture && item.media_type === 'image' && !loadedRef.current && !textureError) {
-      loadedRef.current = true;
-      onImageLoaded();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [texture, item.media_type, textureError]);
-  
-  // Set material based on media type and error state
-  const materialProps = item.media_type === 'image' && texture && !textureError
-    ? { map: texture } 
-    : { color: textureError ? '#666666' : '#111111' };
-  
   // Apply scale directly
   useEffect(() => {
     if (meshRef.current) {
       meshRef.current.scale.set(scale, scale, scale);
     }
   }, [scale]);
+  
+  // Set material based on media type and error state
+  const materialProps = item.media_type === 'image' && texture && !textureError
+    ? { map: texture } 
+    : { color: textureError ? '#666666' : '#111111' };
   
   // Render content based on state - no early returns
   return (
@@ -351,6 +408,16 @@ function CarouselItem({
         <Html center position={[0, 0, 0.1]}>
           <div className="w-16 h-16 bg-black/50 rounded-full flex items-center justify-center">
             <div className="w-0 h-0 border-t-[15px] border-t-transparent border-b-[15px] border-b-transparent border-l-[25px] border-l-white ml-1"></div>
+          </div>
+        </Html>
+      )}
+      
+      {/* Loading indicator for images still loading */}
+      {item.media_type === 'image' && !isLoaded && !textureError && (
+        <Html center>
+          <div className="bg-black/70 text-white p-2 rounded text-center">
+            <div className="w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-1"></div>
+            <div className="text-xs">Loading...</div>
           </div>
         </Html>
       )}

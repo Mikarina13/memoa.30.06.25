@@ -12,7 +12,7 @@ export function PersonalityTestPage() {
   const { user, loading } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const { memoriaProfileId, returnPath, ownerUserId } = location.state || {};
+  const { memoriaProfileId, returnPath, ownerUserId, profileType } = location.state || {};
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfName, setPdfName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -23,6 +23,11 @@ export function PersonalityTestPage() {
     // Redirect if user is not authenticated
     if (!loading && !user) {
       navigate('/memento');
+    }
+    
+    // Load profile data when the user is authenticated
+    if (!loading && user) {
+      loadPersonalityData();
     }
   }, [navigate, user, loading, memoriaProfileId]);
 
