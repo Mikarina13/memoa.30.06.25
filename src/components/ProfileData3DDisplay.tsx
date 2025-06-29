@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useMemo } from 'react';
+import { useRef, useState, useEffect, useMemo } from 'react';
 import { useFrame, useThree, ThreeEvent } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import { Vector3, Group, Color } from 'three'; 
@@ -265,7 +265,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
             isClicked={clickedItem === "personal-favorites"}
             onClick={() => {
               setClickedItem("personal-favorites");
-              setTimeout(() => setClickedItem(null), 200); // Reset after animation
+              setTimeout(() => setClickedItem(null), 200);
               handleItemClick("personal_favorites", personalData);
             }}
             glowIntensity={settings.backgroundIntensity}
@@ -803,7 +803,11 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
     }
     
     // Digital Presence
-    if (personalData?.digital_presence?.length > 0 && isItemVisible('digital_presence')) count++;
+    const digitalPresence = personalData?.digital_presence;
+    if (digitalPresence?.length > 0 && isItemVisible('digital_presence')) {
+      count++;
+      console.log('Counting digital presence:', digitalPresence.length);
+    }
     
     // Gaming Preferences
     const gamingPreferences = personalData?.gaming_preferences;
