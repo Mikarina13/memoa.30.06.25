@@ -7,6 +7,7 @@ import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { useAuth } from '../hooks/useAuth';
 import { useRequireTermsAcceptance } from '../hooks/useRequireTermsAcceptance';
+import { EnhancedDatePicker } from '../components/EnhancedDatePicker';
 
 export function ProfilePage() {
   const navigate = useNavigate();
@@ -322,12 +323,11 @@ export function ProfilePage() {
                       
                       <div>
                         <label className="block text-sm text-white/60 mb-2">Birth Date</label>
-                        <input
-                          type="date"
+                        <EnhancedDatePicker
                           value={birthDate}
-                          onChange={(e) => setBirthDate(e.target.value)}
-                          className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 [color-scheme:dark]"
-                          max={today}
+                          onChange={setBirthDate}
+                          maxDate={today}
+                          minDate="1900-01-01"
                         />
                       </div>
                       

@@ -4,7 +4,8 @@ import { Brain, CheckCircle, ChevronRight, ExternalLink, Save, X, Upload, FileTe
 import { useAuth } from '../hooks/useAuth';
 import { MemoirIntegrations } from '../lib/memoir-integrations';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Footer } from './Footer';
+import { Footer } from '../components/Footer';
+import { EnhancedDatePicker } from './EnhancedDatePicker';
 
 interface PersonalityTestProps {
   memoriaProfileId?: string;
@@ -151,9 +152,9 @@ const sampleQuestions = [
 ];
 
 export function PersonalityTest({ memoriaProfileId: propMemoriaProfileId, onTestCompleted, onClose }: PersonalityTestProps) {
-  const { user } = useAuth();
-  const navigate = useNavigate();
+  const { user, loading } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [testCompleted, setTestCompleted] = useState(false);
@@ -164,15 +165,31 @@ export function PersonalityTest({ memoriaProfileId: propMemoriaProfileId, onTest
   const [saveError, setSaveError] = useState<string | null>(null);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfName, setPdfName] = useState<string | null>(null);
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [pdfUploadError, setPdfUploadError] = useState<string | null>(null);
   const [pdfUploadSuccess, setPdfUploadSuccess] = useState(false);
+  const [personName, setPersonName] = useState<string>('');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Get memoriaProfileId from either props or location state
   const memoriaProfileId = propMemoriaProfileId || location.state?.memoriaProfileId;
   const returnPath = location.state?.returnPath || '/';
+
+  useEffect(() => {
+    document.title = 'Personality Test';
+    
+    // Redirect if user is not authenticated
+    if (!loading && !user) {
+      navigate('/memento');
+    }
+    
+    // Load personality test data
+    if (user) {
+      loadPersonalityData();
+    }
+  }, [navigate, user, loading, memoriaProfileId]);
 
   useEffect(() => {
     if (user && memoriaProfileId) {
@@ -194,7 +211,18 @@ export function PersonalityTest({ memoriaProfileId: propMemoriaProfileId, onTest
     }
   };
 
-  const loadExistingResults = async () => {
+  const loadSavedImages = async () => {
+    try {
+      if (!user || !memoriaProfileId) return;
+      
+      // Do whatever loading is needed for saved images
+      // This is just a placeholder function that matches the component structure
+    } catch (error) {
+      console.error('Error loading saved images:', error);
+    }
+  };
+
+  const loadPersonalityData = async () => {
     try {
       setIsLoading(true);
       
@@ -206,7 +234,7 @@ export function PersonalityTest({ memoriaProfileId: propMemoriaProfileId, onTest
           setExistingResults(profile.profile_data.personality_test);
           setPersonalityType(profile.profile_data.personality_test.type);
           setPdfUrl(profile.profile_data.personality_test.pdfUrl || null);
-          setTestCompleted(true);
+          setPdfName(profile.profile_data.personality_test.pdfName || null);
         }
       } else {
         // Load personality test results for user profile
@@ -216,11 +244,11 @@ export function PersonalityTest({ memoriaProfileId: propMemoriaProfileId, onTest
           setExistingResults(profile.memoir_data.personality_test);
           setPersonalityType(profile.memoir_data.personality_test.type);
           setPdfUrl(profile.memoir_data.personality_test.pdfUrl || null);
-          setTestCompleted(true);
+          setPdfName(profile.memoir_data.personality_test.pdfName || null);
         }
       }
     } catch (error) {
-      console.error('Error loading existing results:', error);
+      console.error('Error loading personality data:', error);
     } finally {
       setIsLoading(false);
     }
@@ -375,19 +403,31 @@ export function PersonalityTest({ memoriaProfileId: propMemoriaProfileId, onTest
 
   const currentQuestion = sampleQuestions[currentQuestionIndex];
 
+  if (loading) {
+    return (
+      <div className="w-full h-screen bg-black flex items-center justify-center">
+        <div className="text-white">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-black to-gray-900 text-white p-8 font-[Orbitron]">
-      <div className="max-w-3xl mx-auto">
-        <div className="flex justify-between items-center mb-12">
-          <button
-            onClick={handleGoBack}
-            className="flex items-center gap-2 text-white/80 hover:text-white transition-colors"
-          >
-            <ArrowLeft className="w-6 h-6" />
-            Return
-          </button>
-        </div>
+      <div className="fixed top-8 left-8 z-40">
+        <button
+          onClick={handleGoBack}
+          className="flex items-center gap-2 text-white/80 hover:text-white transition-colors"
+        >
+          <ArrowLeft className="w-6 h-6" />
+          Return
+        </button>
+      </div>
 
+      <div className="max-w-3xl mx-auto">
         <h1 className="text-4xl font-bold mb-6 text-center bg-gradient-to-r from-indigo-400 to-purple-500 bg-clip-text text-transparent">
           Personality Profile
         </h1>
@@ -481,12 +521,12 @@ export function PersonalityTest({ memoriaProfileId: propMemoriaProfileId, onTest
                 </div>
               ) : (
                 <>
-                  <input
+                  <input 
                     type="file"
+                    ref={fileInputRef}
+                    className="hidden"
                     accept=".pdf,application/pdf"
                     onChange={handleFileSelect}
-                    className="hidden"
-                    ref={fileInputRef}
                   />
                   <button
                     onClick={() => fileInputRef.current?.click()}
@@ -682,7 +722,7 @@ export function PersonalityTest({ memoriaProfileId: propMemoriaProfileId, onTest
                 </div>
               )}
             </div>
-            
+
             <div className="bg-white/5 rounded-lg p-6">
               <h3 className="text-lg font-semibold text-white mb-4">Why This Matters for Your Digital Legacy</h3>
               <p className="text-white/70 mb-4">

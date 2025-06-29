@@ -1,10 +1,9 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, CheckCircle, ChevronRight, ExternalLink, Save, X, Upload, FileText, Download, AlertCircle, ArrowLeft, RefreshCw } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { MemoirIntegrations } from '../lib/memoir-integrations';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Footer } from './Footer';
+import { EnhancedDatePicker } from './EnhancedDatePicker';
 
 interface PersonalityTestProps {
   memoriaProfileId?: string;
@@ -151,9 +150,7 @@ const sampleQuestions = [
 ];
 
 export function PersonalityTestInterface({ memoriaProfileId: propMemoriaProfileId, onTestCompleted, onClose }: PersonalityTestProps) {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
+  const { user, loading } = useAuth();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [testCompleted, setTestCompleted] = useState(false);
@@ -172,10 +169,15 @@ export function PersonalityTestInterface({ memoriaProfileId: propMemoriaProfileI
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Get memoriaProfileId from either props or location state
-  const memoriaProfileId = propMemoriaProfileId || location.state?.memoriaProfileId;
-  const returnPath = location.state?.returnPath || '/';
-
+  // Get memoriaProfileId from props
+  const memoriaProfileId = propMemoriaProfileId;
+  
+  // Tooltip for date input format guide
+  const [showTooltip, setShowTooltip] = useState(false);
+  
+  // Get today's date in YYYY-MM-DD format for max date constraint
+  const today = new Date().toISOString().split('T')[0];
+  
   useEffect(() => {
     if (user) {
       loadExistingResults();
@@ -195,7 +197,6 @@ export function PersonalityTestInterface({ memoriaProfileId: propMemoriaProfileI
           setPersonalityType(profile.profile_data.personality_test.type);
           setSelectedType(profile.profile_data.personality_test.type);
           setPdfUrl(profile.profile_data.personality_test.pdfUrl || null);
-          setTestCompleted(true);
         }
       } else {
         // Load personality test results for user profile
@@ -206,7 +207,6 @@ export function PersonalityTestInterface({ memoriaProfileId: propMemoriaProfileI
           setPersonalityType(profile.memoir_data.personality_test.type);
           setSelectedType(profile.memoir_data.personality_test.type);
           setPdfUrl(profile.memoir_data.personality_test.pdfUrl || null);
-          setTestCompleted(true);
         }
       }
     } catch (error) {
@@ -357,14 +357,6 @@ export function PersonalityTestInterface({ memoriaProfileId: propMemoriaProfileI
     event.target.value = '';
   };
 
-  const handleGoBack = () => {
-    if (onClose) {
-      onClose();
-    } else {
-      navigate(returnPath);
-    }
-  };
-
   const handleTypeChange = async (type: string) => {
     if (!user) return;
     
@@ -417,7 +409,7 @@ export function PersonalityTestInterface({ memoriaProfileId: propMemoriaProfileI
             <h2 className="text-2xl font-bold text-white font-[Orbitron]">Personality Profile</h2>
           </div>
           <button
-            onClick={handleGoBack}
+            onClick={onClose}
             className="text-white/60 hover:text-white transition-colors"
           >
             <X className="w-6 h-6" />
@@ -697,13 +689,6 @@ export function PersonalityTestInterface({ memoriaProfileId: propMemoriaProfileI
                         <Download className="w-4 h-4" />
                         Download
                       </a>
-                      <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-colors"
-                      >
-                        <Upload className="w-4 h-4" />
-                        Replace
-                      </button>
                     </div>
                   </div>
                 </div>
