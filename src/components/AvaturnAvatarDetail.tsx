@@ -57,6 +57,7 @@ function ModelErrorFallback({ error, resetErrorBoundary, modelUrl }: {
   let isTextureError = false;
   let isCorsError = false;
   let isNotFoundError = false;
+  let isAsyncError = false;
   
   // Check for specific error types
   if (displayError.includes('Failed to load buffer') || displayError.includes('.bin') || displayError.includes('BufferGeometry')) {
@@ -79,6 +80,10 @@ function ModelErrorFallback({ error, resetErrorBoundary, modelUrl }: {
   } else if (displayError.includes('WebGL') || displayError.includes('context lost')) {
     displayError = 'WebGL context lost';
     solution = 'Your graphics driver or browser lost the 3D rendering context. Try refreshing the page.';
+  } else if (displayError.includes('Async loading error') || displayError.includes('unexpected asynchronous error')) {
+    displayError = 'Async loading error';
+    solution = 'The model could not be loaded due to an asynchronous error. This may indicate network issues, a corrupted model file, or browser limitations.';
+    isAsyncError = true;
   }
   
   // Determine if this is likely a GLTF dependency issue
@@ -144,6 +149,21 @@ function ModelErrorFallback({ error, resetErrorBoundary, modelUrl }: {
         </div>
       )}
       
+      {isAsyncError && (
+        <div className="bg-purple-500/10 border border-purple-500/20 rounded p-3 mb-4 w-full">
+          <p className="text-purple-400 font-medium text-sm mb-1">Asynchronous Loading Error</p>
+          <p className="text-xs text-white/70">
+            The model encountered an asynchronous loading issue. This can be caused by:
+          </p>
+          <ul className="text-xs text-white/60 mt-1 text-left space-y-1">
+            <li>• Network connection problems</li>
+            <li>• Large or complex model file</li>
+            <li>• Browser memory limitations</li>
+            <li>• Corrupted model file</li>
+          </ul>
+        </div>
+      )}
+      
       <button
         onClick={resetErrorBoundary}
         className="px-3 py-1.5 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded text-sm transition-colors flex items-center gap-2"
@@ -172,8 +192,10 @@ function Model({ url, onLoadingComplete, onError }: {
 }) {
   const [loadingState, setLoadingState] = useState<'loading' | 'loaded' | 'error'>('loading');
   const mountedRef = useRef(true);
+  const loadAttemptRef = useRef(0);
+  const MAX_LOAD_ATTEMPTS = 2;
   
-  // Validate URL before attempting to load
+  // Validate URL format
   const isValidUrl = useCallback(() => {
     if (!url) return false;
     
@@ -196,14 +218,50 @@ function Model({ url, onLoadingComplete, onError }: {
   
   useEffect(() => {
     setLoadingState('loading');
+    loadAttemptRef.current = 0;
     
     if (!isValidUrl()) {
       const error = new Error(`Invalid model URL: ${url}`);
       setLoadingState('error');
       onError?.(error);
-      return;
     }
   }, [url, isValidUrl, onError]);
+  
+  const handleLoadError = useCallback((error: any) => {
+    if (!mountedRef.current) return;
+    
+    // Format specific error for Promise objects
+    if (error && typeof error === 'object' && typeof error.then === 'function') {
+      const enhancedError = new Error(
+        `Async loading error for model: ${url}. The 3D model loader encountered an unexpected asynchronous error. This may indicate a network issue, corrupted model file, or missing dependencies.`
+      );
+      
+      onError?.(enhancedError);
+      return enhancedError;
+    }
+    
+    // Try to extract useful information from the error
+    let enhancedError: Error;
+    
+    if (error instanceof Error) {
+      if (error.message.includes('404') || error.message.includes('Not Found')) {
+        enhancedError = new Error(`Model file not found: ${url}. The file may have been deleted or the URL is incorrect.`);
+      } else if (error.message.includes('CORS')) {
+        enhancedError = new Error(`CORS error loading model: ${url}. Check storage bucket permissions.`);
+      } else if (error.message.includes('Failed to fetch')) {
+        enhancedError = new Error(`Network error loading model: ${url}. Check your internet connection and file accessibility.`);
+      } else {
+        enhancedError = error;
+      }
+    } else if (typeof error === 'string') {
+      enhancedError = new Error(error);
+    } else {
+      enhancedError = new Error(`Unknown error loading 3D model: ${String(error)}`);
+    }
+    
+    onError?.(enhancedError);
+    return enhancedError;
+  }, [url, onError]);
   
   try {
     if (!isValidUrl()) {
@@ -222,8 +280,17 @@ function Model({ url, onLoadingComplete, onError }: {
       if (gltf.scene && mountedRef.current && loadingState !== 'loaded') {
         setLoadingState('loaded');
         onLoadingComplete?.();
+        
+        // Clear cache to help with memory management
+        return () => {
+          try {
+            useGLTF.clear(url);
+          } catch (e) {
+            console.warn('Error clearing GLTF cache:', e);
+          }
+        };
       }
-    }, [gltf.scene, onLoadingComplete, loadingState]);
+    }, [gltf.scene, onLoadingComplete, loadingState, url]);
     
     // Check for common issues with the loaded model
     useEffect(() => {
@@ -231,9 +298,12 @@ function Model({ url, onLoadingComplete, onError }: {
         // Check if model has materials and textures
         let hasTextures = false;
         let hasMaterials = false;
+        let geometryCount = 0;
         
         gltf.scene.traverse((child) => {
           if (child instanceof THREE.Mesh) {
+            geometryCount++;
+            
             if (child.material) {
               hasMaterials = true;
               if (Array.isArray(child.material)) {
@@ -255,6 +325,9 @@ function Model({ url, onLoadingComplete, onError }: {
         if (!hasTextures && url.toLowerCase().endsWith('.gltf')) {
           console.warn('GLTF model loaded but no textures found - this might indicate missing texture files');
         }
+        
+        // Log statistics to help with debugging
+        console.log(`Model stats - Geometry count: ${geometryCount}, Has materials: ${hasMaterials}, Has textures: ${hasTextures}`);
       }
     }, [gltf.scene, url]);
     
@@ -275,31 +348,49 @@ function Model({ url, onLoadingComplete, onError }: {
       </Stage>
     );
   } catch (e) {
-    // Enhanced error handling with more specific error types
-    let error: Error;
-    
-    if (e instanceof Error) {
-      // Enhance error message based on the original error
-      if (e.message.includes('404') || e.message.includes('Not Found')) {
-        error = new Error(`Model file not found: ${url}. The file may have been deleted or the URL is incorrect.`);
-      } else if (e.message.includes('CORS')) {
-        error = new Error(`CORS error loading model: ${url}. Check storage bucket permissions.`);
-      } else if (e.message.includes('Failed to fetch')) {
-        error = new Error(`Network error loading model: ${url}. Check your internet connection and file accessibility.`);
+    // Check if this is an attempt to handle a Promise
+    if (e && typeof e === 'object' && typeof (e as any).then === 'function') {
+      // Handle Promise objects specifically
+      const promiseError = new Error(`Async loading error for model: ${url}. The 3D model loader encountered an unexpected asynchronous error. This may indicate a network issue, corrupted model file, or missing dependencies.`);
+      
+      // Try to get more information from the Promise
+      const promise = e as Promise<any>;
+      promise
+        .then(value => {
+          console.warn('Async model loading eventually succeeded with:', value);
+          if (mountedRef.current && loadAttemptRef.current < MAX_LOAD_ATTEMPTS) {
+            loadAttemptRef.current++;
+            // Potentially retry loading here
+          }
+        })
+        .catch(error => {
+          console.error('Async model loading failed with:', error);
+          handleLoadError(error);
+        });
+      
+      // Use the error handler to format the error
+      const enhancedError = handleLoadError(promiseError);
+      throw enhancedError;
+    } 
+    else if (e instanceof Error) {
+      // Handle standard errors
+      const enhancedError = handleLoadError(e);
+      throw enhancedError;
+    } 
+    else {
+      // Handle unknown error types
+      const errorString = String(e);
+      let enhancedError: Error;
+      
+      if (errorString === '[object Promise]') {
+        enhancedError = new Error(`Unhandled Promise in 3D model loading for: ${url}. This indicates an async operation that wasn't properly awaited. Try refreshing the page or check the model file integrity.`);
       } else {
-        error = e;
+        enhancedError = new Error(`Unknown error loading 3D model: ${errorString}`);
       }
-    } else {
-      error = new Error(`Unknown error loading 3D model: ${String(e)}`);
+      
+      const formattedError = handleLoadError(enhancedError);
+      throw formattedError;
     }
-    
-    // Call error callback
-    useEffect(() => {
-      onError?.(error);
-    }, [error, onError]);
-    
-    // Re-throw for ErrorBoundary to catch
-    throw error;
   }
 }
 
@@ -771,6 +862,11 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                     <div className="bg-black/30 rounded p-3">
                       <p className="font-medium text-purple-400 text-xs">WebGL Context Lost</p>
                       <p className="text-xs mt-1">Graphics driver issue. Try refreshing the page or restarting your browser.</p>
+                    </div>
+                    
+                    <div className="bg-black/30 rounded p-3">
+                      <p className="font-medium text-pink-400 text-xs">Async Loading Error</p>
+                      <p className="text-xs mt-1">Unhandled Promise error. This may indicate network issues or corrupted model files. Try refreshing or re-uploading the model.</p>
                     </div>
                   </div>
                 </div>
