@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useMemo } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import { Vector3, Group, Color } from 'three'; 
 import { Heart, Volume2, User, Brain, Image as ImageIcon, FileText, Gamepad2, Globe, Camera, Cuboid, FileVideo, File as FilePdf, Sparkles } from 'lucide-react';
