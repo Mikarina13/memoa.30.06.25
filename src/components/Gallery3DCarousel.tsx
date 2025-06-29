@@ -3,6 +3,8 @@ import { useFrame, useThree, ThreeEvent } from '@react-three/fiber';
 import { Html, useTexture } from '@react-three/drei';
 import { Vector3, Group, MathUtils } from 'three';
 import React from 'react';
+import { ErrorBoundary } from 'react-error-boundary';
+import { AlertCircle, Loader, RefreshCw, XCircle } from 'lucide-react';
 
 interface GalleryItem {
   id: string;
@@ -12,40 +14,6 @@ interface GalleryItem {
   file_size?: number;
 }
 
-interface Narrative {
-  id: string;
-  type: string;
-  typeLabel: string;
-  content: string;
-}
-
-interface VoiceInfo {
-  voiceId: string;
-  status: string;
-}
-
-interface AvatarInfo {
-  id: string;
-  modelUrl?: string;
-  avaturnUrl?: string;
-  isCustomModel?: boolean;
-  modelName?: string;
-  createdAt: string;
-}
-
-interface PersonalData {
-  [key: string]: unknown;
-}
-
-export interface PreloadedData {
-  galleryItems?: GalleryItem[];
-  narratives?: Narrative[];
-  voiceData?: VoiceInfo | null;
-  avatars?: AvatarInfo[];
-  personalData?: PersonalData | null;
-  aiInsights?: Record<string, unknown> | null;
-}
-
 interface Gallery3DCarouselProps {
   galleryItems: any[];
   onClose: () => void;
@@ -53,6 +21,29 @@ interface Gallery3DCarouselProps {
   currentIndex?: number;
   onIndexChange?: (index: number) => void;
   isLoading?: boolean;
+}
+
+// Error Boundary fallback component for the entire carousel
+function GalleryCarouselErrorFallback({ error, resetErrorBoundary }: { error: Error, resetErrorBoundary: () => void }) {
+  return (
+    <Html center>
+      <div className="bg-black/90 p-8 rounded-lg text-white text-center max-w-lg">
+        <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
+        <h3 className="text-xl font-bold mb-4">Gallery Error</h3>
+        <p className="text-white/70 mb-6">There was a problem loading the gallery carousel.</p>
+        <p className="text-white/50 mb-6 text-sm">{error.message}</p>
+        <div className="flex gap-4 justify-center">
+          <button 
+            onClick={resetErrorBoundary} 
+            className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg flex items-center gap-2"
+          >
+            <RefreshCw className="w-5 h-5" />
+            Retry
+          </button>
+        </div>
+      </div>
+    </Html>
+  );
 }
 
 // Error Boundary for individual carousel items
@@ -95,9 +86,9 @@ function CarouselItemErrorFallback() {
       </mesh>
       <Html center>
         <div className="bg-black/70 text-white p-4 rounded-lg text-center max-w-xs">
-          <div className="text-red-400 mb-2">⚠️</div>
+          <XCircle className="w-8 h-8 mx-auto mb-2 text-red-400" />
           <div className="text-sm font-medium mb-1">Failed to load media</div>
-          <div className="text-xs text-gray-300">Image unavailable</div>
+          <div className="text-xs text-white/70">The image or video could not be displayed</div>
         </div>
       </Html>
     </group>
@@ -237,10 +228,9 @@ export function Gallery3DCarousel({
   if (isLoading) {
     return (
       <Html center>
-        <div className="bg-black/80 p-8 rounded-lg shadow-xl text-white text-center">
-          <div className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <h3 className="text-xl font-semibold mb-2">Loading Gallery</h3>
-          <p className="text-white/70">Please wait while we load your gallery items...</p>
+        <div className="bg-black/80 p-8 rounded-lg shadow-xl text-white text-center"> 
+          <Loader className="w-8 h-8 animate-spin mx-auto mb-2" />
+          <span>Loading gallery...</span>
         </div>
       </Html>
     );
@@ -263,9 +253,14 @@ export function Gallery3DCarousel({
       </Html>
     );
   }
-  
+
   return (
-    <>
+    <ErrorBoundary
+      FallbackComponent={(props) => <GalleryCarouselErrorFallback {...props} />}
+      onReset={() => {
+        console.log("Resetting gallery carousel after error");
+      }}
+    >
       {/* Fixed carousel of images around the camera */}
       <group ref={carouselRef}>
         {galleryItems.map((item, index) => {
@@ -303,8 +298,27 @@ export function Gallery3DCarousel({
       </group>
       
       <CarouselCameraControls />
-    </>
+    </ErrorBoundary>
   );
+}
+
+// Helper function to check if a file path is an image based on extension
+function isImageFile(filePath: string): boolean {
+  if (!filePath) return false;
+  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'];
+  const lowercasePath = filePath.toLowerCase();
+  return imageExtensions.some(ext => lowercasePath.endsWith(ext));
+}
+
+// Helper function to validate URL format
+function isValidHttpUrl(string: string): boolean {
+  let url;
+  try {
+    url = new URL(string);
+  } catch (_) {
+    return false;  
+  }
+  return url.protocol === "http:" || url.protocol === "https:";
 }
 
 interface CarouselItemProps {
@@ -316,14 +330,6 @@ interface CarouselItemProps {
   onImageLoaded: () => void;
   onClick: () => void;
   scale: number;
-}
-
-// Helper function to check if a file path is an image based on extension
-function isImageFile(filePath: string): boolean {
-  if (!filePath) return false;
-  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'];
-  const lowercasePath = filePath.toLowerCase();
-  return imageExtensions.some(ext => lowercasePath.endsWith(ext));
 }
 
 function CarouselItem({ 
@@ -340,16 +346,27 @@ function CarouselItem({
   const loadedRef = useRef(false);
   const [textureError, setTextureError] = useState(false);
   
+  // Validate the file path before attempting to load
+  const isValidPath = isValidHttpUrl(item.file_path);
+  
   // Determine if this item should use texture loading
-  const shouldLoadTexture = item.media_type === 'image' && isImageFile(item.file_path);
+  const shouldLoadTexture = item.media_type === 'image' && isImageFile(item.file_path) && isValidPath;
+  
+  // Log warning for invalid paths
+  useEffect(() => {
+    if (!isValidPath && item.file_path) {
+      console.warn(`Invalid image URL for gallery item ${item.id}: "${item.file_path}"`);
+      setTextureError(true);
+    }
+  }, [item.id, item.file_path, isValidPath]);
   
   // Always call useTexture hook, but conditionally use the result
   // This ensures the hook is called the same number of times on each render
   const texture = useTexture(
-    shouldLoadTexture ? item.file_path || '' : '/placeholder.jpg', 
+    shouldLoadTexture ? item.file_path : '/placeholder.jpg', 
     undefined,
     (error) => {
-      console.warn('Texture loading error:', error);
+      console.warn(`Texture loading error for ${item.id}:`, error);
       setTextureError(true);
     },
     () => {

@@ -83,6 +83,7 @@ const THEME_COLORS = {
     gallery: '#ec4899',
     personality: '#f43f5e',
     family_tree: '#22c55e',
+    ai_tribute_images: '#f97316',
     media_links: '#f59e0b',
     documents: '#6366f1'
   },
@@ -908,6 +909,7 @@ function Item({
         ref={meshRef}
         position={position}
         // Larger invisible mesh for better click detection
+        onClick={handleClick}
       >
         <sphereGeometry args={[3.5, 32, 32]} />
         <meshBasicMaterial opacity={0.01} transparent />
