@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useFrame, useThree, ThreeEvent } from '@react-three/fiber';
-import { Html } from '@react-three/drei';
+import { Html, useTexture } from '@react-three/drei';
 import { Vector3, Group, Color } from 'three';
 import React from 'react';
 
@@ -163,7 +163,8 @@ export function Gallery3DCarousel({
   useFrame(() => {
     if (camera) {
       // Smoothly interpolate camera rotation
-      camera.rotation.y = THREE.MathUtils.lerp(camera.rotation.y, targetRotation.current, 0.05);
+      const { MathUtils } = require('three');
+      camera.rotation.y = MathUtils.lerp(camera.rotation.y, targetRotation.current, 0.05);
     }
   });
   
@@ -320,6 +321,14 @@ interface CarouselItemProps {
   scale: number;
 }
 
+// Helper function to check if a file path is an image based on extension
+function isImageFile(filePath: string): boolean {
+  if (!filePath) return false;
+  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'];
+  const lowercasePath = filePath.toLowerCase();
+  return imageExtensions.some(ext => lowercasePath.endsWith(ext));
+}
+
 function CarouselItem({ 
   item, 
   position, 
@@ -334,17 +343,20 @@ function CarouselItem({
   const loadedRef = useRef(false);
   const [textureError, setTextureError] = useState(false);
   
+  // Determine if this item should use texture loading
+  const shouldLoadTexture = item.media_type === 'image' && isImageFile(item.file_path);
+  
   // Always call useTexture hook, but conditionally use the result
   // This ensures the hook is called the same number of times on each render
   const texture = useTexture(
-    item.media_type === 'image' ? item.file_path || '' : '/placeholder.jpg', 
+    shouldLoadTexture ? item.file_path || '' : '/placeholder.jpg', 
     undefined,
     (error) => {
       console.warn('Texture loading error:', error);
       setTextureError(true);
     },
     () => {
-      if (!loadedRef.current && item.media_type === 'image') {
+      if (!loadedRef.current && shouldLoadTexture) {
         loadedRef.current = true;
         onImageLoaded();
       }
@@ -359,7 +371,7 @@ function CarouselItem({
   }, [scale]);
   
   // Set material based on media type and error state
-  const materialProps = item.media_type === 'image' && !textureError
+  const materialProps = shouldLoadTexture && !textureError
     ? { map: texture } 
     : { color: textureError ? '#666666' : '#111111' };
   
@@ -412,6 +424,3 @@ function CarouselItem({
     </group>
   );
 }
-
-// Import needed
-import { useTexture } from '@react-three/drei';
