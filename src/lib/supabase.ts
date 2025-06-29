@@ -35,6 +35,34 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     headers: {
       'apikey': supabaseAnonKey,
     },
+    fetch: (url, options = {}) => {
+      // Add timeout and better error handling to all requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      
+      return fetch(url, {
+        ...options,
+        signal: controller.signal,
+      })
+      .then(response => {
+        clearTimeout(timeoutId);
+        return response;
+      })
+      .catch(error => {
+        clearTimeout(timeoutId);
+        console.error('Supabase fetch error:', error);
+        
+        if (error.name === 'AbortError') {
+          throw new Error('Request timeout - check your internet connection and Supabase project status');
+        }
+        
+        if (error.message?.includes('Failed to fetch')) {
+          throw new Error('Network error - unable to reach Supabase. Check your internet connection and verify your Supabase project is active.');
+        }
+        
+        throw error;
+      });
+    }
   },
   db: {
     schema: 'public',
@@ -69,10 +97,12 @@ const checkAuth = async () => {
 
 // Helper function to check if error is a network error
 export const isNetworkError = (error: any) => {
-  return error instanceof TypeError && 
+  return (error instanceof TypeError && 
          (error.message?.includes('Failed to fetch') || 
           error.message?.includes('Network request failed') ||
-          error.message?.includes('fetch'));
+          error.message?.includes('fetch'))) ||
+         error.message?.includes('timeout') ||
+         error.message?.includes('Network error');
 };
 
 // Helper function to provide detailed error diagnosis
@@ -85,6 +115,7 @@ const diagnoseConnectionError = (error: any) => {
         'Check your internet connection',
         'Verify the Supabase URL is accessible',
         'Ensure your Supabase project is not paused',
+        'Check your Supabase project dashboard at https://supabase.com/dashboard',
         'Try restarting your development server',
         'Check if you\'re behind a firewall or proxy'
       ]
@@ -97,7 +128,8 @@ const diagnoseConnectionError = (error: any) => {
       message: 'CORS policy error',
       suggestions: [
         'Check your Supabase project CORS settings',
-        'Verify your domain is allowed in Supabase dashboard'
+        'Verify your domain is allowed in Supabase dashboard',
+        'Add localhost:5173 to your allowed origins'
       ]
     };
   }
@@ -114,18 +146,33 @@ const diagnoseConnectionError = (error: any) => {
     };
   }
   
+  if (error?.message?.includes('timeout')) {
+    return {
+      type: 'TIMEOUT_ERROR',
+      message: 'Connection timeout',
+      suggestions: [
+        'Your internet connection may be slow',
+        'Supabase servers may be experiencing issues',
+        'Try again in a few moments',
+        'Check Supabase status page'
+      ]
+    };
+  }
+  
   return {
     type: 'UNKNOWN_ERROR',
     message: error?.message || 'Unknown connection error',
     suggestions: [
       'Check the browser console for more details',
-      'Verify all environment variables are set correctly'
+      'Verify all environment variables are set correctly',
+      'Try refreshing the page',
+      'Contact support if the issue persists'
     ]
   };
 };
 
 // Enhanced test connection function with better error handling and retry logic
-export const testSupabaseConnection = async (retries = 3) => {
+export const testSupabaseConnection = async (retries = 5) => {
   let lastError: any = null;
   
   for (let attempt = 1; attempt <= retries; attempt++) {
@@ -133,29 +180,37 @@ export const testSupabaseConnection = async (retries = 3) => {
       console.log(`🧪 Testing Supabase connection (attempt ${attempt}/${retries})...`);
       console.log('🔗 URL:', supabaseUrl);
       
-      // Add timeout to prevent hanging
+      // Test basic connection with longer timeout for initial connection
+      const timeoutDuration = attempt === 1 ? 20000 : 10000; // First attempt gets more time
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Connection timeout after 10 seconds')), 10000);
+        setTimeout(() => reject(new Error(`Connection timeout after ${timeoutDuration/1000} seconds`)), timeoutDuration);
       });
       
-      // Test basic connection with timeout
-      const connectionPromise = supabase.auth.getSession();
-      const { data, error } = await Promise.race([connectionPromise, timeoutPromise]) as any;
+      // Test auth service first (simpler endpoint)
+      console.log('🔐 Testing auth service...');
+      const authPromise = supabase.auth.getSession();
+      const { error: authError } = await Promise.race([authPromise, timeoutPromise]) as any;
       
-      if (error) {
-        throw error;
+      if (authError && !isSessionError(authError)) {
+        throw authError;
       }
       
-      // Test database connection with a simple query
+      // Test database connection with a simple query (only if auth works)
+      console.log('🗄️  Testing database connection...');
       const dbPromise = supabase
         .from('profiles')
         .select('count')
         .limit(1);
         
-      const { data: testData, error: dbError } = await Promise.race([dbPromise, timeoutPromise]) as any;
+      const { error: dbError } = await Promise.race([dbPromise, timeoutPromise]) as any;
         
       if (dbError) {
-        throw dbError;
+        // Allow certain database errors that don't indicate connection issues
+        if (dbError.code === 'PGRST116' || dbError.message?.includes('relation') || dbError.message?.includes('permission')) {
+          console.log('✅ Database accessible (table/permission issue is normal)');
+        } else {
+          throw dbError;
+        }
       }
       
       console.log('✅ Supabase connection successful!');
@@ -166,7 +221,7 @@ export const testSupabaseConnection = async (retries = 3) => {
       
       // If this isn't the last attempt, wait before retrying
       if (attempt < retries) {
-        const waitTime = attempt * 1000; // Exponential backoff
+        const waitTime = Math.min(attempt * 2000, 10000); // Progressive backoff, max 10s
         console.log(`⏳ Waiting ${waitTime}ms before retry...`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
       }
@@ -184,3 +239,6 @@ export const testSupabaseConnection = async (retries = 3) => {
   
   return false;
 };
+
+// Export the diagnosis function for use in components
+export { diagnoseConnectionError };

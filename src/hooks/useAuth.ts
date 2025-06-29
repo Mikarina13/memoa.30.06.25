@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase, isSessionError } from '../lib/supabase';
+import { supabase, isSessionError, isNetworkError } from '../lib/supabase';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 export function useAuth() {
@@ -7,19 +7,15 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState<boolean | null>(null);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Helper function to check if error is a network error
-  const isNetworkError = (error: any) => {
-    return error instanceof TypeError && 
-           (error.message?.includes('Failed to fetch') || 
-            error.message?.includes('Network request failed') ||
-            error.message?.includes('fetch'));
-  };
-
   const createUserProfile = async (userId: string, userMetadata: any = {}) => {
     try {
+      // Clear any previous connection errors if we get this far
+      setConnectionError(null);
+      
       // Check if profile already exists
       const { data: existingProfile, error: fetchError } = await supabase
         .from('profiles')
@@ -43,6 +39,7 @@ export function useAuth() {
         if (insertError) {
           if (isNetworkError(insertError)) {
             console.warn('Network error while creating profile. Will retry later:', insertError.message);
+            setConnectionError('Unable to sync profile data. Some features may be limited.');
             return; // Don't throw, just return - profile creation can be retried later
           }
           console.error('Error creating user profile:', insertError.message);
@@ -51,6 +48,7 @@ export function useAuth() {
         // Handle network errors more gracefully
         if (isNetworkError(fetchError)) {
           console.warn('Network error while checking profile. Will retry later:', fetchError.message);
+          setConnectionError('Unable to verify profile data. Some features may be limited.');
           return; // Don't throw, just return - profile creation can be retried later
         }
         console.error('Error checking for existing profile:', fetchError.message);
@@ -68,6 +66,7 @@ export function useAuth() {
         if (updateError) {
           if (isNetworkError(updateError)) {
             console.warn('Network error while updating profile. Will retry later:', updateError.message);
+            setConnectionError('Unable to update profile data. Some features may be limited.');
             return;
           }
           console.error('Error updating profile with Google data:', updateError.message);
@@ -77,6 +76,7 @@ export function useAuth() {
       // Handle network errors gracefully
       if (isNetworkError(err)) {
         console.warn('Network connectivity issue during profile creation. Will retry later.');
+        setConnectionError('Network connectivity issues detected. Some features may be limited.');
         return;
       }
       console.error('Error in createUserProfile:', err);
@@ -94,6 +94,8 @@ export function useAuth() {
   useEffect(() => {
     const getUser = async () => {
       try {
+        setConnectionError(null); // Clear any previous errors
+        
         const { data: { user }, error } = await supabase.auth.getUser();
         if (error) {
           if (isSessionError(error)) {
@@ -102,6 +104,7 @@ export function useAuth() {
           } else if (isNetworkError(error)) {
             // Handle network errors gracefully - don't clear user state immediately
             console.warn('Network error fetching user. Connection may be unstable:', error.message);
+            setConnectionError('Unable to verify authentication status. You may need to sign in again.');
             // Keep current user state if we have one, otherwise set to null
             if (!user) {
               setUser(null);
@@ -109,25 +112,32 @@ export function useAuth() {
           } else {
             console.error('Error fetching user:', error.message);
             setUser(null);
+            setConnectionError('Authentication error occurred. Please try signing in again.');
           }
           setHasAcceptedTerms(null);
         } else if (user) {
           setUser(user);
           setHasAcceptedTerms(checkTermsAcceptance(user));
+          setConnectionError(null); // Clear error on successful auth
           // Create profile in background, don't wait for it and handle errors gracefully
           createUserProfile(user.id, user.user_metadata).catch(err => {
             if (!isNetworkError(err)) {
               console.error('Unexpected error creating profile:', err);
             }
           });
+        } else {
+          setUser(null);
+          setHasAcceptedTerms(null);
         }
       } catch (err) {
         if (isNetworkError(err)) {
           console.warn('Network connectivity issue during auth check:', err.message);
+          setConnectionError('Network connectivity issues detected. Please check your internet connection.');
           // Don't clear user state on network errors
         } else {
           console.error('Error in getUser:', err);
           setUser(null);
+          setConnectionError('Unexpected error during authentication check.');
         }
       } finally {
         setLoading(false);
@@ -138,23 +148,32 @@ export function useAuth() {
     getUser();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
-        setUser(null);
-        setHasAcceptedTerms(null);
-      } else if (session?.user) {
-        setUser(session.user);
-        setHasAcceptedTerms(checkTermsAcceptance(session.user));
-        // Create profile in background, don't wait for it and handle errors gracefully
-        createUserProfile(session.user.id, session.user.user_metadata).catch(err => {
-          if (!isNetworkError(err)) {
-            console.error('Unexpected error creating profile:', err);
-          }
-        });
-      }
-      
-      if (!initialized) {
-        setLoading(false);
-        setInitialized(true);
+      try {
+        if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+          setUser(null);
+          setHasAcceptedTerms(null);
+          setConnectionError(null);
+        } else if (session?.user) {
+          setUser(session.user);
+          setHasAcceptedTerms(checkTermsAcceptance(session.user));
+          setConnectionError(null); // Clear error on successful auth state change
+          // Create profile in background, don't wait for it and handle errors gracefully
+          createUserProfile(session.user.id, session.user.user_metadata).catch(err => {
+            if (!isNetworkError(err)) {
+              console.error('Unexpected error creating profile:', err);
+            }
+          });
+        }
+        
+        if (!initialized) {
+          setLoading(false);
+          setInitialized(true);
+        }
+      } catch (err) {
+        console.error('Error in auth state change handler:', err);
+        if (isNetworkError(err)) {
+          setConnectionError('Network issues during authentication. Some features may be limited.');
+        }
       }
     });
 
@@ -174,6 +193,7 @@ export function useAuth() {
 
   const logout = async () => {
     try {
+      setConnectionError(null);
       const { error } = await supabase.auth.signOut();
       if (error) {
         // Handle network errors gracefully
@@ -182,20 +202,25 @@ export function useAuth() {
           // Clear local state even if network request fails
           setUser(null);
           setHasAcceptedTerms(null);
+          setConnectionError(null);
           return;
         }
         throw error;
       }
       setUser(null);
       setHasAcceptedTerms(null);
+      setConnectionError(null);
       // Don't reload the page, just clear the user state and let routing handle it
     } catch (err) {
       console.error('Error logging out:', err);
       // Even if logout fails, clear the local state
       setUser(null);
       setHasAcceptedTerms(null);
+      if (isNetworkError(err)) {
+        setConnectionError('Network error during logout, but you have been signed out locally.');
+      }
     }
   };
 
-  return { user, loading, logout, initialized, hasAcceptedTerms };
+  return { user, loading, logout, initialized, hasAcceptedTerms, connectionError };
 }
