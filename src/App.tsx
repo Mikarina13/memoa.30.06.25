@@ -79,7 +79,7 @@ export function Model({ position, modelPath, text, description, setIsLoading, on
   useEffect(() => {
     const handleClickOutside = (e) => {
       const modal = document.getElementById(`modal-${text}`);
-      if (showModal && modal && !modal.contains(e.target)) {
+      if (showModal && modal && !modal.contains(e.target as Node)) {
         setShowModal(false);
         setIsHovering(false);
       }
@@ -427,7 +427,7 @@ function MainScene() {
                 position={[6, -1, 0]}
                 modelPath="/models/Fluid Harmony 0602193530 texture.glb"
                 text="MEMORIA"
-                description="Explore digital memories"
+                description="Revive what once leaved"
                 setIsLoading={setIsLoading}
                 onAccess={() => navigate('/memoria')}
                 initialRotation={[0, Math.PI, 0]}
