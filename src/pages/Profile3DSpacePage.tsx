@@ -499,8 +499,21 @@ export function Profile3DSpacePage() {
     setMediaLinksCurrentIndex(adjustedIndex);
   };
 
+  // Handle closing of gallery and media carousels (NOT the entire view)
+  const handleCloseCarousel = () => {
+    // Just close the current active carousel and return to the profile view
+    setShowGalleryCarousel(false);
+    setShowMediaLinksCarousel(false);
+  };
+  
   // Handle returning to profile or memento page
   const handleCloseView = () => {
+    if (showGalleryCarousel || showMediaLinksCarousel) {
+      // If we're in a carousel, just close it and stay on the profile space
+      handleCloseCarousel();
+      return;
+    }
+    
     // If we have an initialUserId and it's different from the current user, 
     // we're viewing someone else's profile, so go back to memento with appropriate state
     if (initialUserId && initialUserId !== user?.id) {
@@ -511,8 +524,12 @@ export function Profile3DSpacePage() {
         }
       });
     } else {
-      // Otherwise, just go back to memento
-      navigate('/memento');
+      // For your own profiles, go to the appropriate dashboard
+      if (profileType === 'memoir') {
+        navigate('/memoir/dashboard');
+      } else {
+        navigate('/memoria/dashboard');
+      }
     }
   };
 
@@ -823,7 +840,7 @@ export function Profile3DSpacePage() {
           {showGalleryCarousel && selectedGalleryItems.length > 0 && (
             <Gallery3DCarousel 
               galleryItems={selectedGalleryItems} 
-              onClose={() => setShowGalleryCarousel(false)}
+              onClose={handleCloseCarousel}
               onItemSelect={(item) => {
                 // Check if this is a tribute item that was transformed for the carousel
                 if (item.original_tribute_item) {
@@ -850,7 +867,7 @@ export function Profile3DSpacePage() {
           {showMediaLinksCarousel && selectedMediaLinks.length > 0 && (
             <Content3DCarousel 
               items={selectedMediaLinks} 
-              onClose={() => setShowMediaLinksCarousel(false)}
+              onClose={handleCloseCarousel}
               onItemSelect={(item) => {
                 // Open the link directly in a new tab
                 window.open(item.url, '_blank', 'noopener,noreferrer');
