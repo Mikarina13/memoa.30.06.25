@@ -380,40 +380,6 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
       index++;
     }
     
-    // Tavus Avatar
-    if (profileData?.tavus_avatar_id && isItemVisible('tavus_avatar')) {
-      console.log('Displaying Tavus video avatar with ID:', profileData.tavus_avatar_id);
-      const angle = (index / itemCount) * Math.PI * 2;
-      const position = getItemPosition('tavus_avatar', angle, radius, settings.verticalSpread);
-      
-      items.push(
-        <Item
-          key="tavus-avatar"
-          id="tavus_avatar"
-          position={position}
-          icon={<Camera className={`w-8 h-8`} style={{color: getItemColor('tavus_avatar', themeColors.tavus_avatar)}} />}
-          label="Video Avatar" 
-          color={getItemColor('tavus_avatar', themeColors.tavus_avatar)}
-          scale={settings.iconScale}
-          onHover={() => setHoveredItem("tavus-avatar")}
-          onLeave={() => setHoveredItem(null)}
-          lastClickTime={lastClickTime.current}
-          isHovered={hoveredItem === "tavus-avatar"}
-          isClicked={clickedItem === "tavus-avatar"}
-          onClick={() => {
-            setClickedItem("tavus-avatar");
-            setTimeout(() => setClickedItem(null), 200);
-            handleItemClick("tavus_avatar", { 
-              avatarId: profileData.tavus_avatar_id,
-              status: profileData.integration_status?.tavus?.status
-            });
-          }}
-          glowIntensity={settings.backgroundIntensity}
-        />
-      );
-      index++;
-    }
-    
     // Avaturn Avatars - check both paths
     const avaturnAvatars = profileData?.profile_data?.avaturn_avatars?.avatars || 
                           profileData?.memoir_data?.avaturn_avatars?.avatars;
@@ -651,7 +617,8 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
     }
     
     // AI Tribute Images
-    const tributeImages = profileData?.profile_data?.tribute_images;
+    const tributeImages = profileData?.profile_data?.tribute_images || 
+                          profileData?.memoir_data?.tribute_images;
     console.log('AI Tribute images found:', tributeImages);
     if (tributeImages?.length > 0 && isItemVisible('ai_tribute_images')) {
       console.log('Displaying AI tribute images with', tributeImages.length, 'items:', tributeImages);
@@ -820,9 +787,6 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
     // Voice
     if (profileData?.elevenlabs_voice_id && isItemVisible('voice')) count++;
     
-    // Tavus Avatar
-    if (profileData?.tavus_avatar_id && isItemVisible('tavus_avatar')) count++;
-    
     // Avaturn Avatars
     const avaturnAvatars = profileData?.profile_data?.avaturn_avatars?.avatars || 
                           profileData?.memoir_data?.avaturn_avatars?.avatars;
@@ -856,7 +820,8 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
     if (documents?.length > 0 && isItemVisible('documents')) count++;
     
     // AI Tribute Images
-    const tributeImages = profileData?.profile_data?.tribute_images;
+    const tributeImages = profileData?.profile_data?.tribute_images ||
+                          profileData?.memoir_data?.tribute_images;
     if (tributeImages?.length > 0 && isItemVisible('ai_tribute_images')) count++;
 
     console.log('Total item count:', count);
