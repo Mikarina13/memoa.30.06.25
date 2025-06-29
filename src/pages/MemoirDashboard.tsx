@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Settings, User, LogOut, Mic, PenTool, Image, Brain, Heart, Volume2, ExternalLink, Gamepad2, RefreshCw, Clipboard, Users, FileVideo, Newspaper, BookOpen, Upload } from 'lucide-react';
+import { ArrowLeft, Settings, User, LogOut, Mic, PenTool, Image, Brain, Heart, Volume2, ExternalLink, Gamepad2, RefreshCw, Clipboard, Users, FileVideo, Newspaper, BookOpen, Upload, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Header } from '../components/Header';
@@ -16,6 +16,7 @@ import { MediaLinksInterface } from '../components/MediaLinksInterface';
 import { MemoirIntegrations } from '../lib/memoir-integrations';
 import { Footer } from '../components/Footer';
 import { PersonalityTestInterface } from '../components/PersonalityTestInterface';
+import { TributeImageInterface } from '../components/TributeImageInterface';
 
 export function MemoirDashboard() {
   const navigate = useNavigate();
@@ -27,6 +28,7 @@ export function MemoirDashboard() {
   const [showGamingPreferences, setShowGamingPreferences] = useState(false);
   const [showPersonalPreferences, setShowPersonalPreferences] = useState(false);
   const [showPersonalityTest, setShowPersonalityTest] = useState(false);
+  const [showTributeImage, setShowTributeImage] = useState(false);
   const [initialPersonalPreferencesTab, setInitialPersonalPreferencesTab] = useState<'favorites' | 'digital'>('favorites');
   const [showFamilyTree, setShowFamilyTree] = useState(false);
   const [showMediaLinks, setShowMediaLinks] = useState(false);
@@ -39,6 +41,7 @@ export function MemoirDashboard() {
   const [mediaLinksData, setMediaLinksData] = useState<any>(null);
   const [narrativesData, setNarrativesData] = useState<any>(null);
   const [personalityData, setPersonalityData] = useState<any>(null);
+  const [tributeImagesData, setTributeImagesData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Ensure user has accepted terms
@@ -89,6 +92,9 @@ export function MemoirDashboard() {
       // Load personality test data
       setPersonalityData(profile.memoir_data?.personality_test);
       
+      // Load AI tribute images
+      setTributeImagesData(profile.memoir_data?.tribute_images || []);
+      
       console.log('User profile data loaded successfully');
     } catch (error) {
       console.error('Error loading user profile:', error);
@@ -138,6 +144,11 @@ export function MemoirDashboard() {
   const handlePersonalityTestCompleted = async (testResults: any) => {
     await loadUserProfile();
     setShowPersonalityTest(false);
+  };
+  
+  const handleTributeImagesSaved = async (imageData: any) => {
+    await loadUserProfile();
+    setShowTributeImage(false);
   };
 
   if (loading) {
@@ -339,6 +350,86 @@ export function MemoirDashboard() {
                       <User className="w-5 h-5" />
                       {userProfile?.memoir_data?.avaturn_avatars?.avatars?.length > 0 ? 'Manage 3D Avatar' : 'Create 3D Avatar'}
                     </button>
+                  </div>
+                )}
+              </div>
+
+              {/* AI Tribute Images */}
+              <div 
+                className={`p-6 bg-white/5 rounded-lg cursor-pointer transition-all ${expandedSection === 'tribute' ? 'ring-2 ring-amber-400' : 'hover:bg-white/10'}`}
+                onClick={() => setExpandedSection(expandedSection === 'tribute' ? null : 'tribute')}
+              >
+                <div className="flex items-start gap-4">
+                  <Sparkles className="w-6 h-6 text-amber-400 flex-shrink-0 mt-1" />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="font-semibold text-lg">AI Tributes</h3>
+                      <div className="flex gap-1">
+                        <a
+                          href="https://www.midjourney.com"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-xs bg-amber-500/20 text-amber-400 px-2 py-1 rounded-full hover:bg-amber-500/30 transition-colors"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          Midjourney
+                        </a>
+                      </div>
+                      {tributeImagesData?.length > 0 && (
+                        <div className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">
+                          ✓ Images Created
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-white/70">Create beautiful AI-generated artistic interpretations of yourself in different styles and formats.</p>
+                  </div>
+                </div>
+                {expandedSection === 'tribute' && (
+                  <div className="mt-6 pt-6 border-t border-white/10">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowTributeImage(true);
+                      }}
+                      className="w-full bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Sparkles className="w-5 h-5" />
+                      Generate AI Tributes
+                    </button>
+                    
+                    <div className="grid grid-cols-3 gap-2 mt-3">
+                      <a
+                        href="https://www.midjourney.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-1 px-3 py-2 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-lg transition-colors text-sm"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        Midjourney
+                      </a>
+                      <a
+                        href="https://openai.com/sora"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-1 px-3 py-2 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-lg transition-colors text-sm"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        Sora
+                      </a>
+                      <a
+                        href="https://remini.ai/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-1 px-3 py-2 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-lg transition-colors text-sm"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        Remini
+                      </a>
+                    </div>
                   </div>
                 )}
               </div>
@@ -769,6 +860,13 @@ export function MemoirDashboard() {
             <PersonalityTestInterface
               onClose={() => setShowPersonalityTest(false)}
               onTestCompleted={handlePersonalityTestCompleted}
+            />
+          )}
+          
+          {showTributeImage && (
+            <TributeImageInterface
+              onClose={() => setShowTributeImage(false)}
+              onImagesGenerated={handleTributeImagesSaved}
             />
           )}
         </AnimatePresence>

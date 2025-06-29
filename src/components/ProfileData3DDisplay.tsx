@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useMemo } from 'react';
+import { useRef, useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import { Vector3, Group, Color } from 'three'; 
@@ -616,8 +616,9 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
       index++;
     }
     
-    // AI Tribute Images
-    const tributeImages = profileData?.profile_data?.tribute_images;
+    // AI Tribute Images - check both paths (memoir_data and profile_data)
+    const tributeImages = profileData?.profile_data?.tribute_images || 
+                         profileData?.memoir_data?.tribute_images;
     console.log('AI Tribute images found:', tributeImages);
     if (tributeImages?.length > 0 && isItemVisible('ai_tribute_images')) {
       console.log('Displaying AI tribute images with', tributeImages.length, 'items:', tributeImages);
@@ -819,7 +820,8 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
     if (documents?.length > 0 && isItemVisible('documents')) count++;
     
     // AI Tribute Images
-    const tributeImages = profileData?.profile_data?.tribute_images;
+    const tributeImages = profileData?.profile_data?.tribute_images || 
+                         profileData?.memoir_data?.tribute_images;
     if (tributeImages?.length > 0 && isItemVisible('ai_tribute_images')) count++;
 
     console.log('Total item count:', count);
