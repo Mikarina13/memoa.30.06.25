@@ -286,7 +286,7 @@ export function Gallery3DCarousel({
       {/* Add keyboard navigation hints */}
       <Html position={[0, -5, 0]} center>
         <div className="bg-black/60 backdrop-blur-sm px-4 py-2 rounded-full text-white text-sm">
-          <span className="mr-4"><kbd className="px-2 py-1 bg-white/20 rounded">◀</kbd> / <kbd className="px-2 py-1 bg-white/20 rounded">▶</kbd> or <kbd className="px-2 py-1 bg-white/20 rounded">A</kbd> / <kbd className="px-2 py-1 bg-white/20 rounded">D</kbd> to navigate</span>
+          <span className="mr-4"><kbd className="px-2 py-1 bg-white/20 rounded">◀</kbd> / <kbd className="px-2 py-1 bg-white/20 rounded">▶</kbd> or <kbd className="px-2 py-1 bg-white/20 rounded">A</kbd> / <kbd className=\"px-2 py-1 bg-white/20 rounded">D</kbd> to navigate</span>
           <span><kbd className="px-2 py-1 bg-white/20 rounded">Enter</kbd> to select</span>
         </div>
       </Html>

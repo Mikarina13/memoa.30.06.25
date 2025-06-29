@@ -40,7 +40,7 @@ export function GalleryNavigationFooter({
             />
             <div className="flex items-center justify-center text-white/80 text-sm mt-2">
               <Keyboard className="w-4 h-4 mr-2" />
-              <span>Use <kbd className="px-1.5 py-0.5 bg-white/10 rounded mr-1">◀</kbd><kbd className="px-1.5 py-0.5 bg-white/10 rounded">▶</kbd> or <kbd className="px-1.5 py-0.5 bg-white/10 rounded mr-1">A</kbd><kbd className="px-1.5 py-0.5 bg-white/10 rounded">D</kbd> to Navigate • {currentIndex + 1} of {totalItems}</span>
+              <span>Use <kbd className="px-1.5 py-0.5 bg-white/10 rounded mr-1">◀</kbd><kbd className="px-1.5 py-0.5 bg-white/10 rounded">▶</kbd> or <kbd className=\"px-1.5 py-0.5 bg-white/10 rounded mr-1">A</kbd><kbd className=\"px-1.5 py-0.5 bg-white/10 rounded">D</kbd> to Navigate • {currentIndex + 1} of {totalItems}</span>
             </div>
           </div>
           
