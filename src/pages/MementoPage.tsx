@@ -2,7 +2,7 @@ import { useEffect, useState, FormEvent, Suspense } from 'react';
 import { Canvas, useThree, ThreeEvent } from '@react-three/fiber';
 import { OrbitControls, Environment, Html } from '@react-three/drei';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Loader, LogIn, UserPlus, LogOut, Info, Compass, Heart, Sparkles, Menu, User, UsersIcon, Globe, AlertCircle, RefreshCw, Star, Space } from 'lucide-react';
+import { ArrowLeft, Loader, LogIn, UserPlus, LogOut, Info, Compass, Heart, Sparkles, Menu, User, UsersIcon, Globe, AlertCircle, RefreshCw, Star, Space, WifiOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { AuthForm } from '../components/AuthForm';
@@ -80,6 +80,7 @@ export function MementoPage() {
   const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [showFavorites, setShowFavorites] = useState(false);
+  const [networkError, setNetworkError] = useState<boolean>(false);
   
   // Check if user has accepted terms
   const checkTermsAcceptance = (userData: any) => {
@@ -99,6 +100,14 @@ export function MementoPage() {
   const [error, setError] = useState<string | null>(null);
   const [showSpaceOptions, setShowSpaceOptions] = useState(false);
   const [showExplorer, setShowExplorer] = useState(false);
+  
+  // Helper function to check if error is a network error
+  const isNetworkError = (error: any) => {
+    return error instanceof TypeError && 
+           (error.message?.includes('Failed to fetch') || 
+            error.message?.includes('Network request failed') ||
+            error.message?.includes('fetch'));
+  };
   
   useEffect(() => {
     document.title = 'MEMENTO';
@@ -121,21 +130,36 @@ export function MementoPage() {
 
   const loadMemoriaProfiles = async () => {
     try {
+      setNetworkError(false);
       const profiles = await MemoirIntegrations.getMemoriaProfiles(user.id);
       setMemoriaProfiles(profiles);
       console.log(`Loaded ${profiles.length} Memoria profiles`);
     } catch (error) {
       console.error('Error loading Memoria profiles:', error);
+      if (isNetworkError(error)) {
+        setNetworkError(true);
+        console.warn('Network connectivity issue detected. Some features may be unavailable.');
+      }
     }
   };
   
   const loadFavoriteProfiles = async () => {
     try {
+      setNetworkError(false);
       const favorites = await MemoirIntegrations.getFavoriteProfiles(user.id);
       setFavoriteProfiles(favorites);
       console.log(`Loaded ${favorites.memoir.length} favorite Memoir profiles and ${favorites.memoria.length} favorite Memoria profiles`);
     } catch (error) {
       console.error('Error loading favorite profiles:', error);
+      if (isNetworkError(error)) {
+        setNetworkError(true);
+        console.warn('Network connectivity issue detected. Unable to load favorite profiles.');
+        // Set empty favorites instead of crashing
+        setFavoriteProfiles({ memoir: [], memoria: [] });
+      } else {
+        // For non-network errors, still set empty favorites to prevent crashes
+        setFavoriteProfiles({ memoir: [], memoria: [] });
+      }
     }
   };
 
@@ -143,6 +167,7 @@ export function MementoPage() {
     try {
       setIsLoadingProfiles(true);
       setLoadError(null);
+      setNetworkError(false);
       
       // Load public Memoir profiles
       const memoirProfiles = await MemoirIntegrations.getPublicMemoirProfiles();
@@ -158,7 +183,12 @@ export function MementoPage() {
       console.log(`Loaded ${memoirProfiles.length} public Memoir profiles and ${memoriaProfiles.length} public Memoria profiles`);
     } catch (error) {
       console.error('Error loading public profiles:', error);
-      setLoadError('Failed to load public profiles. Please try again.');
+      if (isNetworkError(error)) {
+        setNetworkError(true);
+        setLoadError('Network connectivity issue. Please check your internet connection and try again.');
+      } else {
+        setLoadError('Failed to load public profiles. Please try again.');
+      }
     } finally {
       setIsLoadingProfiles(false);
     }
@@ -191,7 +221,12 @@ export function MementoPage() {
         setError('Please check your email to confirm your account');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      if (isNetworkError(err)) {
+        setError('Network connectivity issue. Please check your internet connection and try again.');
+        setNetworkError(true);
+      } else {
+        setError(err instanceof Error ? err.message : 'An error occurred');
+      }
     } finally {
       setFormLoading(false);
     }
@@ -208,7 +243,12 @@ export function MementoPage() {
       
       if (error) throw error;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to sign in with Google');
+      if (isNetworkError(err)) {
+        setError('Network connectivity issue. Please check your internet connection and try again.');
+        setNetworkError(true);
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to sign in with Google');
+      }
     }
   };
 
@@ -317,7 +357,12 @@ export function MementoPage() {
       await loadFavoriteProfiles();
     } catch (error) {
       console.error('Error adding favorite:', error);
-      alert('Failed to add favorite. Please try again.');
+      if (isNetworkError(error)) {
+        alert('Network connectivity issue. Please check your internet connection and try again.');
+        setNetworkError(true);
+      } else {
+        alert('Failed to add favorite. Please try again.');
+      }
     }
   };
   
@@ -331,7 +376,12 @@ export function MementoPage() {
       await loadFavoriteProfiles();
     } catch (error) {
       console.error('Error removing favorite:', error);
-      alert('Failed to remove favorite. Please try again.');
+      if (isNetworkError(error)) {
+        alert('Network connectivity issue. Please check your internet connection and try again.');
+        setNetworkError(true);
+      } else {
+        alert('Failed to remove favorite. Please try again.');
+      }
     }
   };
 
@@ -378,6 +428,32 @@ export function MementoPage() {
             Logout
           </button>
         </div>
+
+        {/* Network Error Banner */}
+        <AnimatePresence>
+          {networkError && (
+            <motion.div
+              initial={{ opacity: 0, y: -50 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -50 }}
+              className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 bg-red-500/90 backdrop-blur-sm border border-red-400/50 rounded-lg p-4 max-w-md w-full mx-4"
+            >
+              <div className="flex items-center gap-3">
+                <WifiOff className="w-5 h-5 text-white" />
+                <div className="flex-1">
+                  <h4 className="text-white font-medium text-sm">Connection Issue</h4>
+                  <p className="text-white/90 text-xs">Some features may be unavailable due to network connectivity issues.</p>
+                </div>
+                <button
+                  onClick={() => setNetworkError(false)}
+                  className="text-white/80 hover:text-white text-lg leading-none"
+                >
+                  ×
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <Canvas camera={{ position: CAMERA_POSITION_MEMENTO, fov: CAMERA_FOV_DEFAULT }}>
           <MementoCameraController />
@@ -518,6 +594,14 @@ export function MementoPage() {
 
                 <div className="mb-6">
                   <p className="text-white/70">Access your favorite profiles for quick navigation.</p>
+                  {networkError && (
+                    <div className="mt-2 p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
+                      <p className="text-red-400 text-sm flex items-center gap-2">
+                        <WifiOff className="w-4 h-4" />
+                        Network connectivity issues detected. Some favorites may not be available.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-8">
@@ -636,17 +720,24 @@ export function MementoPage() {
                     <div className="text-center py-12">
                       <Heart className="w-16 h-16 text-white/30 mx-auto mb-4" />
                       <h4 className="text-xl font-semibold text-white mb-2">No Favorites Yet</h4>
-                      <p className="text-white/60 mb-6">You haven't added any profiles to your favorites yet.</p>
-                      <button
-                        onClick={() => {
-                          setShowFavorites(false);
-                          setShowExplorer(true);
-                          loadPublicProfiles();
-                        }}
-                        className="px-6 py-3 bg-pink-500 hover:bg-pink-600 text-white rounded-lg transition-colors"
-                      >
-                        Explore Profiles
-                      </button>
+                      <p className="text-white/60 mb-6">
+                        {networkError 
+                          ? 'Unable to load favorites due to network connectivity issues.'
+                          : 'You haven\'t added any profiles to your favorites yet.'
+                        }
+                      </p>
+                      {!networkError && (
+                        <button
+                          onClick={() => {
+                            setShowFavorites(false);
+                            setShowExplorer(true);
+                            loadPublicProfiles();
+                          }}
+                          className="px-6 py-3 bg-pink-500 hover:bg-pink-600 text-white rounded-lg transition-colors"
+                        >
+                          Explore Profiles
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -841,14 +932,21 @@ export function MementoPage() {
                       <div className="text-center py-12">
                         <Globe className="w-16 h-16 text-white/30 mx-auto mb-4" />
                         <h4 className="text-xl font-semibold text-white mb-2">No Public Profiles Found</h4>
-                        <p className="text-white/60 mb-6">There are no public profiles available to explore at this time.</p>
+                        <p className="text-white/60 mb-6">
+                          {networkError 
+                            ? 'Unable to load public profiles due to network connectivity issues.'
+                            : 'There are no public profiles available to explore at this time.'
+                          }
+                        </p>
                         <div className="flex flex-col md:flex-row gap-4 justify-center">
-                          <button
-                            onClick={() => navigate('/memoir/settings')}
-                            className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
-                          >
-                            Make Your Profile Public
-                          </button>
+                          {!networkError && (
+                            <button
+                              onClick={() => navigate('/memoir/settings')}
+                              className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                            >
+                              Make Your Profile Public
+                            </button>
+                          )}
                           <button
                             onClick={loadPublicProfiles}
                             className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors flex items-center justify-center gap-2"

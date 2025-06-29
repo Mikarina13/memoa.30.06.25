@@ -10,6 +10,14 @@ export function useAuth() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Helper function to check if error is a network error
+  const isNetworkError = (error: any) => {
+    return error instanceof TypeError && 
+           (error.message?.includes('Failed to fetch') || 
+            error.message?.includes('Network request failed') ||
+            error.message?.includes('fetch'));
+  };
+
   const createUserProfile = async (userId: string, userMetadata: any = {}) => {
     try {
       // Check if profile already exists
@@ -33,12 +41,16 @@ export function useAuth() {
           ]);
 
         if (insertError) {
+          if (isNetworkError(insertError)) {
+            console.warn('Network error while creating profile. Will retry later:', insertError.message);
+            return; // Don't throw, just return - profile creation can be retried later
+          }
           console.error('Error creating user profile:', insertError.message);
         }
       } else if (fetchError) {
         // Handle network errors more gracefully
-        if (fetchError.message?.includes('Failed to fetch') || fetchError instanceof TypeError) {
-          console.error('Network error while checking profile. Will retry later:', fetchError.message);
+        if (isNetworkError(fetchError)) {
+          console.warn('Network error while checking profile. Will retry later:', fetchError.message);
           return; // Don't throw, just return - profile creation can be retried later
         }
         console.error('Error checking for existing profile:', fetchError.message);
@@ -54,8 +66,8 @@ export function useAuth() {
           .eq('user_id', userId);
 
         if (updateError) {
-          if (updateError.message?.includes('Failed to fetch') || updateError instanceof TypeError) {
-            console.error('Network error while updating profile. Will retry later:', updateError.message);
+          if (isNetworkError(updateError)) {
+            console.warn('Network error while updating profile. Will retry later:', updateError.message);
             return;
           }
           console.error('Error updating profile with Google data:', updateError.message);
@@ -63,8 +75,8 @@ export function useAuth() {
       }
     } catch (err) {
       // Handle network errors gracefully
-      if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
-        console.error('Network connectivity issue during profile creation. Will retry later.');
+      if (isNetworkError(err)) {
+        console.warn('Network connectivity issue during profile creation. Will retry later.');
         return;
       }
       console.error('Error in createUserProfile:', err);
@@ -87,9 +99,9 @@ export function useAuth() {
           if (isSessionError(error)) {
             await supabase.auth.signOut();
             setUser(null);
-          } else if (error.message?.includes('Failed to fetch') || error instanceof TypeError) {
+          } else if (isNetworkError(error)) {
             // Handle network errors gracefully - don't clear user state immediately
-            console.error('Network error fetching user. Connection may be unstable:', error.message);
+            console.warn('Network error fetching user. Connection may be unstable:', error.message);
             // Keep current user state if we have one, otherwise set to null
             if (!user) {
               setUser(null);
@@ -104,14 +116,14 @@ export function useAuth() {
           setHasAcceptedTerms(checkTermsAcceptance(user));
           // Create profile in background, don't wait for it and handle errors gracefully
           createUserProfile(user.id, user.user_metadata).catch(err => {
-            if (!(err instanceof TypeError && err.message.includes('Failed to fetch'))) {
+            if (!isNetworkError(err)) {
               console.error('Unexpected error creating profile:', err);
             }
           });
         }
       } catch (err) {
-        if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
-          console.error('Network connectivity issue during auth check:', err.message);
+        if (isNetworkError(err)) {
+          console.warn('Network connectivity issue during auth check:', err.message);
           // Don't clear user state on network errors
         } else {
           console.error('Error in getUser:', err);
@@ -134,7 +146,7 @@ export function useAuth() {
         setHasAcceptedTerms(checkTermsAcceptance(session.user));
         // Create profile in background, don't wait for it and handle errors gracefully
         createUserProfile(session.user.id, session.user.user_metadata).catch(err => {
-          if (!(err instanceof TypeError && err.message.includes('Failed to fetch'))) {
+          if (!isNetworkError(err)) {
             console.error('Unexpected error creating profile:', err);
           }
         });
@@ -165,8 +177,8 @@ export function useAuth() {
       const { error } = await supabase.auth.signOut();
       if (error) {
         // Handle network errors gracefully
-        if (error.message?.includes('Failed to fetch') || error instanceof TypeError) {
-          console.error('Network error during logout. Clearing local session:', error.message);
+        if (isNetworkError(error)) {
+          console.warn('Network error during logout. Clearing local session:', error.message);
           // Clear local state even if network request fails
           setUser(null);
           setHasAcceptedTerms(null);
