@@ -219,7 +219,6 @@ export function Profile3DSpacePage() {
               console.log(`Loaded ${galleryItems?.length || 0} gallery items`);
               setGalleryItems(galleryItems || []);
               
-              // Add gallery items to profile data for easy access
               if (profile) {
                 profile.gallery_items = galleryItems;
                 console.log('Added gallery items to profile data:', galleryItems?.length || 0);
@@ -469,19 +468,8 @@ export function Profile3DSpacePage() {
 
   // Handle return to memento with proper state
   const handleReturnToMemento = () => {
-    // If we're viewing someone else's profile, go back to the Explorer
-    if (initialUserId && initialUserId !== user?.id) {
-      navigate('/memento');
-    } else {
-      // If we're viewing our own profile, go to the appropriate dashboard
-      if (profileType === 'memoir') {
-        navigate('/memoir/dashboard');
-      } else if (profileType === 'memoria') {
-        navigate('/memoria/dashboard');
-      } else {
-        navigate('/memento');
-      }
-    }
+    // Go back to memento
+    navigate('/memento');
   };
 
   // Handle return to appropriate dashboard based on error type
