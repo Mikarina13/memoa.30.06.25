@@ -126,6 +126,8 @@ export function Gallery3DCarousel({
   // Set up keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      e.preventDefault(); // Prevent default behaviors for all keys in carousel mode
+      
       if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
         navigateCarousel(1); // Rotate counterclockwise
       } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {

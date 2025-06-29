@@ -344,7 +344,8 @@ export function Profile3DSpacePage() {
     navigate('/memento/profile-space', { 
       state: { 
         profileType: 'memoria',
-        memoriaProfileId: newProfileId
+        memoriaProfileId: newProfileId,
+        userId: initialUserId // Preserve the original user ID if viewing someone else's profile
       },
       replace: true // Replace current history entry to avoid back button issues
     });
@@ -470,6 +471,11 @@ export function Profile3DSpacePage() {
   const handleReturnToMemento = () => {
     // Go back to memento
     navigate('/memento');
+  };
+
+  // Handle return from gallery carousel
+  const handleGalleryReturn = () => {
+    setShowGalleryCarousel(false);
   };
 
   // Handle return to appropriate dashboard based on error type
@@ -779,7 +785,7 @@ export function Profile3DSpacePage() {
           {showGalleryCarousel && selectedGalleryItems.length > 0 && (
             <Gallery3DCarousel 
               galleryItems={selectedGalleryItems} 
-              onClose={() => setShowGalleryCarousel(false)}
+              onClose={handleGalleryReturn} // Use the new dedicated return handler
               onItemSelect={(item) => {
                 // Check if this is a tribute item that was transformed for the carousel
                 if (item.original_tribute_item) {

@@ -16,11 +16,25 @@ export function useKeyboardControls(speed = 0.2, enabled = true) {
     }
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      keysPressed.current.add(e.key.toLowerCase());
+      // Don't add to keysPressed if the key is already down
+      // This prevents the "stuck key" issue when switching context
+      if (!keysPressed.current.has(e.key.toLowerCase())) {
+        keysPressed.current.add(e.key.toLowerCase());
+      }
+      
+      // Only prevent default for movement keys to allow other keyboard shortcuts to work
+      if (['w', 'a', 's', 'd', 'q', 'e', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(e.key.toLowerCase())) {
+        e.preventDefault();
+      }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
       keysPressed.current.delete(e.key.toLowerCase());
+    };
+
+    // Handle blur event to reset keys when window loses focus
+    const handleBlur = () => {
+      keysPressed.current.clear();
     };
 
     const updateCamera = () => {
@@ -60,14 +74,16 @@ export function useKeyboardControls(speed = 0.2, enabled = true) {
       requestAnimationFrame(updateCamera);
     };
 
-    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown, { passive: false });
     window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', handleBlur);
     const animationFrame = requestAnimationFrame(updateCamera);
 
     // Cleanup event listeners on unmount
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', handleBlur);
       cancelAnimationFrame(animationFrame);
     };
   }, [camera, speed, enabled]);
