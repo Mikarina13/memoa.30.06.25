@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useFrame, useThree, ThreeEvent } from '@react-three/fiber';
 import { useTexture, Html } from '@react-three/drei';
 import { Group, MathUtils, Vector3 } from 'three';
 import React from 'react';
@@ -186,7 +186,7 @@ export function Gallery3DCarousel({
     loadingStatesRef.current[itemId] = true;
   }, []);
   
-  // Check if the carousel is empty or loading
+  // Loading state
   if (isLoading) {
     return (
       <Html center>
@@ -199,6 +199,7 @@ export function Gallery3DCarousel({
     );
   }
   
+  // Check if the carousel is empty
   if (galleryItems.length === 0) {
     return (
       <Html center>
@@ -283,89 +284,25 @@ function CarouselItem({
   const meshRef = useRef<THREE.Mesh>(null);
   const loadedRef = useRef(false);
   const [textureError, setTextureError] = useState(false);
-  const [currentTextureUrl, setCurrentTextureUrl] = useState(item.file_path || '');
-  const [hasAttemptedFallback, setHasAttemptedFallback] = useState(false);
-  const [loadStarted, setLoadStarted] = useState(false);
   
-  // Only load texture for image items
-  let texture = null;
-  const shouldLoadTexture = item.media_type === 'image' && !textureError;
-  
-  // Load the texture with error handling
-  useEffect(() => {
-    if (shouldLoadTexture && !loadStarted) {
-      setLoadStarted(true);
-      
-      const loadTexture = async () => {
-        try {
-          const textureLoader = new THREE.TextureLoader();
-          
-          // Create a promise-based texture loader
-          const loadTextureAsync = (url: string) => {
-            return new Promise<THREE.Texture>((resolve, reject) => {
-              textureLoader.load(
-                url,
-                (texture) => resolve(texture),
-                undefined, // onProgress not used
-                (error) => reject(error)
-              );
-            });
-          };
-          
-          const texture = await loadTextureAsync(currentTextureUrl);
-          
-          // Handle successful loading
-          if (loadedRef.current) return; // Prevent duplicate handling
-          
-          loadedRef.current = true;
-          onImageLoaded();
-          setTextureError(false);
-        } catch (error) {
-          console.warn('Texture loading error:', error);
-          
-          // Try fallback if haven't already
-          if (!hasAttemptedFallback) {
-            setCurrentTextureUrl('/placeholder.jpg');
-            setHasAttemptedFallback(true);
-          } else {
-            // Both original and fallback failed
-            setTextureError(true);
-          }
-        }
-      };
-      
-      loadTexture();
-    }
-  }, [shouldLoadTexture, currentTextureUrl, hasAttemptedFallback, onImageLoaded, loadStarted]);
-  
-  if (shouldLoadTexture) {
-    try {
-      texture = useTexture(currentTextureUrl, 
-        (loadedTexture) => {
-          // Texture loaded successfully
-          if (!loadedRef.current) {
-            loadedRef.current = true;
-            onImageLoaded();
-          }
-        },
-        (error) => {
-          console.warn('Texture loading error:', error);
-          if (!hasAttemptedFallback) {
-            setCurrentTextureUrl('/placeholder.jpg');
-            setHasAttemptedFallback(true);
-          } else {
-            // Both original and fallback failed
-            setTextureError(true);
-          }
-        }
-      );
-    } catch (error) {
-      console.warn('useTexture hook error:', error);
+  // Always call useTexture hook, but conditionally use the result
+  // This ensures the hook is called the same number of times on each render
+  const texture = useTexture(
+    item.media_type === 'image' ? item.file_path || '' : '/placeholder.jpg', 
+    undefined,
+    (error) => {
+      console.warn('Texture loading error:', error);
       setTextureError(true);
+    },
+    () => {
+      if (!loadedRef.current && item.media_type === 'image') {
+        loadedRef.current = true;
+        onImageLoaded();
+      }
     }
-  }
-  
-  // Apply scale directly
+  );
+
+  // Apply scale directly to the mesh
   useEffect(() => {
     if (meshRef.current) {
       meshRef.current.scale.set(scale, scale, scale);
@@ -373,7 +310,7 @@ function CarouselItem({
   }, [scale]);
   
   // Set material based on media type and error state
-  const materialProps = item.media_type === 'image' && texture && !textureError
+  const materialProps = item.media_type === 'image' && !textureError
     ? { map: texture } 
     : { color: textureError ? '#666666' : '#111111' };
   
@@ -408,16 +345,6 @@ function CarouselItem({
         <Html center position={[0, 0, 0.1]}>
           <div className="w-16 h-16 bg-black/50 rounded-full flex items-center justify-center">
             <div className="w-0 h-0 border-t-[15px] border-t-transparent border-b-[15px] border-b-transparent border-l-[25px] border-l-white ml-1"></div>
-          </div>
-        </Html>
-      )}
-      
-      {/* Loading indicator for images still loading */}
-      {item.media_type === 'image' && !isLoaded && !textureError && (
-        <Html center>
-          <div className="bg-black/70 text-white p-2 rounded text-center">
-            <div className="w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-1"></div>
-            <div className="text-xs">Loading...</div>
           </div>
         </Html>
       )}
