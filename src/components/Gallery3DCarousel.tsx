@@ -1,18 +1,8 @@
-import { useRef, useState, useEffect, useCallback } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
-import { Html, useTexture } from '@react-three/drei';
-import { Vector3, Group, MathUtils } from 'three';
+import { useRef, useState, useEffect, useMemo } from 'react';
+import { useFrame, useThree, ThreeEvent } from '@react-three/fiber';
+import { Html } from '@react-three/drei';
+import { Vector3 } from 'three';
 import React from 'react';
-import { ErrorBoundary } from 'react-error-boundary';
-import { AlertCircle, Loader, RefreshCw, XCircle } from 'lucide-react';
-
-interface GalleryItem {
-  id: string;
-  media_type: string;
-  title: string;
-  file_path: string;
-  file_size?: number;
-}
 
 interface Gallery3DCarouselProps {
   galleryItems: any[];
@@ -21,29 +11,6 @@ interface Gallery3DCarouselProps {
   currentIndex?: number;
   onIndexChange?: (index: number) => void;
   isLoading?: boolean;
-}
-
-// Error Boundary fallback component for the entire carousel
-function GalleryCarouselErrorFallback({ error, resetErrorBoundary }: { error: Error, resetErrorBoundary: () => void }) {
-  return (
-    <Html center>
-      <div className="bg-black/90 p-8 rounded-lg text-white text-center max-w-lg">
-        <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
-        <h3 className="text-xl font-bold mb-4">Gallery Error</h3>
-        <p className="text-white/70 mb-6">There was a problem loading the gallery carousel.</p>
-        <p className="text-white/50 mb-6 text-sm">{error.message}</p>
-        <div className="flex gap-4 justify-center">
-          <button 
-            onClick={resetErrorBoundary} 
-            className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg flex items-center gap-2"
-          >
-            <RefreshCw className="w-5 h-5" />
-            Retry
-          </button>
-        </div>
-      </div>
-    </Html>
-  );
 }
 
 // Error Boundary for individual carousel items
@@ -86,9 +53,9 @@ function CarouselItemErrorFallback() {
       </mesh>
       <Html center>
         <div className="bg-black/70 text-white p-4 rounded-lg text-center max-w-xs">
-          <XCircle className="w-8 h-8 mx-auto mb-2 text-red-400" />
+          <div className="text-red-400 mb-2">⚠️</div>
           <div className="text-sm font-medium mb-1">Failed to load media</div>
-          <div className="text-xs text-white/70">The image or video could not be displayed</div>
+          <div className="text-xs text-gray-300">Image unavailable</div>
         </div>
       </Html>
     </group>
@@ -156,6 +123,22 @@ export function Gallery3DCarousel({
     }
   });
   
+  // Set up keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+        navigateCarousel(1); // Rotate counterclockwise
+      } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+        navigateCarousel(-1); // Rotate clockwise
+      } else if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+  
   // Handle manual navigation
   const navigateCarousel = useCallback((direction: number) => {
     if (isTransitioning || galleryItems.length === 0) return;
@@ -179,40 +162,6 @@ export function Gallery3DCarousel({
       setIsTransitioning(false);
     }, 300);
   }, [angleStep, currentIndex, galleryItems.length, isTransitioning, onIndexChange]);
-  
-  // Set up keyboard navigation - IMPROVED VERSION
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Prevent default browser behavior for navigation keys
-      if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "a", "d", "w", "s", "A", "D", "W", "S", "Space", " "].includes(e.key)) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-      
-      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
-        navigateCarousel(1); // Rotate counterclockwise
-      } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
-        navigateCarousel(-1); // Rotate clockwise
-      } else if (e.key === 'Escape') {
-        onClose();
-      } else if (e.key === 'Enter' || e.key === ' ' || e.key === 'Space') {
-        // Select current item on Enter or Space
-        if (galleryItems.length > 0 && onItemSelect) {
-          onItemSelect(galleryItems[currentIndex]);
-        }
-      }
-    };
-    
-    // Use { passive: false } to allow preventDefault() to work properly
-    window.addEventListener('keydown', handleKeyDown, { passive: false });
-    
-    // Focus the window/document to ensure keyboard events are captured
-    window.focus();
-    
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [navigateCarousel, onClose, onItemSelect, galleryItems, currentIndex]);
   
   // Update index if controlled externally
   useEffect(() => {
@@ -241,9 +190,10 @@ export function Gallery3DCarousel({
   if (isLoading) {
     return (
       <Html center>
-        <div className="bg-black/80 p-8 rounded-lg shadow-xl text-white text-center"> 
-          <Loader className="w-8 h-8 animate-spin mx-auto mb-2" />
-          <span>Loading gallery...</span>
+        <div className="bg-black/80 p-8 rounded-lg shadow-xl text-white text-center">
+          <div className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <h3 className="text-xl font-semibold mb-2">Loading Gallery</h3>
+          <p className="text-white/70">Please wait while we load your gallery items...</p>
         </div>
       </Html>
     );
@@ -266,14 +216,9 @@ export function Gallery3DCarousel({
       </Html>
     );
   }
-
+  
   return (
-    <ErrorBoundary
-      FallbackComponent={(props) => <GalleryCarouselErrorFallback {...props} />}
-      onReset={() => {
-        console.log("Resetting gallery carousel after error");
-      }}
-    >
+    <>
       {/* Fixed carousel of images around the camera */}
       <group ref={carouselRef}>
         {galleryItems.map((item, index) => {
@@ -311,27 +256,8 @@ export function Gallery3DCarousel({
       </group>
       
       <CarouselCameraControls />
-    </ErrorBoundary>
+    </>
   );
-}
-
-// Helper function to check if a file path is an image based on extension
-function isImageFile(filePath: string): boolean {
-  if (!filePath) return false;
-  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'];
-  const lowercasePath = filePath.toLowerCase();
-  return imageExtensions.some(ext => lowercasePath.endsWith(ext));
-}
-
-// Helper function to validate URL format
-function isValidHttpUrl(string: string): boolean {
-  let url;
-  try {
-    url = new URL(string);
-  } catch (_) {
-    return false;  
-  }
-  return url.protocol === "http:" || url.protocol === "https:";
 }
 
 interface CarouselItemProps {
@@ -359,31 +285,17 @@ function CarouselItem({
   const loadedRef = useRef(false);
   const [textureError, setTextureError] = useState(false);
   
-  // Validate the file path before attempting to load
-  const isValidPath = isValidHttpUrl(item.file_path);
-  
-  // Determine if this item should use texture loading
-  const shouldLoadTexture = item.media_type === 'image' && isImageFile(item.file_path) && isValidPath;
-  
-  // Log warning for invalid paths
-  useEffect(() => {
-    if (!isValidPath && item.file_path) {
-      console.warn(`Invalid image URL for gallery item ${item.id}: "${item.file_path}"`);
-      setTextureError(true);
-    }
-  }, [item.id, item.file_path, isValidPath]);
-  
   // Always call useTexture hook, but conditionally use the result
   // This ensures the hook is called the same number of times on each render
   const texture = useTexture(
-    shouldLoadTexture ? item.file_path : '/placeholder.jpg', 
+    item.media_type === 'image' ? item.file_path || '' : '/placeholder.jpg', 
     undefined,
     (error) => {
-      console.warn(`Texture loading error for ${item.id}:`, error);
+      console.warn('Texture loading error:', error);
       setTextureError(true);
     },
     () => {
-      if (!loadedRef.current && shouldLoadTexture) {
+      if (!loadedRef.current && item.media_type === 'image') {
         loadedRef.current = true;
         onImageLoaded();
       }
@@ -398,26 +310,14 @@ function CarouselItem({
   }, [scale]);
   
   // Set material based on media type and error state
-  const materialProps = shouldLoadTexture && !textureError
+  const materialProps = item.media_type === 'image' && !textureError
     ? { map: texture } 
     : { color: textureError ? '#666666' : '#111111' };
-  
-  // Increase clickable area significantly
-  const hitAreaSize = [9, 6, 1]; // Much larger hit area
   
   // Render content based on state - no early returns
   return (
     <group position={position} rotation={rotation}>
-      {/* Invisible hit area - much larger than the visible plane */}
-      <mesh
-        onClick={onClick}
-        position={[0, 0, 0.5]} // Position it slightly in front of the visual mesh
-      >
-        <boxGeometry args={hitAreaSize} />
-        <meshBasicMaterial opacity={0.001} transparent />
-      </mesh>
-      
-      {/* Visible image plane */}
+      {/* Image plane */}
       <mesh
         ref={meshRef}
         onClick={onClick}

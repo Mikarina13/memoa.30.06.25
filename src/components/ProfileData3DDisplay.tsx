@@ -1,5 +1,5 @@
-import { useRef, useMemo, useState, useEffect } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useRef, useState, useEffect, useMemo } from 'react';
+import { useFrame, useThree, ThreeEvent } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import { Vector3, Group, Color } from 'three'; 
 import { Heart, Volume2, User, Brain, Image as ImageIcon, FileText, Gamepad2, Globe, Camera, Cuboid, FileVideo, File as FilePdf, Sparkles } from 'lucide-react';
@@ -36,6 +36,7 @@ const THEME_COLORS = {
     digital_presence: '#a855f7',
     gaming_preferences: '#06b6d4',
     voice: '#3b82f6',
+    tavus_avatar: '#8b5cf6',
     avaturn_avatars: '#f97316',
     narratives: '#10b981',
     gallery: '#ec4899',
@@ -50,6 +51,7 @@ const THEME_COLORS = {
     digital_presence: '#e11d48',
     gaming_preferences: '#f59e0b',
     voice: '#f97316',
+    tavus_avatar: '#e11d48',
     avaturn_avatars: '#f97316',
     narratives: '#f59e0b',
     gallery: '#f97316',
@@ -64,6 +66,7 @@ const THEME_COLORS = {
     digital_presence: '#0ea5e9',
     gaming_preferences: '#10b981',
     voice: '#0ea5e9',
+    tavus_avatar: '#10b981',
     avaturn_avatars: '#0ea5e9',
     narratives: '#10b981',
     gallery: '#0ea5e9',
@@ -78,12 +81,12 @@ const THEME_COLORS = {
     digital_presence: '#6366f1',
     gaming_preferences: '#10b981',
     voice: '#06b6d4',
+    tavus_avatar: '#f43f5e',
     avaturn_avatars: '#f97316',
     narratives: '#10b981',
     gallery: '#ec4899',
     personality: '#f43f5e',
     family_tree: '#22c55e',
-    ai_tribute_images: '#f97316',
     media_links: '#f59e0b',
     documents: '#6366f1'
   },
@@ -92,6 +95,7 @@ const THEME_COLORS = {
     digital_presence: '#94a3b8',
     gaming_preferences: '#94a3b8',
     voice: '#94a3b8',
+    tavus_avatar: '#94a3b8',
     avaturn_avatars: '#94a3b8',
     narratives: '#94a3b8',
     gallery: '#94a3b8',
@@ -106,6 +110,7 @@ const THEME_COLORS = {
     digital_presence: '#4f46e5',
     gaming_preferences: '#1e40af',
     voice: '#2563eb',
+    tavus_avatar: '#4f46e5',
     avaturn_avatars: '#1e40af',
     narratives: '#2563eb',
     gallery: '#4f46e5',
@@ -179,6 +184,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
       profileType: isMemoriaProfile ? 'memoria' : 'memoir',
       profileId: currentProfileId,
       elevenlabsVoiceId: profileData?.elevenlabs_voice_id,
+      tavusAvatarId: profileData?.tavus_avatar_id,
       hasGalleryItems: profileData?.gallery_items?.length > 0,
       galleryItemCount: profileData?.gallery_items?.length || 0
     });
@@ -249,7 +255,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
             key="personal-favorites"
             id="personal_favorites"
             position={position}
-            icon={<Heart className={`w-14 h-14`} style={{color: getItemColor('personal_favorites', themeColors.personal_favorites)}} />}
+            icon={<Heart className={`w-8 h-8`} style={{color: getItemColor('personal_favorites', themeColors.personal_favorites)}} />}
             label="Personal Favorites" 
             color={getItemColor('personal_favorites', themeColors.personal_favorites)}
             scale={settings.iconScale}
@@ -287,7 +293,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           key="digital-presence"
           id="digital_presence"
           position={position}
-          icon={<Globe className={`w-14 h-14`} style={{color: getItemColor('digital_presence', themeColors.digital_presence)}} />}
+          icon={<Globe className={`w-8 h-8`} style={{color: getItemColor('digital_presence', themeColors.digital_presence)}} />}
           label="Digital Presence" 
           color={getItemColor('digital_presence', themeColors.digital_presence)}
           scale={settings.iconScale}
@@ -319,7 +325,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           key="gaming-preferences"
           id="gaming_preferences"
           position={position}
-          icon={<Gamepad2 className={`w-14 h-14`} style={{color: getItemColor('gaming_preferences', themeColors.gaming_preferences)}} />}
+          icon={<Gamepad2 className={`w-8 h-8`} style={{color: getItemColor('gaming_preferences', themeColors.gaming_preferences)}} />}
           label="Gaming Preferences" 
           color={getItemColor('gaming_preferences', themeColors.gaming_preferences)}
           scale={settings.iconScale}
@@ -350,7 +356,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           key="voice"
           id="voice"
           position={position}
-          icon={<Volume2 className={`w-14 h-14`} style={{color: getItemColor('voice', themeColors.voice)}} />}
+          icon={<Volume2 className={`w-8 h-8`} style={{color: getItemColor('voice', themeColors.voice)}} />}
           label="Voice Clone" 
           color={getItemColor('voice', themeColors.voice)}
           scale={settings.iconScale}
@@ -374,6 +380,40 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
       index++;
     }
     
+    // Tavus Avatar
+    if (profileData?.tavus_avatar_id && isItemVisible('tavus_avatar')) {
+      console.log('Displaying Tavus video avatar with ID:', profileData.tavus_avatar_id);
+      const angle = (index / itemCount) * Math.PI * 2;
+      const position = getItemPosition('tavus_avatar', angle, radius, settings.verticalSpread);
+      
+      items.push(
+        <Item
+          key="tavus-avatar"
+          id="tavus_avatar"
+          position={position}
+          icon={<Camera className={`w-8 h-8`} style={{color: getItemColor('tavus_avatar', themeColors.tavus_avatar)}} />}
+          label="Video Avatar" 
+          color={getItemColor('tavus_avatar', themeColors.tavus_avatar)}
+          scale={settings.iconScale}
+          onHover={() => setHoveredItem("tavus-avatar")}
+          onLeave={() => setHoveredItem(null)}
+          lastClickTime={lastClickTime.current}
+          isHovered={hoveredItem === "tavus-avatar"}
+          isClicked={clickedItem === "tavus-avatar"}
+          onClick={() => {
+            setClickedItem("tavus-avatar");
+            setTimeout(() => setClickedItem(null), 200);
+            handleItemClick("tavus_avatar", { 
+              avatarId: profileData.tavus_avatar_id,
+              status: profileData.integration_status?.tavus?.status
+            });
+          }}
+          glowIntensity={settings.backgroundIntensity}
+        />
+      );
+      index++;
+    }
+    
     // Avaturn Avatars - check both paths
     const avaturnAvatars = profileData?.profile_data?.avaturn_avatars?.avatars || 
                           profileData?.memoir_data?.avaturn_avatars?.avatars;
@@ -388,7 +428,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           key="avaturn-avatars"
           id="avaturn_avatars"
           position={position}
-          icon={<Cuboid className={`w-14 h-14`} style={{color: getItemColor('avaturn_avatars', themeColors.avaturn_avatars)}} />}
+          icon={<Cuboid className={`w-8 h-8`} style={{color: getItemColor('avaturn_avatars', themeColors.avaturn_avatars)}} />}
           label="3D Avatars" 
           color={getItemColor('avaturn_avatars', themeColors.avaturn_avatars)}
           scale={settings.iconScale}
@@ -422,7 +462,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           key="narratives"
           id="narratives"
           position={position}
-          icon={<FileText className={`w-14 h-14`} style={{color: getItemColor('narratives', themeColors.narratives)}} />}
+          icon={<FileText className={`w-8 h-8`} style={{color: getItemColor('narratives', themeColors.narratives)}} />}
           label="Narratives" 
           color={getItemColor('narratives', themeColors.narratives)}
           scale={settings.iconScale}
@@ -453,7 +493,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           key="gallery"
           id="gallery"
           position={position}
-          icon={<ImageIcon className={`w-14 h-14`} style={{color: getItemColor('gallery', themeColors.gallery)}} />}
+          icon={<ImageIcon className={`w-8 h-8`} style={{color: getItemColor('gallery', themeColors.gallery)}} />}
           label="Gallery" 
           color={getItemColor('gallery', themeColors.gallery)}
           scale={settings.iconScale}
@@ -487,7 +527,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           key="personality"
           id="personality"
           position={position}
-          icon={<Brain className={`w-14 h-14`} style={{color: getItemColor('personality', themeColors.personality)}} />}
+          icon={<Brain className={`w-8 h-8`} style={{color: getItemColor('personality', themeColors.personality)}} />}
           label="Personality" 
           color={getItemColor('personality', themeColors.personality)}
           scale={settings.iconScale}
@@ -521,7 +561,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           key="family-tree"
           id="family_tree"
           position={position}
-          icon={<User className={`w-14 h-14`} style={{color: getItemColor('family_tree', themeColors.family_tree)}} />}
+          icon={<User className={`w-8 h-8`} style={{color: getItemColor('family_tree', themeColors.family_tree)}} />}
           label="Family Tree" 
           color={getItemColor('family_tree', themeColors.family_tree)}
           scale={settings.iconScale}
@@ -555,7 +595,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           key="media-links"
           id="media_links"
           position={position}
-          icon={<FileVideo className={`w-14 h-14`} style={{color: getItemColor('media_links', themeColors.media_links)}} />}
+          icon={<FileVideo className={`w-8 h-8`} style={{color: getItemColor('media_links', themeColors.media_links)}} />}
           label="Media Links" 
           color={getItemColor('media_links', themeColors.media_links)}
           scale={settings.iconScale}
@@ -588,7 +628,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           key="documents"
           id="documents"
           position={position}
-          icon={<FilePdf className={`w-14 h-14`} style={{color: getItemColor('documents', themeColors.documents)}} />}
+          icon={<FilePdf className={`w-8 h-8`} style={{color: getItemColor('documents', themeColors.documents)}} />}
           label="Documents" 
           color={getItemColor('documents', themeColors.documents)}
           scale={settings.iconScale}
@@ -610,9 +650,8 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
       index++;
     }
     
-    // AI Tribute Images - check both paths (memoir_data and profile_data)
-    const tributeImages = profileData?.profile_data?.tribute_images || 
-                         profileData?.memoir_data?.tribute_images;
+    // AI Tribute Images
+    const tributeImages = profileData?.profile_data?.tribute_images;
     console.log('AI Tribute images found:', tributeImages);
     if (tributeImages?.length > 0 && isItemVisible('ai_tribute_images')) {
       console.log('Displaying AI tribute images with', tributeImages.length, 'items:', tributeImages);
@@ -624,7 +663,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
           key="ai-tribute-images"
           id="ai_tribute_images"
           position={position}
-          icon={<Sparkles className={`w-14 h-14`} style={{color: getItemColor('ai_tribute_images', themeColors.ai_tribute_images)}} />}
+          icon={<Sparkles className={`w-8 h-8`} style={{color: getItemColor('ai_tribute_images', themeColors.ai_tribute_images)}} />}
           label="AI Tribute Images" 
           color={getItemColor('ai_tribute_images', themeColors.ai_tribute_images)}
           scale={settings.iconScale}
@@ -781,6 +820,9 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
     // Voice
     if (profileData?.elevenlabs_voice_id && isItemVisible('voice')) count++;
     
+    // Tavus Avatar
+    if (profileData?.tavus_avatar_id && isItemVisible('tavus_avatar')) count++;
+    
     // Avaturn Avatars
     const avaturnAvatars = profileData?.profile_data?.avaturn_avatars?.avatars || 
                           profileData?.memoir_data?.avaturn_avatars?.avatars;
@@ -814,8 +856,7 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
     if (documents?.length > 0 && isItemVisible('documents')) count++;
     
     // AI Tribute Images
-    const tributeImages = profileData?.profile_data?.tribute_images || 
-                         profileData?.memoir_data?.tribute_images;
+    const tributeImages = profileData?.profile_data?.tribute_images;
     if (tributeImages?.length > 0 && isItemVisible('ai_tribute_images')) count++;
 
     console.log('Total item count:', count);
@@ -844,7 +885,7 @@ interface ItemProps {
   lastClickTime: Record<string, number>;
   isHovered: boolean;
   isClicked: boolean;
-  onClick: (e: any) => void;
+  onClick: (e: ThreeEvent<MouseEvent>) => void;
   glowIntensity?: number;
 }
 
@@ -888,7 +929,7 @@ function Item({
     }
   });
   
-  const handleClick = (e: any) => {
+  const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
     
     // Start pulse animation
@@ -909,35 +950,31 @@ function Item({
       <mesh
         ref={meshRef}
         position={position}
-        // Larger invisible mesh for better click detection
-        onClick={handleClick}
+        visible={false}
       >
-        <sphereGeometry args={[3.5, 32, 32]} />
-        <meshBasicMaterial opacity={0.01} transparent />
+        <sphereGeometry args={[0.1, 8, 8]} />
+        <meshBasicMaterial opacity={0} transparent />
       </mesh>
       
       {/* Label */}
-      <Html center position={[position.x, position.y + 3.5, position.z]}>
+      <Html center position={[position.x, position.y + 2.5, position.z]}>
         <div 
-          className={`px-6 py-3 rounded-lg text-white text-center transition-all duration-200 font-[Orbitron] ${
+          className={`px-4 py-2 rounded-lg text-white text-center transition-all duration-200 font-[Orbitron] ${
             isHovered 
-              ? 'opacity-100 transform scale-110 bg-black/40' 
+              ? 'opacity-100 transform scale-110 bg-black/80' 
               : 'opacity-0 transform scale-90 bg-transparent'
           }`} 
           style={{ 
             borderColor: color,
-            borderWidth: '2px',
-            minWidth: '220px',
-            maxWidth: '300px',
-            boxShadow: isHovered ? `0 0 25px ${color}90` : 'none',
+            borderWidth: '1px',
+            minWidth: '160px',
+            boxShadow: isHovered ? `0 0 15px ${color}80` : 'none',
             userSelect: 'none',
-            WebkitUserSelect: 'none',
-            fontSize: '18px',
-            lineHeight: '1.2'
+            WebkitUserSelect: 'none'
           }}
         >
           {label}
-          <div className="text-sm mt-2 opacity-80">Double-click to view</div>
+          <div className="text-xs mt-1 opacity-70">Double-click to view</div>
         </div>
       </Html>
       
@@ -948,26 +985,17 @@ function Item({
           onMouseLeave={onLeave}
           onClick={handleClick}
           onTouchEnd={handleClick}
-          className={`rounded-full p-12 transition-all duration-150 cursor-pointer ${
+          className={`rounded-full p-8 transition-all duration-150 cursor-pointer ${
             isClicked ? 'scale-90' : isHovered ? 'scale-125' : 'scale-100'
           } active:scale-90`} 
           style={{ 
             transform: `scale(${scale * (isClicked ? 0.9 : isHovered ? 1.25 : 1)})`,
-            backgroundColor: 'transparent', // Fully transparent background
-            border: `3px solid ${color}90`, // Slightly transparent border
-            boxShadow: isHovered 
-              ? `0 0 30px ${color}, 0 0 15px ${color}` 
-              : `0 0 25px ${color}60, 0 0 10px ${color}30`,
+            backgroundColor: `${color}20`,
+            border: `2px solid ${color}60`,
+            boxShadow: isHovered ? `0 0 20px ${color}` : glowIntensity > 0.2 ? `0 0 ${Math.floor(glowIntensity * 10)}px ${glowColor}` : 'none',
             userSelect: 'none',
             WebkitUserSelect: 'none',
-            transition: 'all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)',
-            width: '120px',
-            height: '120px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: isHovered ? 10 : 1,
-            animation: !isHovered ? 'pulse 3s infinite ease-in-out' : 'none',
+            transition: 'all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)'
           }}
         >
           {icon}
