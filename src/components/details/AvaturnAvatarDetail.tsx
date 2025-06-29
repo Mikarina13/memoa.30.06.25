@@ -275,10 +275,28 @@ function Model({ url, onLoadingComplete, onError }: {
       </Stage>
     );
   } catch (e) {
-    // Enhanced error handling with more specific error types
+    // Enhanced error handling with specific Promise object detection
     let error: Error;
     
-    if (e instanceof Error) {
+    // Check if the caught object is a Promise
+    if (e && typeof e === 'object' && typeof (e as any).then === 'function') {
+      // Handle Promise objects specifically
+      error = new Error(`Async loading error for model: ${url}. The 3D model loader encountered an unexpected asynchronous error. This may indicate a network issue, corrupted model file, or missing dependencies.`);
+      
+      // Try to extract more information from the Promise if possible
+      Promise.resolve(e as Promise<any>)
+        .then((resolvedValue) => {
+          console.warn('Promise resolved with:', resolvedValue);
+        })
+        .catch((promiseError) => {
+          console.error('Promise rejected with:', promiseError);
+          // Update error with more specific information if available
+          if (promiseError instanceof Error) {
+            const updatedError = new Error(`Model loading failed: ${promiseError.message}`);
+            onError?.(updatedError);
+          }
+        });
+    } else if (e instanceof Error) {
       // Enhance error message based on the original error
       if (e.message.includes('404') || e.message.includes('Not Found')) {
         error = new Error(`Model file not found: ${url}. The file may have been deleted or the URL is incorrect.`);
@@ -290,7 +308,13 @@ function Model({ url, onLoadingComplete, onError }: {
         error = e;
       }
     } else {
-      error = new Error(`Unknown error loading 3D model: ${String(e)}`);
+      // Handle other types of errors
+      const errorString = String(e);
+      if (errorString === '[object Promise]') {
+        error = new Error(`Unhandled Promise in 3D model loading for: ${url}. This indicates an async operation that wasn't properly awaited. Try refreshing the page or check the model file integrity.`);
+      } else {
+        error = new Error(`Unknown error loading 3D model: ${errorString}`);
+      }
     }
     
     // Call error callback
@@ -788,6 +812,11 @@ export function AvaturnAvatarDetail({ data }: AvaturnAvatarDetailProps) {
                     <div className="bg-black/30 rounded p-3">
                       <p className="font-medium text-purple-400 text-xs">WebGL Context Lost</p>
                       <p className="text-xs mt-1">Graphics driver issue. Try refreshing the page or restarting your browser.</p>
+                    </div>
+                    
+                    <div className="bg-black/30 rounded p-3">
+                      <p className="font-medium text-pink-400 text-xs">Async Loading Error</p>
+                      <p className="text-xs mt-1">Unhandled Promise error. This may indicate network issues or corrupted model files. Try refreshing or re-uploading the model.</p>
                     </div>
                   </div>
                 </div>
