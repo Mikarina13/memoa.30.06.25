@@ -2,7 +2,7 @@ import { useState, useEffect, Suspense, useMemo } from 'react';
 import { Canvas, useThree, ThreeEvent } from '@react-three/fiber';
 import { OrbitControls, Environment, Html } from '@react-three/drei';
 import { motion, AnimatePresence } from 'framer-motion'; 
-import { X, Loader, RefreshCw, Settings, SlidersHorizontal as SliderHorizontal, Undo, CheckCircle, Cog, Image } from 'lucide-react';
+import { X, Loader, RefreshCw, Settings, Cog, Image, ArrowLeft } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { EnhancedStars } from '../components/EnhancedStars';
 import { ProfileData3DDisplay } from '../components/ProfileData3DDisplay';
@@ -376,7 +376,7 @@ export function Profile3DSpacePage() {
           item.metadata.isTribute === true ||
           (item.metadata.type === 'tribute') ||
           (item.tags && item.tags.includes('tribute')) ||
-          (item.folder === 'Tribute Images') ||
+          (item.metadata.folder === 'Tribute Images') ||
           (item.title && item.title.toLowerCase().includes('tribute'));
         
         return !isTribute;
@@ -519,9 +519,9 @@ export function Profile3DSpacePage() {
   // Handle return to appropriate dashboard based on error type
   const handleReturnToDashboard = () => {
     if (profileType === 'memoria') {
-      navigate('/memoria');
+      navigate('/memoria/dashboard');
     } else {
-      navigate('/memento');
+      navigate('/memoir/dashboard');
     }
   };
 
@@ -928,7 +928,7 @@ export function Profile3DSpacePage() {
                   item.metadata.isTribute === true ||
                   (item.metadata.type === 'tribute') ||
                   (item.tags && item.tags.includes('tribute')) ||
-                  (item.folder === 'Tribute Images') ||
+                  (item.metadata.folder === 'Tribute Images') ||
                   (item.title && item.title.toLowerCase().includes('tribute'));
                 
                 return !isTribute;

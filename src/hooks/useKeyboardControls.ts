@@ -12,6 +12,8 @@ export function useKeyboardControls(speed = 0.2, enabled = true) {
   useEffect(() => {
     // If not enabled, don't set up event listeners
     if (!enabled) {
+      // Clear any pressed keys when disabled to avoid "stuck" keys
+      keysPressed.current.clear();
       return;
     }
 
@@ -24,7 +26,10 @@ export function useKeyboardControls(speed = 0.2, enabled = true) {
       
       // Only prevent default for movement keys to allow other keyboard shortcuts to work
       if (['w', 'a', 's', 'd', 'q', 'e', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(e.key.toLowerCase())) {
-        e.preventDefault();
+        // Only prevent default if we're enabled
+        if (enabled) {
+          e.preventDefault();
+        }
       }
     };
 
@@ -85,6 +90,8 @@ export function useKeyboardControls(speed = 0.2, enabled = true) {
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('blur', handleBlur);
       cancelAnimationFrame(animationFrame);
+      // Clear keys when effect is cleaned up
+      keysPressed.current.clear();
     };
   }, [camera, speed, enabled]);
 }

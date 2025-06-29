@@ -5,6 +5,14 @@ import { Vector3, Group, MathUtils } from 'three';
 import * as THREE from 'three';
 import React from 'react';
 
+interface GalleryItem {
+  id: string;
+  media_type: string;
+  title: string;
+  file_path: string;
+  file_size?: number;
+}
+
 interface Gallery3DCarouselProps {
   galleryItems: any[];
   onClose: () => void;
@@ -127,6 +135,12 @@ export function Gallery3DCarousel({
   // Set up keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Prevent default browser behavior for navigation keys
+      if (["ArrowLeft", "ArrowRight", "a", "d", "A", "D"].includes(e.key)) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      
       if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
         navigateCarousel(1); // Rotate counterclockwise
       } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
@@ -136,7 +150,9 @@ export function Gallery3DCarousel({
       }
     };
     
-    window.addEventListener('keydown', handleKeyDown);
+    // Use { passive: false } to allow preventDefault() to work properly
+    window.addEventListener('keydown', handleKeyDown, { passive: false });
+    
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
   
