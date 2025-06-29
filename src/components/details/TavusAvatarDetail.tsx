@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Camera, ExternalLink, Play, Pause, Send, Loader, AlertCircle, MessageSquare, RefreshCw, Info, X } from 'lucide-react';
+import { Camera, ExternalLink, Play, Pause, Send, Loader, AlertCircle, MessageSquare, RefreshCw, Info, X, Globe, Link } from 'lucide-react';
 import { MemoirIntegrations } from '../../lib/memoir-integrations';
 import { TavusAPI } from '../../lib/tavus-api';
 import { useAuth } from '../../hooks/useAuth';
@@ -21,7 +21,13 @@ export function TavusAvatarDetail({ data }: TavusAvatarDetailProps) {
   const [error, setError] = useState<string | null>(null);
   const [videoVisible, setVideoVisible] = useState(false);
   const [currentVideoUrl, setCurrentVideoUrl] = useState<string | null>(null);
-  const [credentials, setCredentials] = useState<{ apiKey?: string, replicaId: string, personaId?: string } | null>(null);
+  const [credentials, setCredentials] = useState<{ 
+    apiKey?: string, 
+    replicaId: string, 
+    personaId?: string, 
+    conversationId?: string, 
+    conversationName?: string 
+  } | null>(null);
   const [isLoadingCredentials, setIsLoadingCredentials] = useState(true);
   const [showInfoBox, setShowInfoBox] = useState(false);
   
@@ -71,7 +77,9 @@ export function TavusAvatarDetail({ data }: TavusAvatarDetailProps) {
         setCredentials({
           apiKey: tavsCredentials.tavus_api_key,
           replicaId: tavsCredentials.tavus_avatar_id || data.avatarId,
-          personaId: tavsCredentials.tavus_persona_id
+          personaId: tavsCredentials.tavus_persona_id,
+          conversationId: tavsCredentials.tavus_conversation_id,
+          conversationName: tavsCredentials.tavus_conversation_name
         });
         console.log('Tavus credentials loaded');
       } else {
@@ -315,6 +323,23 @@ export function TavusAvatarDetail({ data }: TavusAvatarDetailProps) {
               <p className="text-white/70 text-sm font-mono">{credentials.personaId}</p>
             </div>
           )}
+          
+          {credentials?.conversationId && (
+            <div className="mt-2">
+              <h4 className="text-white font-medium text-sm flex items-center gap-1">
+                <Link className="w-4 h-4 text-blue-400" />
+                Conversation ID
+              </h4>
+              <p className="text-white/70 text-sm font-mono">{credentials.conversationId}</p>
+            </div>
+          )}
+          
+          {credentials?.conversationName && (
+            <div className="mt-2">
+              <h4 className="text-white font-medium text-sm">Conversation Name</h4>
+              <p className="text-white/70 text-sm font-mono">{credentials.conversationName}</p>
+            </div>
+          )}
         </div>
         
         <div className="bg-black/30 rounded-lg overflow-hidden mb-6">
@@ -486,6 +511,9 @@ export function TavusAvatarDetail({ data }: TavusAvatarDetailProps) {
             <li>• Conversational video interactions</li>
             <li>• Personalized video messages</li>
             <li>• Live chat with AI-powered responses</li>
+            {credentials?.conversationId && (
+              <li>• Web-based conversation interface via Tavus</li>
+            )}
           </ul>
         </div>
         
@@ -495,15 +523,29 @@ export function TavusAvatarDetail({ data }: TavusAvatarDetailProps) {
             <p className="text-white/60 text-sm">Send messages to generate video responses</p>
           </div>
           
-          <a
-            href="https://tavus.io/dashboard"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 rounded-lg transition-colors"
-          >
-            <ExternalLink className="w-4 h-4" />
-            Manage in Tavus
-          </a>
+          <div className="flex gap-2">
+            {credentials?.conversationId && (
+              <a
+                href={TavusAPI.getConversationUrl(credentials.conversationId)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg transition-colors"
+              >
+                <Globe className="w-4 h-4" />
+                Open Conversation
+              </a>
+            )}
+            
+            <a
+              href="https://tavus.io/dashboard"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 rounded-lg transition-colors"
+            >
+              <ExternalLink className="w-4 h-4" />
+              Manage in Tavus
+            </a>
+          </div>
         </div>
         
         <div className="mt-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">

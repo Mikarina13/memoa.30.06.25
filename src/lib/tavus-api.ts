@@ -139,6 +139,30 @@ export class TavusAPI {
   }
 
   /**
+   * Get conversation details by ID (v2 API)
+   */
+  async getConversation(conversationId: string): Promise<any> {
+    try {
+      const response = await fetch(`https://api.tavus.io/v2/conversations/${conversationId}`, {
+        headers: this.getHeaders(),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to fetch conversation: ${response.status} - ${errorText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        throw new Error('Network Error: Unable to connect to Tavus API. Please check your internet connection and try again.');
+      }
+      console.error('Error getting conversation:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Check if API key is valid
    */
   async validateApiKey(): Promise<boolean> {
@@ -151,13 +175,6 @@ export class TavusAPI {
       // Re-throw the error instead of returning false to provide specific error details
       throw error;
     }
-  }
-
-  /**
-   * Get a conversation URL from a conversation ID
-   */
-  static getConversationUrl(conversationId: string): string {
-    return `https://tavus.io/conversation/${conversationId}`;
   }
 
   /**
@@ -186,6 +203,13 @@ export class TavusAPI {
       console.error('Error extracting conversation ID:', error);
       return null;
     }
+  }
+
+  /**
+   * Get a conversation URL from a conversation ID
+   */
+  static getConversationUrl(conversationId: string): string {
+    return `https://tavus.io/conversation/${conversationId}`;
   }
 
   /**

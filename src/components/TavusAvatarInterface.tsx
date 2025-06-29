@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, Link, ExternalLink, CheckCircle, AlertCircle, Save, X, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Camera, Link, ExternalLink, CheckCircle, AlertCircle, Save, X, ArrowLeft, ArrowRight, Globe } from 'lucide-react';
 import { MemoirIntegrations } from '../lib/memoir-integrations'; 
 import { TavusAPI } from '../lib/tavus-api';
 import { useAuth } from '../hooks/useAuth';
@@ -18,11 +18,14 @@ export function TavusAvatarInterface({ memoriaProfileId, onAvatarCreated, onClos
   const [replicaId, setReplicaId] = useState('');
   const [personaId, setPersonaId] = useState('');
   const [conversationLink, setConversationLink] = useState('');
+  const [conversationId, setConversationId] = useState('');
+  const [conversationName, setConversationName] = useState('');
   const [validationStatus, setValidationStatus] = useState<'idle' | 'validating' | 'success' | 'error'>('idle');
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
   const [validationError, setValidationError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [currentReplicaId, setCurrentReplicaId] = useState<string | null>(null);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [showApiKeyInfo, setShowApiKeyInfo] = useState(false);
   const [testMessageResponse, setTestMessageResponse] = useState<string | null>(null);
   const [testMessageStatus, setTestMessageStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
@@ -50,24 +53,37 @@ export function TavusAvatarInterface({ memoriaProfileId, onAvatarCreated, onClos
         if (credentials.tavus_api_key) {
           setApiKey(credentials.tavus_api_key);
         }
+        
+        if (credentials.tavus_conversation_id) {
+          setConversationId(credentials.tavus_conversation_id);
+          setCurrentConversationId(credentials.tavus_conversation_id);
+          
+          // Set conversation link from ID
+          setConversationLink(TavusAPI.getConversationUrl(credentials.tavus_conversation_id));
+        }
+        
+        if (credentials.tavus_conversation_name) {
+          setConversationName(credentials.tavus_conversation_name);
+        }
       }
     } catch (error) {
       console.error('Error loading current Tavus credentials:', error);
     }
   };
 
-  const extractIdsFromLink = (link: string): { replicaId: string | null, personaId: string | null } => {
+  const extractIdsFromLink = (link: string): { replicaId: string | null, conversationId: string | null } => {
     try {
+      // Try to extract conversation ID from the link
       const conversationId = TavusAPI.extractConversationId(link);
       
-      // For now, we don't have a way to extract persona IDs from links
+      // For now, we don't have a way to extract replica IDs from links
       // Users will need to enter these manually from the Tavus dashboard
       return { 
-        replicaId: conversationId,
-        personaId: null
+        replicaId: null,
+        conversationId
       };
     } catch (e) {
-      return { replicaId: null, personaId: null };
+      return { replicaId: null, conversationId: null };
     }
   };
 
@@ -129,19 +145,24 @@ export function TavusAvatarInterface({ memoriaProfileId, onAvatarCreated, onClos
     setSaveError(null);
 
     try {
-      // Save Tavus credentials
+      // Save Tavus credentials including conversation ID and name
       await MemoirIntegrations.storeTavusCredentials(
         user.id, 
         {
           tavus_avatar_id: replicaId.trim(),
           tavus_persona_id: personaId.trim() || undefined,
-          tavus_api_key: apiKey.trim()
+          tavus_api_key: apiKey.trim(),
+          tavus_conversation_id: conversationId.trim() || undefined,
+          tavus_conversation_name: conversationName.trim() || undefined
         }, 
         memoriaProfileId
       );
       
-      // Update current replica ID
+      // Update current replica ID and conversation ID
       setCurrentReplicaId(replicaId);
+      if (conversationId) {
+        setCurrentConversationId(conversationId);
+      }
       
       // Reset form and show success
       setSaveStatus('success');
@@ -171,10 +192,10 @@ export function TavusAvatarInterface({ memoriaProfileId, onAvatarCreated, onClos
     const link = e.target.value;
     setConversationLink(link);
     
-    // Try to extract replica ID and persona ID from the link
-    const { replicaId: extractedReplicaId } = extractIdsFromLink(link);
-    if (extractedReplicaId) {
-      setReplicaId(extractedReplicaId);
+    // Try to extract conversation ID from the link
+    const { conversationId: extractedConversationId } = extractIdsFromLink(link);
+    if (extractedConversationId) {
+      setConversationId(extractedConversationId);
     }
   };
 
@@ -292,6 +313,12 @@ export function TavusAvatarInterface({ memoriaProfileId, onAvatarCreated, onClos
                   <span className="ml-2 text-white font-mono">{personaId}</span>
                 </div>
               )}
+              {currentConversationId && (
+                <div className="bg-black/30 p-2 rounded text-sm">
+                  <span className="text-white/60">Conversation ID:</span>
+                  <span className="ml-2 text-white font-mono">{currentConversationId}</span>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -356,6 +383,7 @@ export function TavusAvatarInterface({ memoriaProfileId, onAvatarCreated, onClos
                   <li>• Tavus API Key (from Developer Settings)</li>
                   <li>• Replica ID (shown on your Tavus dashboard)</li>
                   <li>• Persona ID (optional, for better personality matching)</li>
+                  <li>• Conversation ID (optional, for real-time conversations)</li>
                 </ul>
               </div>
             </div>
@@ -414,7 +442,7 @@ export function TavusAvatarInterface({ memoriaProfileId, onAvatarCreated, onClos
               <h4 className="text-blue-400 font-medium mb-2">Where to find your Tavus API Key:</h4>
               <ol className="text-white/70 text-sm space-y-1 list-decimal pl-5">
                 <li>Log in to your <a href="https://tavus.io/dashboard" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">Tavus Dashboard</a></li>
-                <li>{'Go to Settings > Developer'}</li>
+                <li>Go to Settings {'>'} Developer</li>
                 <li>Create a new API Key or copy your existing one</li>
                 <li>Paste it into the field above</li>
               </ol>
@@ -431,15 +459,15 @@ export function TavusAvatarInterface({ memoriaProfileId, onAvatarCreated, onClos
               </div>
               
               <p className="text-white/70 mb-4">
-                Enter the Replica ID and Persona ID for your Tavus avatar. You can find these in your Tavus dashboard.
+                Enter your Tavus IDs to connect your avatar. You can find these in your Tavus dashboard.
               </p>
 
               <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-lg mb-4">
                 <h4 className="text-purple-400 font-medium mb-2">Finding Your IDs:</h4>
                 <ul className="text-white/70 text-sm space-y-1">
-                  <li>• Replica ID is shown in your avatar settings in the Tavus dashboard</li>
-                  <li>• Persona ID defines the personality of your avatar</li>
-                  <li>• Both can be found in the Tavus dashboard under your avatar details</li>
+                  <li>• <strong>Replica ID</strong>: Required for generating video responses (r0123...)</li>
+                  <li>• <strong>Persona ID</strong>: Optional, defines the personality (p0123...)</li>
+                  <li>• <strong>Conversation ID</strong>: Optional, for real-time conversation sessions (c0123...)</li>
                 </ul>
               </div>
             </div>
@@ -456,7 +484,7 @@ export function TavusAvatarInterface({ memoriaProfileId, onAvatarCreated, onClos
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:border-purple-500 text-sm"
                 />
                 <p className="text-white/50 text-xs mt-1">
-                  If you have a Tavus conversation link, enter it here to automatically extract the Replica ID
+                  If you have a Tavus conversation link, enter it here to automatically extract the Conversation ID
                 </p>
               </div>
 
@@ -472,6 +500,9 @@ export function TavusAvatarInterface({ memoriaProfileId, onAvatarCreated, onClos
                     className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:border-purple-500 font-mono text-sm"
                     required
                   />
+                  <p className="text-white/50 text-xs mt-1">
+                    Required for video generation
+                  </p>
                 </div>
                 
                 <div>
@@ -483,6 +514,41 @@ export function TavusAvatarInterface({ memoriaProfileId, onAvatarCreated, onClos
                     onChange={(e) => setPersonaId(e.target.value)}
                     className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:border-purple-500 font-mono text-sm"
                   />
+                  <p className="text-white/50 text-xs mt-1">
+                    Optional personality settings
+                  </p>
+                </div>
+              </div>
+              
+              {/* Conversation ID and Name */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Conversation ID</label>
+                  <input
+                    type="text"
+                    placeholder="c0123a4b5c6"
+                    value={conversationId}
+                    onChange={(e) => setConversationId(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:border-purple-500 font-mono text-sm"
+                  />
+                  <p className="text-white/50 text-xs mt-1 flex items-center gap-1">
+                    <Globe className="w-3 h-3" />
+                    For real-time web conversations
+                  </p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Conversation Name</label>
+                  <input
+                    type="text"
+                    placeholder="My Conversation"
+                    value={conversationName}
+                    onChange={(e) => setConversationName(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:border-purple-500 text-sm"
+                  />
+                  <p className="text-white/50 text-xs mt-1">
+                    Optional display name
+                  </p>
                 </div>
               </div>
 
@@ -560,8 +626,9 @@ export function TavusAvatarInterface({ memoriaProfileId, onAvatarCreated, onClos
                 <li>Click on your avatar</li>
                 <li>The Replica ID will be displayed in the details (looks like r0123...)</li>
                 <li>For Persona ID, check the persona section (looks like p0123...)</li>
+                <li>For Conversation ID, copy it from a conversation URL</li>
               </ol>
-              <p className="text-amber-400 text-sm mt-2">Tip: You can use a conversation link to automatically extract the Replica ID.</p>
+              <p className="text-amber-400 text-sm mt-2">Tip: You can use a conversation link to automatically extract the Conversation ID.</p>
             </div>
           </form>
         )}
