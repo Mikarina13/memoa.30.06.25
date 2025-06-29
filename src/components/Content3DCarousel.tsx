@@ -4,7 +4,7 @@ import { Html, useTexture } from '@react-three/drei';
 import { Vector3, Group, MathUtils } from 'three';
 import React from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
-import { AlertCircle, Loader, RefreshCw, XCircle, FileText, FileVideo, Mic, Newspaper, Link as LinkIcon, Facebook, Instagram, Twitter, Linkedin, Youtube, Github, Twitch, AlignJustify as Spotify, Rss, Mail, Globe2, MessageSquare, ExternalLink } from 'lucide-react';
+import { AlertCircle, Loader, RefreshCw, XCircle, FileText, FileVideo, Mic, Newspaper, Link as LinkIcon, Facebook, Instagram, Twitter, Linkedin, Youtube, Github, Twitch, AlignJustify as Spotify, Rss, Mail, Globe2, MessageSquare, ExternalLink, Play } from 'lucide-react';
 
 interface ContentItem {
   id: string;
@@ -156,30 +156,6 @@ export function Content3DCarousel({
     }
   });
   
-  // Handle manual navigation
-  const navigateCarousel = useCallback((direction: number) => {
-    if (isTransitioning || items.length === 0) return;
-    
-    // Update target rotation
-    targetRotation.current += direction * angleStep;
-    
-    // Update current index
-    const newIndex = (currentIndex - direction + items.length) % items.length;
-    
-    setIsTransitioning(true);
-    setCurrentIndex(newIndex);
-    
-    // Notify parent if callback provided
-    if (onIndexChange) {
-      onIndexChange(newIndex);
-    }
-    
-    // Reset transitioning state after animation completes
-    setTimeout(() => {
-      setIsTransitioning(false);
-    }, 300);
-  }, [angleStep, currentIndex, items.length, isTransitioning, onIndexChange]);
-  
   // Set up keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -212,7 +188,31 @@ export function Content3DCarousel({
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [navigateCarousel, onClose, onItemSelect, items, currentIndex]);
+  }, [onClose, onItemSelect, items, currentIndex]);
+  
+  // Handle manual navigation
+  const navigateCarousel = useCallback((direction: number) => {
+    if (isTransitioning || items.length === 0) return;
+    
+    // Update target rotation
+    targetRotation.current += direction * angleStep;
+    
+    // Update current index
+    const newIndex = (currentIndex - direction + items.length) % items.length;
+    
+    setIsTransitioning(true);
+    setCurrentIndex(newIndex);
+    
+    // Notify parent if callback provided
+    if (onIndexChange) {
+      onIndexChange(newIndex);
+    }
+    
+    // Reset transitioning state after animation completes
+    setTimeout(() => {
+      setIsTransitioning(false);
+    }, 300);
+  }, [angleStep, currentIndex, items.length, isTransitioning, onIndexChange]);
   
   // Update index if controlled externally
   useEffect(() => {
@@ -306,6 +306,37 @@ export function Content3DCarousel({
       </group>
       
       <CarouselCameraControls />
+      
+      {/* Add navigation controls */}
+      <Html position={[0, -6, 0]} center>
+        <div className="flex items-center gap-4 bg-black/60 px-4 py-2 rounded-full">
+          <button 
+            onClick={() => navigateCarousel(1)}
+            className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white"
+          >
+            ◀
+          </button>
+          <span className="text-white">
+            {currentIndex + 1} / {items.length}
+          </span>
+          <button 
+            onClick={() => navigateCarousel(-1)}
+            className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white"
+          >
+            ▶
+          </button>
+        </div>
+      </Html>
+      
+      {/* Close button */}
+      <Html position={[0, 6, 0]} center>
+        <button 
+          onClick={onClose}
+          className="p-3 bg-black/60 hover:bg-black/80 rounded-full text-white"
+        >
+          ✕
+        </button>
+      </Html>
     </ErrorBoundary>
   );
 }
@@ -330,6 +361,7 @@ function CarouselItem({
   renderContent
 }: CarouselItemProps) {
   const meshRef = useRef<THREE.Mesh>(null);
+  const [isHovered, setIsHovered] = useState(false);
   
   // Apply scale directly to the mesh
   useEffect(() => {
@@ -337,9 +369,6 @@ function CarouselItem({
       meshRef.current.scale.set(scale, scale, scale);
     }
   }, [scale]);
-  
-  // Increase clickable area significantly
-  const hitAreaSize = [9, 6, 1]; // Much larger hit area
   
   // Default content rendering (fallback if no custom renderer provided)
   const defaultRenderContent = () => {
@@ -350,13 +379,52 @@ function CarouselItem({
       if (itemType === 'video') {
         return (
           <>
-            <mesh>
+            <mesh visible={false}>
               <planeGeometry args={[6, 4]} />
               <meshBasicMaterial color="#111111" />
             </mesh>
             <Html center position={[0, 0, 0.1]}>
-              <div className="w-16 h-16 bg-black/50 rounded-full flex items-center justify-center">
-                <FileVideo className="w-8 h-8 text-red-400" />
+              <div 
+                className={`w-64 h-44 bg-gradient-to-r from-red-500/20 to-red-600/20 border border-red-500/30 rounded-lg p-4 transition-all duration-300 cursor-pointer ${isActive ? 'scale-105 shadow-lg' : ''}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClick();
+                }}
+                onPointerOver={() => setIsHovered(true)}
+                onPointerOut={() => setIsHovered(false)}
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <div className="p-2 bg-black/40 rounded-lg">
+                    <FileVideo className="w-8 h-8 text-red-400" />
+                  </div>
+                  <div className="px-2 py-1 bg-black/40 rounded-full text-red-400 text-xs font-medium">
+                    Video
+                  </div>
+                </div>
+                
+                <div className="mb-3 overflow-hidden">
+                  <h3 className="text-white font-bold text-sm truncate mb-1">{item.title}</h3>
+                  <div className="text-white/70 text-xs truncate">{item.source}</div>
+                </div>
+                
+                <div className="absolute bottom-3 left-3 right-3">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs bg-black/50 px-2 py-1 rounded-md text-white/60 truncate max-w-[140px]">
+                      {item.url ? (new URL(item.url)).hostname : 'Watch video'}
+                    </div>
+                    <div className="bg-white/10 hover:bg-white/20 p-1.5 rounded-full transition-colors">
+                      <ExternalLink className="w-4 h-4 text-white" />
+                    </div>
+                  </div>
+                </div>
+                
+                {isHovered && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 transition-colors">
+                    <div className="bg-white/20 p-4 rounded-full">
+                      <Play className="w-8 h-8 text-white" />
+                    </div>
+                  </div>
+                )}
               </div>
             </Html>
           </>
@@ -364,13 +432,52 @@ function CarouselItem({
       } else if (itemType === 'podcast') {
         return (
           <>
-            <mesh>
+            <mesh visible={false}>
               <planeGeometry args={[6, 4]} />
               <meshBasicMaterial color="#111111" />
             </mesh>
             <Html center position={[0, 0, 0.1]}>
-              <div className="w-16 h-16 bg-black/50 rounded-full flex items-center justify-center">
-                <Mic className="w-8 h-8 text-purple-400" />
+              <div 
+                className={`w-64 h-44 bg-gradient-to-r from-purple-500/20 to-purple-600/20 border border-purple-500/30 rounded-lg p-4 transition-all duration-300 cursor-pointer ${isActive ? 'scale-105 shadow-lg' : ''}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClick();
+                }}
+                onPointerOver={() => setIsHovered(true)}
+                onPointerOut={() => setIsHovered(false)}
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <div className="p-2 bg-black/40 rounded-lg">
+                    <Mic className="w-8 h-8 text-purple-400" />
+                  </div>
+                  <div className="px-2 py-1 bg-black/40 rounded-full text-purple-400 text-xs font-medium">
+                    Podcast
+                  </div>
+                </div>
+                
+                <div className="mb-3 overflow-hidden">
+                  <h3 className="text-white font-bold text-sm truncate mb-1">{item.title}</h3>
+                  <div className="text-white/70 text-xs truncate">{item.source}</div>
+                </div>
+                
+                <div className="absolute bottom-3 left-3 right-3">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs bg-black/50 px-2 py-1 rounded-md text-white/60 truncate max-w-[140px]">
+                      {item.url ? (new URL(item.url)).hostname : 'Listen'}
+                    </div>
+                    <div className="bg-white/10 hover:bg-white/20 p-1.5 rounded-full transition-colors">
+                      <ExternalLink className="w-4 h-4 text-white" />
+                    </div>
+                  </div>
+                </div>
+                
+                {isHovered && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 transition-colors">
+                    <div className="bg-white/20 p-4 rounded-full">
+                      <Play className="w-8 h-8 text-white" />
+                    </div>
+                  </div>
+                )}
               </div>
             </Html>
           </>
@@ -378,13 +485,52 @@ function CarouselItem({
       } else if (itemType === 'article') {
         return (
           <>
-            <mesh>
+            <mesh visible={false}>
               <planeGeometry args={[6, 4]} />
               <meshBasicMaterial color="#111111" />
             </mesh>
             <Html center position={[0, 0, 0.1]}>
-              <div className="w-16 h-16 bg-black/50 rounded-full flex items-center justify-center">
-                <Newspaper className="w-8 h-8 text-blue-400" />
+              <div 
+                className={`w-64 h-44 bg-gradient-to-r from-blue-500/20 to-blue-600/20 border border-blue-500/30 rounded-lg p-4 transition-all duration-300 cursor-pointer ${isActive ? 'scale-105 shadow-lg' : ''}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClick();
+                }}
+                onPointerOver={() => setIsHovered(true)}
+                onPointerOut={() => setIsHovered(false)}
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <div className="p-2 bg-black/40 rounded-lg">
+                    <Newspaper className="w-8 h-8 text-blue-400" />
+                  </div>
+                  <div className="px-2 py-1 bg-black/40 rounded-full text-blue-400 text-xs font-medium">
+                    Article
+                  </div>
+                </div>
+                
+                <div className="mb-3 overflow-hidden">
+                  <h3 className="text-white font-bold text-sm truncate mb-1">{item.title}</h3>
+                  <div className="text-white/70 text-xs truncate">{item.source}</div>
+                </div>
+                
+                <div className="absolute bottom-3 left-3 right-3">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs bg-black/50 px-2 py-1 rounded-md text-white/60 truncate max-w-[140px]">
+                      {item.url ? (new URL(item.url)).hostname : 'Read article'}
+                    </div>
+                    <div className="bg-white/10 hover:bg-white/20 p-1.5 rounded-full transition-colors">
+                      <ExternalLink className="w-4 h-4 text-white" />
+                    </div>
+                  </div>
+                </div>
+                
+                {isHovered && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 transition-colors">
+                    <div className="bg-white/20 p-3 rounded-lg">
+                      <span className="text-white text-sm font-medium">Click to read</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </Html>
           </>
@@ -397,13 +543,44 @@ function CarouselItem({
       if (item.media_type === 'video') {
         return (
           <>
-            <mesh>
+            <mesh visible={false}>
               <planeGeometry args={[6, 4]} />
               <meshBasicMaterial color="#111111" />
             </mesh>
             <Html center position={[0, 0, 0.1]}>
-              <div className="w-16 h-16 bg-black/50 rounded-full flex items-center justify-center">
-                <div className="w-0 h-0 border-t-[15px] border-t-transparent border-b-[15px] border-b-transparent border-l-[25px] border-l-white ml-1"></div>
+              <div 
+                className={`w-64 h-44 bg-gradient-to-r from-pink-500/20 to-red-500/20 border border-pink-500/30 rounded-lg relative overflow-hidden cursor-pointer ${isActive ? 'scale-105 shadow-lg' : ''}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClick();
+                }}
+                onPointerOver={() => setIsHovered(true)}
+                onPointerOut={() => setIsHovered(false)}
+              >
+                <div className="absolute inset-0 flex flex-col justify-between p-3">
+                  <div className="flex justify-between">
+                    <div className="px-2 py-1 bg-black/50 rounded text-xs text-white/90">
+                      Video
+                    </div>
+                    <div className="bg-black/50 rounded-full p-1">
+                      <FileVideo className="w-4 h-4 text-white" />
+                    </div>
+                  </div>
+                  
+                  <div className="bg-black/50 p-2 rounded mt-auto">
+                    <div className="text-white text-sm font-medium truncate">
+                      {item.title}
+                    </div>
+                  </div>
+                </div>
+                
+                {isHovered && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                    <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
+                      <div className="w-0 h-0 border-t-[15px] border-t-transparent border-b-[15px] border-b-transparent border-l-[25px] border-l-white ml-1"></div>
+                    </div>
+                  </div>
+                )}
               </div>
             </Html>
           </>
@@ -414,13 +591,38 @@ function CarouselItem({
     // Generic fallback
     return (
       <>
-        <mesh>
+        <mesh visible={false}>
           <planeGeometry args={[6, 4]} />
           <meshBasicMaterial color="#111111" />
         </mesh>
         <Html center position={[0, 0, 0.1]}>
-          <div className="w-16 h-16 bg-black/50 rounded-full flex items-center justify-center">
-            <LinkIcon className="w-8 h-8 text-white/70" />
+          <div 
+            className={`w-64 h-44 bg-gradient-to-r from-purple-500/20 to-indigo-500/20 border border-purple-500/30 rounded-lg p-4 transition-all duration-300 cursor-pointer ${isActive ? 'scale-105 shadow-lg' : ''}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onClick();
+            }}
+            onPointerOver={() => setIsHovered(true)}
+            onPointerOut={() => setIsHovered(false)}
+          >
+            <div className="flex justify-between items-start mb-2">
+              <div className="p-2 bg-black/40 rounded-lg">
+                <LinkIcon className="w-8 h-8 text-white/70" />
+              </div>
+            </div>
+            
+            <div className="mb-3 overflow-hidden">
+              <h3 className="text-white font-bold text-sm truncate mb-1">{item.title || "Link"}</h3>
+              <div className="text-white/70 text-xs truncate">{item.url || ""}</div>
+            </div>
+            
+            {isHovered && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/30 transition-colors">
+                <div className="bg-white/20 p-3 rounded-lg">
+                  <span className="text-white text-sm font-medium">Click to open</span>
+                </div>
+              </div>
+            )}
           </div>
         </Html>
       </>
@@ -429,26 +631,30 @@ function CarouselItem({
   
   return (
     <group position={position} rotation={rotation}>
-      {/* Invisible hit area - much larger than the visible plane */}
-      <mesh
-        onClick={onClick}
-        position={[0, 0, 0.5]} // Position it slightly in front of the visual mesh
-      >
-        <boxGeometry args={hitAreaSize} />
-        <meshBasicMaterial opacity={0.001} transparent />
-      </mesh>
-      
       {/* Content */}
-      <group ref={meshRef}>
+      <group 
+        ref={meshRef} 
+        onClick={(e) => {
+          e.stopPropagation();
+          onClick();
+        }}
+      >
         {renderContent ? renderContent(item, isActive, scale) : defaultRenderContent()}
+        
+        {/* Active indicator - pulsing border for the active item */}
+        {isActive && (
+          <Html center>
+            <div 
+              className="absolute inset-0 rounded-lg animate-pulse"
+              style={{
+                boxShadow: '0 0 20px rgba(255, 255, 255, 0.5)',
+                border: '2px solid rgba(255, 255, 255, 0.3)',
+                animation: 'pulse 2s infinite',
+              }}
+            />
+          </Html>
+        )}
       </group>
-      
-      {/* Item title */}
-      <Html center position={[0, -3, 0]}>
-        <div className="px-4 py-2 bg-black/80 rounded-lg text-white text-center min-w-[200px] max-w-[300px]">
-          {item.title || (item.name ? item.name : "Item")}
-        </div>
-      </Html>
     </group>
   );
 }
@@ -481,6 +687,7 @@ export function renderGalleryContent(item: any, isActive: boolean, scale: number
   const shouldLoadTexture = item.media_type === 'image' && isImageFile(item.file_path) && isValidPath;
   
   const [textureError, setTextureError] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const loadedRef = useRef(false);
   
   // Always call useTexture hook, but conditionally use the result
@@ -505,34 +712,88 @@ export function renderGalleryContent(item: any, isActive: boolean, scale: number
   
   return (
     <>
-      {/* Visible image plane */}
-      <mesh>
-        <planeGeometry args={[6, 4]} />
-        <meshBasicMaterial 
-          {...materialProps} 
-          transparent
-          opacity={1}
-        />
-      </mesh>
-      
-      {/* Error indicator if texture failed to load */}
-      {textureError && (
-        <Html center>
-          <div className="bg-black/70 text-white p-2 rounded text-center text-xs">
-            <div className="text-red-400 mb-1">⚠️</div>
-            <div>Image failed to load</div>
-          </div>
-        </Html>
-      )}
-      
-      {/* Video indicator for video items */}
-      {item.media_type === 'video' && (
+      {/* Wrap in a group that can be clicked */}
+      <group>
+        {/* Visible image plane */}
+        <mesh visible={false}>
+          <planeGeometry args={[6, 4]} />
+          <meshBasicMaterial 
+            {...materialProps} 
+            transparent
+            opacity={1}
+          />
+        </mesh>
+        
+        {/* Enhanced HTML content with styling and proper click handling */}
         <Html center position={[0, 0, 0.1]}>
-          <div className="w-16 h-16 bg-black/50 rounded-full flex items-center justify-center">
-            <div className="w-0 h-0 border-t-[15px] border-t-transparent border-b-[15px] border-b-transparent border-l-[25px] border-l-white ml-1"></div>
+          <div 
+            className={`w-64 h-44 rounded-lg overflow-hidden cursor-pointer border transition-all duration-300 ${
+              isActive ? 'border-white/50 shadow-lg scale-105' : 'border-white/20'
+            }`}
+            onClick={(e) => e.stopPropagation()} // Prevent event bubbling
+            onPointerOver={() => setIsHovered(true)}
+            onPointerOut={() => setIsHovered(false)}
+          >
+            {/* Image container with proper styling */}
+            {shouldLoadTexture && !textureError ? (
+              <div 
+                className="w-full h-full bg-center bg-cover relative"
+                style={{ backgroundImage: `url(${item.file_path})` }}
+              >
+                {/* Overlay for hover effect */}
+                {isHovered && (
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                    {item.media_type === 'video' ? (
+                      <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
+                        <Play className="w-8 h-8 text-white ml-1" />
+                      </div>
+                    ) : (
+                      <div className="bg-black/60 px-3 py-2 rounded-lg">
+                        <span className="text-white text-sm">View full image</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {/* Caption overlay at bottom */}
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
+                  <p className="text-white text-sm font-medium truncate">{item.title}</p>
+                </div>
+              </div>
+            ) : (
+              // Fallback for errors or video items
+              <div className="w-full h-full bg-black/50 flex flex-col items-center justify-center relative">
+                {item.media_type === 'video' ? (
+                  <>
+                    <FileVideo className="w-12 h-12 text-white/60 mb-2" />
+                    <p className="text-white/80 text-sm">{item.title}</p>
+                    
+                    {/* Play button overlay on hover */}
+                    {isHovered && (
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                        <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
+                          <Play className="w-8 h-8 text-white ml-1" />
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : textureError ? (
+                  <>
+                    <XCircle className="w-12 h-12 text-red-400 mb-2" />
+                    <p className="text-white/80 text-sm">Image failed to load</p>
+                    <p className="text-white/60 text-xs mt-1">{item.title}</p>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-10 h-10 border-2 border-white/40 border-t-transparent rounded-full animate-spin mb-4"></div>
+                    <p className="text-white/80 text-sm">Loading...</p>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </Html>
-      )}
+      </group>
     </>
   );
 }
@@ -594,6 +855,7 @@ function getPlatformIconAndColor(item: any) {
 export function renderMediaLinkContent(item: any, isActive: boolean, scale: number) {
   // Get the platform-specific icon and styling
   const { icon: IconComponent, color, bgColor, borderColor } = getPlatformIconAndColor(item);
+  const [isHovered, setIsHovered] = useState(false);
   
   // Determine content type icon and color
   let ContentIcon = FileVideo;
@@ -610,18 +872,13 @@ export function renderMediaLinkContent(item: any, isActive: boolean, scale: numb
     contentLabel = "Article";
   }
 
-  // Animation styles for active state
-  const activeClass = isActive ? 
-    'shadow-lg transform scale-105 border-2' : 
-    'shadow border';
-  
   // Determine if we should make plane transparent
   const meshOpacity = 0.0; // Fully transparent 3D plane
 
   return (
     <>
       {/* Transparent 3D mesh as base */}
-      <mesh>
+      <mesh visible={false}>
         <planeGeometry args={[6, 4]} />
         <meshBasicMaterial color="#000000" opacity={meshOpacity} transparent />
       </mesh>
@@ -629,11 +886,18 @@ export function renderMediaLinkContent(item: any, isActive: boolean, scale: numb
       {/* HTML content with frame styling */}
       <Html center position={[0, 0, 0.1]} transform>
         <div 
-          className={`w-64 h-44 bg-gradient-to-r ${bgColor} backdrop-blur-sm rounded-lg p-4 ${activeClass} ${borderColor} transition-all duration-300 overflow-hidden`}
-          style={{ 
-            boxShadow: isActive ? '0 0 25px rgba(255, 255, 255, 0.3)' : '0 0 15px rgba(0, 0, 0, 0.5)',
-            transform: `scale(${scale})`,
+          className={`w-64 h-44 bg-gradient-to-r ${bgColor} backdrop-blur-sm rounded-lg p-4 ${
+            isActive ? 'scale-105 border-2' : 'border'
+          } ${borderColor} transition-all duration-300 overflow-hidden cursor-pointer ${
+            isHovered ? 'shadow-lg shadow-white/20' : ''
+          }`}
+          style={{ boxShadow: isActive ? '0 0 25px rgba(255, 255, 255, 0.3)' : '0 0 15px rgba(0, 0, 0, 0.5)' }}
+          onClick={(e) => {
+            e.stopPropagation();
+            window.open(item.url, '_blank', 'noopener,noreferrer');
           }}
+          onPointerOver={() => setIsHovered(true)}
+          onPointerOut={() => setIsHovered(false)}
         >
           {/* Platform Logo & Type Badge */}
           <div className="flex justify-between items-start mb-2">
@@ -664,13 +928,13 @@ export function renderMediaLinkContent(item: any, isActive: boolean, scale: numb
           </div>
           
           {/* Interactive Overlay */}
-          <div className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/30 transition-colors cursor-pointer">
-            <div className="opacity-0 hover:opacity-100 transition-opacity text-center">
-              <div className="bg-black/70 px-3 py-1 rounded-lg text-white text-sm">
-                Click to open
+          {isHovered && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/30 transition-colors">
+              <div className="bg-white/20 p-3 rounded-lg">
+                <span className="text-white text-sm font-medium">Click to open</span>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </Html>
     </>
