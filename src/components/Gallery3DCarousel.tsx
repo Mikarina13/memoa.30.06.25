@@ -1,11 +1,55 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useFrame, useThree, ThreeEvent } from '@react-three/fiber';
-import { useTexture, Html } from '@react-three/drei';
-import { Group, MathUtils, Vector3 } from 'three';
+import { Html } from '@react-three/drei';
+import { Vector3, Group, Color } from 'three';
 import React from 'react';
+
+interface GalleryItem {
+  id: string;
+  media_type: string;
+  title: string;
+  file_path: string;
+  file_size?: number;
+}
+
+interface Narrative {
+  id: string;
+  type: string;
+  typeLabel: string;
+  content: string;
+}
+
+interface VoiceInfo {
+  voiceId: string;
+  status: string;
+}
+
+interface AvatarInfo {
+  id: string;
+  modelUrl?: string;
+  avaturnUrl?: string;
+  isCustomModel?: boolean;
+  modelName?: string;
+  createdAt: string;
+}
+
+interface PersonalData {
+  [key: string]: unknown;
+}
+
+export interface PreloadedData {
+  galleryItems?: GalleryItem[];
+  narratives?: Narrative[];
+  voiceData?: VoiceInfo | null;
+  avatars?: AvatarInfo[];
+  personalData?: PersonalData | null;
+  aiInsights?: Record<string, unknown> | null;
+}
 
 interface Gallery3DCarouselProps {
   galleryItems: any[];
+  onUploadAsset?: (file: File, type: string) => void;
+  onSelectAsset?: (asset: unknown) => void;
   onClose: () => void;
   onItemSelect?: (item: any) => void;
   currentIndex?: number;
@@ -119,14 +163,17 @@ export function Gallery3DCarousel({
   useFrame(() => {
     if (camera) {
       // Smoothly interpolate camera rotation
-      camera.rotation.y = MathUtils.lerp(camera.rotation.y, targetRotation.current, 0.05);
+      camera.rotation.y = THREE.MathUtils.lerp(camera.rotation.y, targetRotation.current, 0.05);
     }
   });
   
   // Set up keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      e.preventDefault(); // Prevent default behaviors for all keys in carousel mode
+      // Prevent default browser behavior for these keys when in gallery mode
+      if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "a", "d", "w", "s"].includes(e.key.toLowerCase())) {
+        e.preventDefault();
+      }
       
       if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
         navigateCarousel(1); // Rotate counterclockwise
@@ -137,7 +184,7 @@ export function Gallery3DCarousel({
       }
     };
     
-    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown, { passive: false });
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
   
@@ -316,10 +363,22 @@ function CarouselItem({
     ? { map: texture } 
     : { color: textureError ? '#666666' : '#111111' };
   
+  // Increase clickable area significantly
+  const hitAreaSize = [9, 6, 1]; // Much larger hit area
+  
   // Render content based on state - no early returns
   return (
     <group position={position} rotation={rotation}>
-      {/* Image plane */}
+      {/* Invisible hit area - much larger than the visible plane */}
+      <mesh
+        onClick={onClick}
+        position={[0, 0, 0.5]} // Position it slightly in front of the visual mesh
+      >
+        <boxGeometry args={hitAreaSize} />
+        <meshBasicMaterial opacity={0.001} transparent />
+      </mesh>
+      
+      {/* Visible image plane */}
       <mesh
         ref={meshRef}
         onClick={onClick}
@@ -353,3 +412,6 @@ function CarouselItem({
     </group>
   );
 }
+
+// Import needed
+import { useTexture } from '@react-three/drei';

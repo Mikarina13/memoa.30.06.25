@@ -950,10 +950,11 @@ function Item({
       <mesh
         ref={meshRef}
         position={position}
-        visible={false}
+        // Larger invisible mesh for better click detection - 4x larger than before
+        // This significantly increases the hit area for better interaction
       >
-        <sphereGeometry args={[0.1, 8, 8]} />
-        <meshBasicMaterial opacity={0} transparent />
+        <sphereGeometry args={[3.2, 32, 32]} />
+        <meshBasicMaterial opacity={0.01} transparent />
       </mesh>
       
       {/* Label */}
@@ -990,12 +991,26 @@ function Item({
           } active:scale-90`} 
           style={{ 
             transform: `scale(${scale * (isClicked ? 0.9 : isHovered ? 1.25 : 1)})`,
-            backgroundColor: `${color}20`,
-            border: `2px solid ${color}60`,
-            boxShadow: isHovered ? `0 0 20px ${color}` : glowIntensity > 0.2 ? `0 0 ${Math.floor(glowIntensity * 10)}px ${glowColor}` : 'none',
+            backgroundColor: `${color}30`, // More visible background
+            border: `3px solid ${color}80`, // Thicker border for better visibility
+            boxShadow: isHovered 
+              ? `0 0 25px ${color}, 0 0 10px ${color}` 
+              : glowIntensity > 0.2 
+                ? `0 0 ${Math.floor(glowIntensity * 15)}px ${glowColor}` 
+                : `0 0 8px ${color}40`, // Always some glow for visibility
             userSelect: 'none',
             WebkitUserSelect: 'none',
-            transition: 'all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)'
+            transition: 'all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)',
+            // Add pulse effect to make items more noticeable
+            animation: !isHovered ? 'pulse 3s infinite ease-in-out' : 'none',
+            width: '80px', // Fixed size for bigger hit area
+            height: '80px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: isHovered ? 10 : 1, // Bring hovered items forward
+            // Add subtle shadow for better visibility against dark background
+            filter: 'drop-shadow(0 0 8px rgba(0,0,0,0.8))'
           }}
         >
           {icon}
