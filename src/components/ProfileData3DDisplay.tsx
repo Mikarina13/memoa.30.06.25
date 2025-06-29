@@ -380,40 +380,6 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
       index++;
     }
     
-    // Tavus Avatar
-    if (profileData?.tavus_avatar_id && isItemVisible('tavus_avatar')) {
-      console.log('Displaying Tavus video avatar with ID:', profileData.tavus_avatar_id);
-      const angle = (index / itemCount) * Math.PI * 2;
-      const position = getItemPosition('tavus_avatar', angle, radius, settings.verticalSpread);
-      
-      items.push(
-        <Item
-          key="tavus-avatar"
-          id="tavus_avatar"
-          position={position}
-          icon={<Camera className={`w-8 h-8`} style={{color: getItemColor('tavus_avatar', themeColors.tavus_avatar)}} />}
-          label="Video Avatar" 
-          color={getItemColor('tavus_avatar', themeColors.tavus_avatar)}
-          scale={settings.iconScale}
-          onHover={() => setHoveredItem("tavus-avatar")}
-          onLeave={() => setHoveredItem(null)}
-          lastClickTime={lastClickTime.current}
-          isHovered={hoveredItem === "tavus-avatar"}
-          isClicked={clickedItem === "tavus-avatar"}
-          onClick={() => {
-            setClickedItem("tavus-avatar");
-            setTimeout(() => setClickedItem(null), 200);
-            handleItemClick("tavus_avatar", { 
-              avatarId: profileData.tavus_avatar_id,
-              status: profileData.integration_status?.tavus?.status
-            });
-          }}
-          glowIntensity={settings.backgroundIntensity}
-        />
-      );
-      index++;
-    }
-    
     // Avaturn Avatars - check both paths
     const avaturnAvatars = profileData?.profile_data?.avaturn_avatars?.avatars || 
                           profileData?.memoir_data?.avaturn_avatars?.avatars;
@@ -820,9 +786,6 @@ export function ProfileData3DDisplay({ profileData, onItemClick, customizationSe
     // Voice
     if (profileData?.elevenlabs_voice_id && isItemVisible('voice')) count++;
     
-    // Tavus Avatar
-    if (profileData?.tavus_avatar_id && isItemVisible('tavus_avatar')) count++;
-    
     // Avaturn Avatars
     const avaturnAvatars = profileData?.profile_data?.avaturn_avatars?.avatars || 
                           profileData?.memoir_data?.avaturn_avatars?.avatars;
@@ -958,24 +921,27 @@ function Item({
       </mesh>
       
       {/* Label */}
-      <Html center position={[position.x, position.y + 2.5, position.z]}>
+      <Html center position={[position.x, position.y + 3, position.z]}>
         <div 
-          className={`px-4 py-2 rounded-lg text-white text-center transition-all duration-200 font-[Orbitron] ${
+          className={`px-5 py-3 rounded-lg text-white text-center transition-all duration-200 font-[Orbitron] ${
             isHovered 
-              ? 'opacity-100 transform scale-110 bg-black/80' 
+              ? 'opacity-100 transform scale-110 bg-black/60' 
               : 'opacity-0 transform scale-90 bg-transparent'
           }`} 
           style={{ 
             borderColor: color,
-            borderWidth: '1px',
-            minWidth: '160px',
-            boxShadow: isHovered ? `0 0 15px ${color}80` : 'none',
+            borderWidth: '2px',
+            minWidth: '200px',
+            maxWidth: '280px',
+            boxShadow: isHovered ? `0 0 20px ${color}90` : 'none',
             userSelect: 'none',
-            WebkitUserSelect: 'none'
+            WebkitUserSelect: 'none',
+            fontSize: '16px',
+            lineHeight: '1.2'
           }}
         >
           {label}
-          <div className="text-xs mt-1 opacity-70">Double-click to view</div>
+          <div className="text-sm mt-2 opacity-80">Double-click to view</div>
         </div>
       </Html>
       
@@ -986,12 +952,12 @@ function Item({
           onMouseLeave={onLeave}
           onClick={handleClick}
           onTouchEnd={handleClick}
-          className={`rounded-full p-8 transition-all duration-150 cursor-pointer ${
+          className={`rounded-full p-10 transition-all duration-150 cursor-pointer ${
             isClicked ? 'scale-90' : isHovered ? 'scale-125' : 'scale-100'
           } active:scale-90`} 
           style={{ 
             transform: `scale(${scale * (isClicked ? 0.9 : isHovered ? 1.25 : 1)})`,
-            backgroundColor: `${color}30`, // More visible background
+            backgroundColor: `${color}15`, // Very transparent background
             border: `3px solid ${color}80`, // Thicker border for better visibility
             boxShadow: isHovered 
               ? `0 0 25px ${color}, 0 0 10px ${color}` 
@@ -1003,8 +969,8 @@ function Item({
             transition: 'all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)',
             // Add pulse effect to make items more noticeable
             animation: !isHovered ? 'pulse 3s infinite ease-in-out' : 'none',
-            width: '80px', // Fixed size for bigger hit area
-            height: '80px',
+            width: '100px', // Fixed size for bigger hit area
+            height: '100px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
