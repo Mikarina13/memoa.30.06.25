@@ -46,6 +46,10 @@ export interface AIInsights {
   personality_traits: string[];
   core_themes: string[];
   writing_style: string;
+  key_life_events_summary?: string;
+  emotional_tone_analysis?: string;
+  recurring_motifs?: string[];
+  most_impactful_story_summary?: string;
   processed_at: string;
 }
 
@@ -446,6 +450,10 @@ export function validateNarrativesData(data: any): NarrativesData {
       personality_traits: validateStringArray(data.ai_insights.personality_traits),
       core_themes: validateStringArray(data.ai_insights.core_themes),
       writing_style: validateString(data.ai_insights.writing_style, ''),
+      key_life_events_summary: validateString(data.ai_insights.key_life_events_summary, ''),
+      emotional_tone_analysis: validateString(data.ai_insights.emotional_tone_analysis, ''),
+      recurring_motifs: validateStringArray(data.ai_insights.recurring_motifs),
+      most_impactful_story_summary: validateString(data.ai_insights.most_impactful_story_summary, ''),
       processed_at: validateDateString(data.ai_insights.processed_at)
     };
   }

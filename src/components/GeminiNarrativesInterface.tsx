@@ -38,7 +38,8 @@ export function GeminiNarrativesInterface({ memoriaProfileId, onNarrativesProces
   const [activeTab, setActiveTab] = useState<'write' | 'manage'>('write');
   const [showOnlineDataImport, setShowOnlineDataImport] = useState(false);
   const [selectedType, setSelectedType] = useState<NarrativeSection['type']>('personal_story');
-  const [aiInsights, setAiInsights] = useState<Record<string, any> | null>(null);
+  const [aiInsights, setAiInsights] = useState<any>(null);
+  const [isGeneratingInsights, setIsGeneratingInsights] = useState(false);
 
   // Ref for document file input
   const documentInputRef = useRef<HTMLInputElement>(null);
@@ -61,118 +62,38 @@ export function GeminiNarrativesInterface({ memoriaProfileId, onNarrativesProces
   const loadExistingNarratives = async () => {
     try {
       const profile = await MemoirIntegrations.getMemoirProfile(user.id, memoriaProfileId);
-      
-      const narrativesData = memoriaProfileId ? 
-        profile?.profile_data?.narratives : 
-        profile?.memoir_data?.narratives;
-      
-      if (narrativesData) {
-        // Process all narrative types
-        const processedNarratives: NarrativeSection[] = [];
-        
-        // Check if AI insights exist and load them
-        if (narrativesData.ai_insights) {
-          setAiInsights(narrativesData.ai_insights);
-        }
-        
-        // Personal stories
-        if (narrativesData.personal_stories) {
-          processedNarratives.push(
-            ...narrativesData.personal_stories.map((story: any) => ({
-              id: `ps-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-              title: story.title,
-              content: story.content,
-              type: 'personal_story' as NarrativeSection['type'],
-              timestamp: new Date(story.timestamp),
+      if (profile?.memoir_data?.narratives || profile?.profile_data?.narratives) {
+        const narrativesData = profile?.memoir_data?.narratives || profile?.profile_data?.narratives;
+        const loadedNarratives = Object.entries(narrativesData).flatMap(([type, stories]: [string, any]) => {
+          if (type === 'ai_insights') {
+            setAiInsights(stories);
+            return [];
+          }
+          
+          if (Array.isArray(stories)) {
+            return stories.map((story, index) => ({
+              id: `${type}-${index}`,
+              title: story.title || story.documentName || `${type.replace('_', ' ')} ${index + 1}`,
+              content: story.content || (typeof story === 'string' ? story : null),
+              type: type as NarrativeSection['type'],
+              timestamp: new Date(story.timestamp || Date.now()),
               aiEnhanced: story.aiEnhanced || false,
-              documentUrl: story.documentUrl,
-              documentType: story.documentType,
-              documentName: story.documentName
-            }))
-          );
-        }
-        
-        // Memories
-        if (narrativesData.memories) {
-          processedNarratives.push(
-            ...narrativesData.memories.map((item: any) => ({
-              id: `mem-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-              title: item.title,
-              content: item.content,
-              type: 'memory' as NarrativeSection['type'],
-              timestamp: new Date(item.timestamp),
-              aiEnhanced: item.aiEnhanced || false
-            }))
-          );
-        }
-        
-        // Values
-        if (narrativesData.values) {
-          processedNarratives.push(
-            ...narrativesData.values.map((item: any) => ({
-              id: `val-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-              title: item.title,
-              content: item.content,
-              type: 'value' as NarrativeSection['type'],
-              timestamp: new Date(item.timestamp),
-              aiEnhanced: item.aiEnhanced || false
-            }))
-          );
-        }
-        
-        // Wisdom
-        if (narrativesData.wisdom) {
-          processedNarratives.push(
-            ...narrativesData.wisdom.map((item: any) => ({
-              id: `wis-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-              title: item.title,
-              content: item.content,
-              type: 'wisdom' as NarrativeSection['type'],
-              timestamp: new Date(item.timestamp),
-              aiEnhanced: item.aiEnhanced || false
-            }))
-          );
-        }
-        
-        // Reflections
-        if (narrativesData.reflections) {
-          processedNarratives.push(
-            ...narrativesData.reflections.map((item: any) => ({
-              id: `ref-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-              title: item.title,
-              content: item.content,
-              type: 'reflection' as NarrativeSection['type'],
-              timestamp: new Date(item.timestamp),
-              aiEnhanced: item.aiEnhanced || false
-            }))
-          );
-        }
-        
-        // Documents
-        if (narrativesData.documents) {
-          processedNarratives.push(
-            ...narrativesData.documents.map((item: any) => ({
-              id: `doc-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-              title: item.title,
-              content: null,
-              type: 'document' as NarrativeSection['type'],
-              timestamp: new Date(item.timestamp),
-              documentUrl: item.documentUrl,
-              documentType: item.documentType,
-              documentName: item.documentName
-            }))
-          );
-        }
-        
-        setNarratives(processedNarratives);
+              documentUrl: story.documentUrl || null,
+              documentType: story.documentType || null,
+              documentName: story.documentName || null
+            }));
+          }
+          return [];
+        });
+        setNarratives(loadedNarratives);
       }
     } catch (error) {
-      console.error('Error loading existing narratives:', error);
+      console.error('Error loading narratives:', error);
     }
   };
 
   const handleSaveNarrative = async () => {
-    if (!currentNarrative.title.trim() || !currentNarrative.content?.trim()) {
+    if (!currentNarrative.title.trim() || !currentNarrative.content.trim()) {
       alert('Please fill in both title and content');
       return;
     }
@@ -364,78 +285,8 @@ export function GeminiNarrativesInterface({ memoriaProfileId, onNarrativesProces
     }
   };
 
-  const handleDeleteNarrative = async (narrativeId: string) => {
-    // Find the narrative to be deleted
-    const narrativeToDelete = narratives.find(n => n.id === narrativeId);
-    if (!narrativeToDelete) return;
-
-    // Remove from local state
+  const handleDeleteNarrative = (narrativeId: string) => {
     setNarratives(prev => prev.filter(n => n.id !== narrativeId));
-
-    // Remove from database
-    if (user) {
-      try {
-        // Get current memoir data to update the narratives
-        const profile = await MemoirIntegrations.getMemoirProfile(user.id, memoriaProfileId);
-        const currentNarratives = memoriaProfileId
-          ? profile?.profile_data?.narratives || {}
-          : profile?.memoir_data?.narratives || {};
-
-        // Determine which collection to update based on the type
-        let typeKey = '';
-        switch (narrativeToDelete.type) {
-          case 'personal_story':
-            typeKey = 'personal_stories';
-            break;
-          case 'memory':
-            typeKey = 'memories';
-            break;
-          case 'value':
-            typeKey = 'values';
-            break;
-          case 'wisdom':
-            typeKey = 'wisdom';
-            break;
-          case 'reflection':
-            typeKey = 'reflections';
-            break;
-          case 'document':
-            typeKey = 'documents';
-            break;
-        }
-
-        // If the collection exists, filter out the item to delete
-        if (currentNarratives[typeKey] && Array.isArray(currentNarratives[typeKey])) {
-          // Since we don't have a reliable ID, we'll use the title and content to match
-          // This is not ideal but works for this simple implementation
-          const updatedCollection = currentNarratives[typeKey].filter((item: any) => {
-            // For documents, match by URL
-            if (typeKey === 'documents' && narrativeToDelete.documentUrl) {
-              return item.documentUrl !== narrativeToDelete.documentUrl;
-            }
-            
-            // For other types, match by title and content
-            return !(item.title === narrativeToDelete.title && 
-                    item.content === narrativeToDelete.content);
-          });
-
-          const updatedNarratives = {
-            ...currentNarratives,
-            [typeKey]: updatedCollection
-          };
-
-          // Update the database
-          await MemoirIntegrations.updateMemoirData(
-            user.id, 
-            { narratives: updatedNarratives },
-            memoriaProfileId
-          );
-        }
-      } catch (error) {
-        console.error('Error deleting narrative from database:', error);
-        // Consider adding the item back to state if deletion fails
-      }
-    }
   };
 
   const handleImportText = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -475,64 +326,141 @@ export function GeminiNarrativesInterface({ memoriaProfileId, onNarrativesProces
 
     setProcessStatus('processing');
     setProcessError(null);
+    setIsGeneratingInsights(true);
 
     try {
-      // Check if Gemini API key is set
+      // Check if Gemini API key is configured
       const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      
       if (!geminiApiKey) {
-        throw new Error('Gemini API key not configured. Please add VITE_GEMINI_API_KEY to your .env file.');
+        throw new Error('Gemini API key is not configured. Please add VITE_GEMINI_API_KEY to your .env file.');
       }
-
+      
+      if (geminiApiKey === 'your_gemini_api_key_here') {
+        throw new Error('Please replace the placeholder Gemini API key in your .env file with your actual API key from https://makersuite.google.com/app/apikey');
+      }
+      
       // Update integration status to in_progress
       await MemoirIntegrations.updateIntegrationStatus(user.id, 'gemini', {
         status: 'in_progress'
       }, memoriaProfileId);
 
       // Organize narratives by type
-      const organizedNarratives: Record<string, any[]> = {};
-      
-      narratives.forEach(narrative => {
-        const typeKey = narrative.type === 'personal_story' ? 'personal_stories' : 
-                       narrative.type === 'memory' ? 'memories' :
-                       narrative.type === 'value' ? 'values' :
-                       narrative.type === 'wisdom' ? 'wisdom' : 
-                       narrative.type === 'document' ? 'documents' : 'reflections';
-        
-        if (!organizedNarratives[typeKey]) {
-          organizedNarratives[typeKey] = [];
+      const organizedNarratives = narratives.reduce((acc, narrative) => {
+        if (!acc[narrative.type]) {
+          acc[narrative.type] = [];
         }
-        
-        if (typeKey === 'documents' && narrative.documentUrl) {
-          // Handle document type
-          organizedNarratives[typeKey].push({
-            title: narrative.title,
-            documentUrl: narrative.documentUrl,
-            documentType: narrative.documentType,
-            documentName: narrative.documentName,
-            timestamp: narrative.timestamp.toISOString()
-          });
-        } else {
-          // Handle other narrative types
-          organizedNarratives[typeKey].push({
-            title: narrative.title,
-            content: narrative.content,
-            timestamp: narrative.timestamp.toISOString(),
-            aiEnhanced: narrative.aiEnhanced || false
-          });
-        }
-      });
+        acc[narrative.type].push({
+          title: narrative.title,
+          content: narrative.content,
+          timestamp: narrative.timestamp.toISOString(),
+          aiEnhanced: narrative.aiEnhanced
+        });
+        return acc;
+      }, {} as Record<string, any[]>);
 
-      // Process with Gemini AI
-      const enhancedNarratives = await MemoirIntegrations.processNarrativesWithGemini(
-        user.id, 
-        organizedNarratives,
-        memoriaProfileId
-      );
+      // Prepare the content for Gemini analysis
+      const allContent = narratives
+        .filter(n => n.content) // Filter out documents without content
+        .map(n => `${n.title}: ${n.content}`)
+        .join('\n\n');
       
-      // Update local state with AI insights
-      if (enhancedNarratives.ai_insights) {
-        setAiInsights(enhancedNarratives.ai_insights);
+      // Call Gemini API for analysis
+      const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': geminiApiKey
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: `Analyze the following personal narratives and provide insights:
+              
+              ${allContent}
+              
+              Please provide a comprehensive analysis with the following structure:
+              1. Personality traits (list of 5-7 traits)
+              2. Core themes (list of 5-7 themes)
+              3. Writing style (brief paragraph)
+              4. Key life events identified (list with brief descriptions)
+              5. Emotional tone analysis (paragraph)
+              6. Recurring motifs (list)
+              7. Most impactful story (title and brief summary)
+              
+              Format the response as a JSON object with these keys: personality_traits (array), core_themes (array), writing_style (string), key_life_events (array of objects with title and description), emotional_tone (string), recurring_motifs (array), and most_impactful_story (object with title and summary).`
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.2,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 2048,
+          }
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Gemini API error: ${errorData.error?.message || response.statusText}`);
       }
+      
+      const data = await response.json();
+      
+      // Extract the response text
+      const responseText = data.candidates[0].content.parts[0].text;
+      
+      // Try to parse the JSON from the response
+      let parsedInsights;
+      try {
+        // Find JSON in the response (it might be wrapped in markdown code blocks)
+        const jsonMatch = responseText.match(/```json\n([\s\S]*?)\n```/) || 
+                         responseText.match(/```\n([\s\S]*?)\n```/) ||
+                         responseText.match(/{[\s\S]*}/);
+                         
+        const jsonString = jsonMatch ? jsonMatch[1] || jsonMatch[0] : responseText;
+        parsedInsights = JSON.parse(jsonString);
+      } catch (parseError) {
+        console.error('Error parsing Gemini response as JSON:', parseError);
+        console.log('Raw response:', responseText);
+        
+        // If parsing fails, create a structured object from the text
+        parsedInsights = {
+          personality_traits: extractListItems(responseText, 'Personality traits'),
+          core_themes: extractListItems(responseText, 'Core themes'),
+          writing_style: extractParagraph(responseText, 'Writing style'),
+          key_life_events: extractListItems(responseText, 'Key life events'),
+          emotional_tone: extractParagraph(responseText, 'Emotional tone'),
+          recurring_motifs: extractListItems(responseText, 'Recurring motifs'),
+          most_impactful_story: {
+            title: extractTitle(responseText, 'Most impactful story'),
+            summary: extractParagraph(responseText, 'Most impactful story')
+          }
+        };
+      }
+      
+      // Add processed_at timestamp
+      parsedInsights.processed_at = new Date().toISOString();
+      
+      // Store the AI insights
+      const enhancedNarratives = {
+        ...organizedNarratives,
+        ai_insights: parsedInsights
+      };
+      
+      // Update the local state
+      setAiInsights(parsedInsights);
+
+      // Store processed narratives in memoir_data
+      await MemoirIntegrations.updateMemoirData(user.id, {
+        narratives: enhancedNarratives
+      }, memoriaProfileId);
+
+      // Update integration status to completed
+      await MemoirIntegrations.updateIntegrationStatus(user.id, 'gemini', {
+        status: 'completed',
+        narratives_processed: true
+      }, memoriaProfileId);
 
       setProcessStatus('success');
       onNarrativesProcessed?.(enhancedNarratives);
@@ -564,7 +492,32 @@ export function GeminiNarrativesInterface({ memoriaProfileId, onNarrativesProces
           console.error('Error updating integration status:', statusError);
         }
       }
+    } finally {
+      setIsGeneratingInsights(false);
     }
+  };
+
+  // Helper functions to extract information from text response
+  const extractListItems = (text: string, section: string): string[] => {
+    const sectionRegex = new RegExp(`${section}[:\\s]*(.*?)(?=\\n\\s*\\d+\\.|\\n\\s*[A-Z][a-z]+\\s*:|$)`, 's');
+    const match = text.match(sectionRegex);
+    if (!match) return [];
+    
+    const content = match[1].trim();
+    const items = content.split(/\n\s*[-•*]\s*/).filter(Boolean);
+    return items.length ? items : content.split(/\n\s*\d+\.\s*/).filter(Boolean);
+  };
+
+  const extractParagraph = (text: string, section: string): string => {
+    const sectionRegex = new RegExp(`${section}[:\\s]*(.*?)(?=\\n\\s*\\d+\\.|\\n\\s*[A-Z][a-z]+\\s*:|$)`, 's');
+    const match = text.match(sectionRegex);
+    return match ? match[1].trim() : '';
+  };
+
+  const extractTitle = (text: string, section: string): string => {
+    const paragraph = extractParagraph(text, section);
+    const titleMatch = paragraph.match(/^(.*?)(?=:|\n|$)/);
+    return titleMatch ? titleMatch[1].trim() : '';
   };
 
   const selectedTypeInfo = narrativeTypes.find(t => t.id === selectedType);
@@ -747,19 +700,19 @@ export function GeminiNarrativesInterface({ memoriaProfileId, onNarrativesProces
 
         {activeTab === 'manage' && (
           <div className="space-y-6">
-            {/* AI Insights - Show if available */}
+            {/* AI Insights Section */}
             {aiInsights && (
               <div className="bg-gradient-to-r from-purple-500/20 to-emerald-500/20 rounded-lg p-6 border border-purple-500/30 mb-6">
-                <div className="flex items-center gap-2 mb-4">
+                <div className="flex items-center gap-3 mb-4">
                   <Brain className="w-6 h-6 text-purple-400" />
-                  <h3 className="text-xl font-semibold text-white">AI Analysis Results</h3>
+                  <h3 className="text-lg font-semibold text-white">AI Narrative Analysis</h3>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-                  <div>
-                    <h4 className="text-purple-400 text-sm font-medium mb-2">Personality Traits</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <div className="bg-black/30 rounded-lg p-4">
+                    <h4 className="text-purple-400 font-medium mb-2">Personality Traits</h4>
                     <div className="flex flex-wrap gap-2">
-                      {aiInsights.personality_traits.map((trait: string, index: number) => (
+                      {aiInsights.personality_traits?.map((trait: string, index: number) => (
                         <span key={index} className="px-3 py-1.5 bg-purple-500/20 text-purple-300 rounded-full text-sm">
                           {trait}
                         </span>
@@ -767,10 +720,10 @@ export function GeminiNarrativesInterface({ memoriaProfileId, onNarrativesProces
                     </div>
                   </div>
                   
-                  <div>
-                    <h4 className="text-emerald-400 text-sm font-medium mb-2">Core Themes</h4>
+                  <div className="bg-black/30 rounded-lg p-4">
+                    <h4 className="text-emerald-400 font-medium mb-2">Core Themes</h4>
                     <div className="flex flex-wrap gap-2">
-                      {aiInsights.core_themes.map((theme: string, index: number) => (
+                      {aiInsights.core_themes?.map((theme: string, index: number) => (
                         <span key={index} className="px-3 py-1.5 bg-emerald-500/20 text-emerald-300 rounded-full text-sm">
                           {theme}
                         </span>
@@ -779,19 +732,59 @@ export function GeminiNarrativesInterface({ memoriaProfileId, onNarrativesProces
                   </div>
                 </div>
                 
-                <div>
-                  <h4 className="text-blue-400 text-sm font-medium mb-2">Writing Style</h4>
-                  <p className="text-white/80 bg-blue-500/10 p-3 rounded-lg border border-blue-500/20">
-                    {aiInsights.writing_style}
-                  </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <div className="bg-black/30 rounded-lg p-4">
+                    <h4 className="text-blue-400 font-medium mb-2">Writing Style</h4>
+                    <p className="text-white/80">{aiInsights.writing_style}</p>
+                  </div>
+                  
+                  <div className="bg-black/30 rounded-lg p-4">
+                    <h4 className="text-amber-400 font-medium mb-2">Emotional Tone</h4>
+                    <p className="text-white/80">{aiInsights.emotional_tone}</p>
+                  </div>
                 </div>
                 
-                <div className="text-xs text-white/60 mt-2 text-right">
-                  Processed: {new Date(aiInsights.processed_at).toLocaleString()}
+                {aiInsights.key_life_events && (
+                  <div className="bg-black/30 rounded-lg p-4 mb-6">
+                    <h4 className="text-indigo-400 font-medium mb-3">Key Life Events</h4>
+                    <div className="space-y-3">
+                      {aiInsights.key_life_events.map((event: any, index: number) => (
+                        <div key={index} className="bg-white/5 p-3 rounded-lg">
+                          <h5 className="font-medium text-white">{event.title || `Event ${index + 1}`}</h5>
+                          <p className="text-white/70 text-sm">{event.description}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {aiInsights.recurring_motifs && (
+                  <div className="bg-black/30 rounded-lg p-4 mb-6">
+                    <h4 className="text-pink-400 font-medium mb-2">Recurring Motifs</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {aiInsights.recurring_motifs.map((motif: string, index: number) => (
+                        <span key={index} className="px-3 py-1.5 bg-pink-500/20 text-pink-300 rounded-full text-sm">
+                          {motif}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {aiInsights.most_impactful_story && (
+                  <div className="bg-black/30 rounded-lg p-4">
+                    <h4 className="text-orange-400 font-medium mb-2">Most Impactful Story</h4>
+                    <h5 className="font-medium text-white mb-1">{aiInsights.most_impactful_story.title}</h5>
+                    <p className="text-white/80">{aiInsights.most_impactful_story.summary}</p>
+                  </div>
+                )}
+                
+                <div className="mt-4 text-xs text-white/50 text-right">
+                  Processed on {new Date(aiInsights.processed_at).toLocaleDateString()} with Google Gemini AI
                 </div>
               </div>
             )}
-
+            
             {/* Saved Narratives */}
             <div className="bg-white/5 rounded-lg p-6">
               <div className="flex justify-between items-center mb-4">
@@ -812,10 +805,7 @@ export function GeminiNarrativesInterface({ memoriaProfileId, onNarrativesProces
                     const Icon = typeInfo?.icon || FileText;
                     
                     return (
-                      <div 
-                        key={narrative.id} 
-                        className="bg-white/5 rounded-lg p-4"
-                      >
+                      <div key={narrative.id} className="bg-white/5 rounded-lg p-4">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
@@ -898,10 +888,10 @@ export function GeminiNarrativesInterface({ memoriaProfileId, onNarrativesProces
               <div className="flex items-center gap-4">
                 <button
                   onClick={processWithGeminiAI}
-                  disabled={narratives.length === 0 || processStatus === 'processing'}
+                  disabled={narratives.length === 0 || processStatus === 'processing' || isGeneratingInsights}
                   className="flex items-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-500 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
                 >
-                  {processStatus === 'processing' ? (
+                  {processStatus === 'processing' || isGeneratingInsights ? (
                     <>
                       <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                       Processing...
@@ -943,7 +933,10 @@ export function GeminiNarrativesInterface({ memoriaProfileId, onNarrativesProces
                   <li>• Personality trait analysis</li>
                   <li>• Core theme identification</li>
                   <li>• Writing style assessment</li>
-                  <li>• Narrative organization and enhancement</li>
+                  <li>• Key life events extraction</li>
+                  <li>• Emotional tone analysis</li>
+                  <li>• Recurring motifs identification</li>
+                  <li>• Most impactful story highlight</li>
                 </ul>
               </div>
             </div>

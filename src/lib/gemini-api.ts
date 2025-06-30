@@ -28,6 +28,10 @@ interface NarrativeInsights {
   personality_traits: string[];
   core_themes: string[];
   writing_style: string;
+  key_life_events_summary?: string;
+  emotional_tone_analysis?: string;
+  recurring_motifs?: string[];
+  most_impactful_story_summary?: string;
   processed_at: string;
 }
 
@@ -78,7 +82,11 @@ Please provide your analysis in JSON format with the following structure:
 {
   "personality_traits": ["trait1", "trait2", "trait3", ...], // 3-6 key personality traits evident in the writing
   "core_themes": ["theme1", "theme2", "theme3", ...], // 3-6 main themes that recur in the narratives
-  "writing_style": "A paragraph describing the writing style, tone, and distinctive characteristics of the author's voice"
+  "writing_style": "A paragraph describing the writing style, tone, and distinctive characteristics of the author's voice",
+  "key_life_events_summary": "A brief summary of significant life events or periods mentioned, with approximate timelines if discernible.",
+  "emotional_tone_analysis": "A description of the overall emotional tone and any significant emotional shifts or recurring feelings.",
+  "recurring_motifs": ["motif1", "motif2", ...], // 3-5 recurring symbols, ideas, or relationships
+  "most_impactful_story_summary": "A summary of what appears to be the most impactful or central story."
 }
 
 Your analysis should be insightful, respectful, and reflective of the actual content provided.
