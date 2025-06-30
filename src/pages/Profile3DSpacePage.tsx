@@ -8,13 +8,13 @@ import { EnhancedStars } from '../components/EnhancedStars';
 import { ProfileData3DDisplay } from '../components/ProfileData3DDisplay';
 import { SpaceCustomizer, SpaceCustomizationSettings } from '../components/SpaceCustomizer'; 
 import { Gallery3DCarousel, CarouselCameraControls } from '../components/Gallery3DCarousel';
+import { Content3DCarousel, renderGalleryContent, renderMediaLinkContent, renderPersonalFavoritesContent, renderDigitalPresenceContent } from '../components/Content3DCarousel';
 import { GalleryNavigationFooter } from '../components/GalleryNavigationFooter';
 import { useKeyboardControls } from '../hooks/useKeyboardControls';
 import { useAuth } from '../hooks/useAuth';
 import { MemoirIntegrations, MemoriaProfile } from '../lib/memoir-integrations';
 import { useRequireTermsAcceptance } from '../hooks/useRequireTermsAcceptance';
 import { TributeImageInterface } from '../components/TributeImageInterface';
-import { Content3DCarousel, renderGalleryContent, renderMediaLinkContent, renderDigitalPresenceContent } from '../components/Content3DCarousel';
 import { SPACE_THEMES } from '../utils/constants';
 
 // Import detail components
@@ -79,14 +79,23 @@ export function Profile3DSpacePage() {
     data: any;
   } | null>(null);
   const [showTributeImageInterface, setShowTributeImageInterface] = useState(false);
+  
+  // State for carousels
   const [showGalleryCarousel, setShowGalleryCarousel] = useState(false);
   const [showMediaLinksCarousel, setShowMediaLinksCarousel] = useState(false);
+  const [showPersonalFavoritesCarousel, setShowPersonalFavoritesCarousel] = useState(false);
   const [showDigitalPresenceCarousel, setShowDigitalPresenceCarousel] = useState(false);
+  
+  // State for carousel items
   const [selectedGalleryItems, setSelectedGalleryItems] = useState<any[]>([]);
   const [selectedMediaLinks, setSelectedMediaLinks] = useState<any[]>([]);
-  const [selectedDigitalPresenceItems, setSelectedDigitalPresenceItems] = useState<any[]>([]);
+  const [selectedPersonalFavorites, setSelectedPersonalFavorites] = useState<any[]>([]);
+  const [selectedDigitalPresence, setSelectedDigitalPresence] = useState<any[]>([]);
+  
+  // State for carousel indices
   const [galleryCurrentIndex, setGalleryCurrentIndex] = useState(0);
   const [mediaLinksCurrentIndex, setMediaLinksCurrentIndex] = useState(0);
+  const [personalFavoritesCurrentIndex, setPersonalFavoritesCurrentIndex] = useState(0);
   const [digitalPresenceCurrentIndex, setDigitalPresenceCurrentIndex] = useState(0);
   
   // State for customization
@@ -416,11 +425,101 @@ export function Profile3DSpacePage() {
       return;
     }
     
+    // Special handling for personal favorites to show 3D carousel
+    if (itemType === 'personal_favorites') {
+      const personalData = itemData;
+      console.log('Personal favorites data:', personalData);
+      
+      // Create flattened array of personal favorites
+      const flattenedItems = [];
+      
+      // Add songs
+      if (personalData.favorite_songs && personalData.favorite_songs.length > 0) {
+        flattenedItems.push(...personalData.favorite_songs.map((song: string, index: number) => ({
+          id: `song-${index}`,
+          type: 'song',
+          value: song,
+          title: song
+        })));
+      }
+      
+      // Add movies
+      if (personalData.favorite_movies && personalData.favorite_movies.length > 0) {
+        flattenedItems.push(...personalData.favorite_movies.map((movie: string, index: number) => ({
+          id: `movie-${index}`,
+          type: 'movie',
+          value: movie,
+          title: movie
+        })));
+      }
+      
+      // Add books
+      if (personalData.favorite_books && personalData.favorite_books.length > 0) {
+        flattenedItems.push(...personalData.favorite_books.map((book: string, index: number) => ({
+          id: `book-${index}`,
+          type: 'book',
+          value: book,
+          title: book
+        })));
+      }
+      
+      // Add quotes
+      if (personalData.favorite_quotes && personalData.favorite_quotes.length > 0) {
+        flattenedItems.push(...personalData.favorite_quotes.map((quote: string, index: number) => ({
+          id: `quote-${index}`,
+          type: 'quote',
+          value: quote,
+          title: `Quote ${index + 1}`
+        })));
+      }
+      
+      // Add locations
+      if (personalData.favorite_locations && personalData.favorite_locations.length > 0) {
+        flattenedItems.push(...personalData.favorite_locations.map((location: string, index: number) => ({
+          id: `location-${index}`,
+          type: 'location',
+          value: location,
+          title: location
+        })));
+      }
+      
+      // Add foods
+      if (personalData.favorite_foods && personalData.favorite_foods.length > 0) {
+        flattenedItems.push(...personalData.favorite_foods.map((food: string, index: number) => ({
+          id: `food-${index}`,
+          type: 'food',
+          value: food,
+          title: food
+        })));
+      }
+      
+      console.log('Flattened personal favorites:', flattenedItems);
+      
+      if (flattenedItems.length > 0) {
+        setSelectedPersonalFavorites(flattenedItems);
+        setPersonalFavoritesCurrentIndex(0); // Reset to first item
+        setShowPersonalFavoritesCarousel(true);
+      } else {
+        // If no items, just show the details view
+        setSelectedItem({ type: itemType, data: itemData });
+        setShowDetailModal(true);
+      }
+      return;
+    }
+    
     // Special handling for digital presence to show 3D carousel
     if (itemType === 'digital_presence') {
-      setSelectedDigitalPresenceItems(itemData);
-      setDigitalPresenceCurrentIndex(0); // Reset index to first item
-      setShowDigitalPresenceCarousel(true);
+      console.log('Digital presence data:', itemData);
+      
+      if (itemData && itemData.length > 0) {
+        setSelectedDigitalPresence(itemData);
+        setDigitalPresenceCurrentIndex(0); // Reset to first item
+        setShowDigitalPresenceCarousel(true);
+      } else {
+        // If no items, just show the details view
+        setSelectedItem({ type: itemType, data: itemData });
+        setShowDetailModal(true);
+      }
       return;
     }
     
@@ -510,34 +609,56 @@ export function Profile3DSpacePage() {
     const adjustedIndex = Math.min(Math.max(0, targetIndex), selectedMediaLinks.length - 1);
     setMediaLinksCurrentIndex(adjustedIndex);
   };
-  
+
+  // Personal Favorites navigation handlers
+  const handlePersonalFavoritesPrev = () => {
+    setPersonalFavoritesCurrentIndex(prev => 
+      prev === 0 ? selectedPersonalFavorites.length - 1 : prev - 1
+    );
+  };
+
+  const handlePersonalFavoritesNext = () => {
+    setPersonalFavoritesCurrentIndex(prev => 
+      prev === selectedPersonalFavorites.length - 1 ? 0 : prev + 1
+    );
+  };
+
+  const handlePersonalFavoritesSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseFloat(e.target.value);
+    const normalizedValue = value / 100;
+    const targetIndex = Math.floor(normalizedValue * selectedPersonalFavorites.length);
+    const adjustedIndex = Math.min(Math.max(0, targetIndex), selectedPersonalFavorites.length - 1);
+    setPersonalFavoritesCurrentIndex(adjustedIndex);
+  };
+
   // Digital Presence navigation handlers
   const handleDigitalPresencePrev = () => {
     setDigitalPresenceCurrentIndex(prev => 
-      prev === 0 ? selectedDigitalPresenceItems.length - 1 : prev - 1
+      prev === 0 ? selectedDigitalPresence.length - 1 : prev - 1
     );
   };
 
   const handleDigitalPresenceNext = () => {
     setDigitalPresenceCurrentIndex(prev => 
-      prev === selectedDigitalPresenceItems.length - 1 ? 0 : prev + 1
+      prev === selectedDigitalPresence.length - 1 ? 0 : prev + 1
     );
   };
 
   const handleDigitalPresenceSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseFloat(e.target.value);
     const normalizedValue = value / 100;
-    const targetIndex = Math.floor(normalizedValue * selectedDigitalPresenceItems.length);
-    const adjustedIndex = Math.min(Math.max(0, targetIndex), selectedDigitalPresenceItems.length - 1);
+    const targetIndex = Math.floor(normalizedValue * selectedDigitalPresence.length);
+    const adjustedIndex = Math.min(Math.max(0, targetIndex), selectedDigitalPresence.length - 1);
     setDigitalPresenceCurrentIndex(adjustedIndex);
   };
 
   // Handle closing of gallery and media carousels (NOT the entire view)
   const handleCloseCarousel = () => {
     console.log('Closing carousel, returning to profile view');
-    // Just close the current active carousel and return to the profile view
+    // Close all carousels
     setShowGalleryCarousel(false);
     setShowMediaLinksCarousel(false);
+    setShowPersonalFavoritesCarousel(false);
     setShowDigitalPresenceCarousel(false);
   };
   
@@ -553,7 +674,7 @@ export function Profile3DSpacePage() {
     }
     
     // If a carousel is open, close it first and stay on the profile
-    if (showGalleryCarousel || showMediaLinksCarousel || showDigitalPresenceCarousel) {
+    if (showGalleryCarousel || showMediaLinksCarousel || showPersonalFavoritesCarousel || showDigitalPresenceCarousel) {
       console.log('Carousel is open, closing it');
       handleCloseCarousel();
       return;
@@ -878,10 +999,7 @@ export function Profile3DSpacePage() {
             </div>
           </Html>
         }>
-          <ProfileSpaceControls 
-            settings={customizationSettings} 
-            isGalleryActive={showGalleryCarousel || showMediaLinksCarousel || showDigitalPresenceCarousel} 
-          />
+          <ProfileSpaceControls settings={customizationSettings} isGalleryActive={showGalleryCarousel || showMediaLinksCarousel || showPersonalFavoritesCarousel || showDigitalPresenceCarousel} />
           <EnhancedStars 
             count={starCount}
             size={customizationSettings.particleSize}
@@ -932,14 +1050,51 @@ export function Profile3DSpacePage() {
             />
           )}
           
-          {/* 3D Digital Presence Carousel */}
-          {showDigitalPresenceCarousel && selectedDigitalPresenceItems.length > 0 && (
+          {/* 3D Personal Favorites Carousel */}
+          {showPersonalFavoritesCarousel && selectedPersonalFavorites.length > 0 && (
             <Content3DCarousel 
-              items={selectedDigitalPresenceItems} 
+              items={selectedPersonalFavorites} 
+              onClose={handleCloseCarousel}
+              onItemSelect={(item) => {
+                // Handle URL items differently by opening them in a new tab
+                if (item.value && typeof item.value === 'string') {
+                  try {
+                    const url = new URL(item.value);
+                    window.open(url.toString(), '_blank', 'noopener,noreferrer');
+                  } catch {
+                    // Not a URL, just close the carousel and show details
+                    setSelectedItem({ 
+                      type: 'personal_favorites', 
+                      data: { [item.type === 'song' ? 'favorite_songs' : 
+                              item.type === 'movie' ? 'favorite_movies' : 
+                              item.type === 'book' ? 'favorite_books' : 
+                              item.type === 'quote' ? 'favorite_quotes' : 
+                              item.type === 'location' ? 'favorite_locations' : 
+                              item.type === 'food' ? 'favorite_foods' : 
+                              'favorite_items']: [item.value] }
+                    });
+                    setShowDetailModal(true);
+                    setShowPersonalFavoritesCarousel(false);
+                  }
+                }
+              }}
+              currentIndex={personalFavoritesCurrentIndex}
+              onIndexChange={setPersonalFavoritesCurrentIndex}
+              title="Personal Favorites"
+              renderItemContent={(item, isActive, scale) => renderPersonalFavoritesContent(item, isActive, scale)}
+            />
+          )}
+
+          {/* 3D Digital Presence Carousel */}
+          {showDigitalPresenceCarousel && selectedDigitalPresence.length > 0 && (
+            <Content3DCarousel 
+              items={selectedDigitalPresence} 
               onClose={handleCloseCarousel}
               onItemSelect={(item) => {
                 // Open the link directly in a new tab
-                window.open(item.url, '_blank', 'noopener,noreferrer');
+                if (item.url) {
+                  window.open(item.url, '_blank', 'noopener,noreferrer');
+                }
               }}
               currentIndex={digitalPresenceCurrentIndex}
               onIndexChange={setDigitalPresenceCurrentIndex}
@@ -950,7 +1105,8 @@ export function Profile3DSpacePage() {
           
           {/* Only render 3D icons when modal is NOT visible to prevent them from showing through */}
           <Suspense fallback={null}>
-            {profileData && !showDetailModal && !showGalleryCarousel && !showMediaLinksCarousel && !showDigitalPresenceCarousel && (
+            {profileData && !showDetailModal && !showGalleryCarousel && !showMediaLinksCarousel && 
+             !showPersonalFavoritesCarousel && !showDigitalPresenceCarousel && (
               <ProfileData3DDisplay 
                 profileData={profileData} 
                 onItemClick={handleItemClick}
@@ -961,11 +1117,11 @@ export function Profile3DSpacePage() {
           
           {/* Always render OrbitControls but disable when carousel is active */}
           <OrbitControls 
-            enabled={!showGalleryCarousel && !showMediaLinksCarousel && !showDigitalPresenceCarousel}
-            enablePan={!showGalleryCarousel && !showMediaLinksCarousel && !showDigitalPresenceCarousel}
-            enableZoom={!showGalleryCarousel && !showMediaLinksCarousel && !showDigitalPresenceCarousel}
-            enableRotate={!showGalleryCarousel && !showMediaLinksCarousel && !showDigitalPresenceCarousel}
-            autoRotate={customizationSettings.autoRotate && !showGalleryCarousel && !showMediaLinksCarousel && !showDigitalPresenceCarousel} 
+            enabled={!showGalleryCarousel && !showMediaLinksCarousel && !showPersonalFavoritesCarousel && !showDigitalPresenceCarousel}
+            enablePan={!showGalleryCarousel && !showMediaLinksCarousel && !showPersonalFavoritesCarousel && !showDigitalPresenceCarousel}
+            enableZoom={!showGalleryCarousel && !showMediaLinksCarousel && !showPersonalFavoritesCarousel && !showDigitalPresenceCarousel}
+            enableRotate={!showGalleryCarousel && !showMediaLinksCarousel && !showPersonalFavoritesCarousel && !showDigitalPresenceCarousel}
+            autoRotate={customizationSettings.autoRotate && !showGalleryCarousel && !showMediaLinksCarousel && !showPersonalFavoritesCarousel && !showDigitalPresenceCarousel} 
             autoRotateSpeed={customizationSettings.rotationSpeed * 50}
             rotateSpeed={0.5}
             zoomSpeed={0.8}
@@ -1093,11 +1249,22 @@ export function Profile3DSpacePage() {
         />
       )}
       
+      {/* Personal Favorites Navigation Footer - Only shown when personal favorites carousel is active */}
+      {showPersonalFavoritesCarousel && selectedPersonalFavorites.length > 0 && (
+        <GalleryNavigationFooter
+          currentIndex={personalFavoritesCurrentIndex}
+          totalItems={selectedPersonalFavorites.length}
+          onPrev={handlePersonalFavoritesPrev}
+          onNext={handlePersonalFavoritesNext}
+          onSliderChange={handlePersonalFavoritesSliderChange}
+        />
+      )}
+      
       {/* Digital Presence Navigation Footer - Only shown when digital presence carousel is active */}
-      {showDigitalPresenceCarousel && selectedDigitalPresenceItems.length > 0 && (
+      {showDigitalPresenceCarousel && selectedDigitalPresence.length > 0 && (
         <GalleryNavigationFooter
           currentIndex={digitalPresenceCurrentIndex}
-          totalItems={selectedDigitalPresenceItems.length}
+          totalItems={selectedDigitalPresence.length}
           onPrev={handleDigitalPresencePrev}
           onNext={handleDigitalPresenceNext}
           onSliderChange={handleDigitalPresenceSliderChange}

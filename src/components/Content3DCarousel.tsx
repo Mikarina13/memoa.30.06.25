@@ -4,7 +4,7 @@ import { Html, useTexture } from '@react-three/drei';
 import { Vector3, Group, MathUtils } from 'three';
 import React from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
-import { AlertCircle, Loader, RefreshCw, XCircle, FileText, FileVideo, Mic, Newspaper, Link as LinkIcon, Facebook, Instagram, Twitter, Linkedin, Youtube, Github, Twitch, AlignJustify as Spotify, Rss, Mail, Globe2, MessageSquare, ExternalLink } from 'lucide-react';
+import { AlertCircle, Loader, RefreshCw, XCircle, FileText, FileVideo, Mic, Newspaper, Link as LinkIcon, Facebook, Instagram, Twitter, Linkedin, Youtube, Github, Twitch, AlignJustify as Spotify, Rss, Mail, Globe2, MessageSquare, ExternalLink, Heart, Film, BookOpen, MapPin, Quote, Music, Utensils } from 'lucide-react';
 
 interface ContentItem {
   id: string;
@@ -464,9 +464,9 @@ export function renderGalleryContent(item: any, isActive: boolean, scale: number
   };
 
   // Helper function to validate URL format
-  const isValidHttpUrl = (string: string): boolean => {
+  const isValidHttpUrl = (str: string): boolean => {
     try {
-      new URL(string);
+      new URL(str);
       return true;  
     } catch (_) {
       return false;  
@@ -789,6 +789,161 @@ export function renderDigitalPresenceContent(item: any, isActive: boolean, scale
               Visit {item.name}
             </a>
           </div>
+        </div>
+      </Html>
+    </>
+  );
+}
+
+// Helper function to get icon and theme for a personal favorite item
+function getFavoriteIconAndTheme(itemType: string, value: string) {
+  switch (itemType) {
+    case 'song':
+      return { 
+        icon: Music, 
+        color: 'text-pink-400', 
+        bgColor: 'from-pink-500/30 to-rose-600/30', 
+        borderColor: 'border-pink-500/50',
+        label: 'Song'
+      };
+    case 'movie':
+      return { 
+        icon: Film, 
+        color: 'text-blue-400', 
+        bgColor: 'from-blue-500/30 to-indigo-600/30', 
+        borderColor: 'border-blue-500/50',
+        label: 'Movie'
+      };
+    case 'book':
+      return { 
+        icon: BookOpen, 
+        color: 'text-emerald-400', 
+        bgColor: 'from-emerald-500/30 to-green-600/30', 
+        borderColor: 'border-emerald-500/50',
+        label: 'Book'
+      };
+    case 'location':
+      return { 
+        icon: MapPin, 
+        color: 'text-amber-400', 
+        bgColor: 'from-amber-500/30 to-orange-600/30', 
+        borderColor: 'border-amber-500/50',
+        label: 'Place'
+      };
+    case 'quote':
+      return { 
+        icon: Quote, 
+        color: 'text-purple-400', 
+        bgColor: 'from-purple-500/30 to-indigo-600/30', 
+        borderColor: 'border-purple-500/50',
+        label: 'Quote'
+      };
+    case 'food':
+      return { 
+        icon: Utensils, 
+        color: 'text-red-400', 
+        bgColor: 'from-red-500/30 to-rose-600/30', 
+        borderColor: 'border-red-500/50',
+        label: 'Food'
+      };
+    default:
+      return { 
+        icon: Heart, 
+        color: 'text-pink-400', 
+        bgColor: 'from-pink-500/30 to-red-600/30', 
+        borderColor: 'border-pink-500/50',
+        label: 'Favorite'
+      };
+  }
+}
+
+// Personal favorites renderer
+export function renderPersonalFavoritesContent(item: any, isActive: boolean, scale: number) {
+  // Get the appropriate icon and theme based on the item type
+  const { icon: IconComponent, color, bgColor, borderColor, label } = 
+    getFavoriteIconAndTheme(item.type || 'favorite', item.value);
+
+  // Check if the value is a URL
+  const isUrl = (() => {
+    try {
+      new URL(item.value);
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+
+  // For quotes, we need special handling for the longer text
+  const isQuote = item.type === 'quote';
+  
+  // Animation styles for active state
+  const activeClass = isActive ? 
+    'shadow-lg transform scale-105 border-2' : 
+    'shadow border';
+  
+  // Fully transparent 3D plane
+  const meshOpacity = 0.0;
+
+  return (
+    <>
+      {/* Transparent 3D mesh as base */}
+      <mesh>
+        <planeGeometry args={[6, 4]} />
+        <meshBasicMaterial color="#000000" opacity={meshOpacity} transparent />
+      </mesh>
+      
+      {/* HTML content with frame styling */}
+      <Html center position={[0, 0, 0.1]} transform>
+        <div 
+          className={`w-64 h-44 bg-gradient-to-r ${bgColor} backdrop-blur-sm rounded-lg ${activeClass} ${borderColor} transition-all duration-300 overflow-hidden`}
+          style={{ 
+            boxShadow: isActive ? '0 0 25px rgba(255, 255, 255, 0.3)' : '0 0 15px rgba(0, 0, 0, 0.5)',
+            transform: `scale(${scale})`,
+          }}
+        >
+          {/* Item icon and type */}
+          <div className="flex justify-between items-start p-4">
+            <div className="p-3 bg-black/40 rounded-lg">
+              <IconComponent className={`w-8 h-8 ${color}`} />
+            </div>
+            <div className={`px-2 py-1 bg-black/40 rounded-full ${color} text-xs font-medium`}>
+              {label}
+            </div>
+          </div>
+          
+          {/* Item content */}
+          {isQuote ? (
+            <div className="px-4 pb-4">
+              <div className="bg-black/40 px-4 py-3 rounded-lg overflow-y-auto max-h-[100px]">
+                <p className="text-white/90 text-sm italic">
+                  "{item.value.length > 120 ? item.value.substring(0, 120) + '...' : item.value}"
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="px-4 pb-4">
+              <div className="bg-black/40 px-4 py-3 rounded-lg">
+                <p className="text-white/90 text-sm font-medium truncate">
+                  {item.value}
+                </p>
+              </div>
+              
+              {isUrl && (
+                <div className="mt-3 text-center">
+                  <a 
+                    href={item.value}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs transition-colors"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    Open Link
+                  </a>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </Html>
     </>
