@@ -13,6 +13,7 @@ import {
   validateSpaceCustomizationData,
   validateTributeImagesData
 } from './data-validation';
+import { GeminiAPI } from './gemini-api';
 
 // Define interfaces for various data types
 export interface MemoriaProfile {
@@ -564,6 +565,102 @@ export class MemoirIntegrations {
       }
     } catch (error) {
       console.error('Error updating integration status:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Process narratives with Gemini AI
+   */
+  static async processNarrativesWithGemini(userId: string, narrativesData: any, memoriaProfileId?: string): Promise<any> {
+    try {
+      // Create a new instance of the GeminiAPI
+      const geminiAPI = new GeminiAPI();
+      
+      // Combine all narratives into a single text for analysis
+      let combinedText = '';
+      
+      // Process personal stories
+      if (narrativesData.personal_stories?.length) {
+        combinedText += '== PERSONAL STORIES ==\n\n';
+        narrativesData.personal_stories.forEach((story: any, index: number) => {
+          combinedText += `Story ${index + 1}: ${story.title}\n${story.content}\n\n`;
+        });
+      }
+      
+      // Process memories
+      if (narrativesData.memories?.length) {
+        combinedText += '== MEMORIES ==\n\n';
+        narrativesData.memories.forEach((memory: any, index: number) => {
+          combinedText += `Memory ${index + 1}: ${memory.title}\n${memory.content}\n\n`;
+        });
+      }
+      
+      // Process values
+      if (narrativesData.values?.length) {
+        combinedText += '== VALUES ==\n\n';
+        narrativesData.values.forEach((value: any, index: number) => {
+          combinedText += `Value ${index + 1}: ${value.title}\n${value.content}\n\n`;
+        });
+      }
+      
+      // Process wisdom
+      if (narrativesData.wisdom?.length) {
+        combinedText += '== WISDOM ==\n\n';
+        narrativesData.wisdom.forEach((wisdom: any, index: number) => {
+          combinedText += `Wisdom ${index + 1}: ${wisdom.title}\n${wisdom.content}\n\n`;
+        });
+      }
+      
+      // Process reflections
+      if (narrativesData.reflections?.length) {
+        combinedText += '== REFLECTIONS ==\n\n';
+        narrativesData.reflections.forEach((reflection: any, index: number) => {
+          combinedText += `Reflection ${index + 1}: ${reflection.title}\n${reflection.content}\n\n`;
+        });
+      }
+      
+      // If we don't have enough content to analyze
+      if (combinedText.length < 50) {
+        throw new Error('Not enough content to analyze. Please add more narratives.');
+      }
+      
+      // Call the Gemini API to analyze the narratives
+      const insights = await geminiAPI.analyzeNarratives(combinedText);
+      
+      // Add processed timestamp
+      insights.processed_at = new Date().toISOString();
+      
+      // Update the narratives data with the AI insights
+      const updatedNarrativesData = {
+        ...narrativesData,
+        ai_insights: insights
+      };
+      
+      // Update integration status to mark narratives as processed
+      const integrationStatus = {
+        status: 'completed',
+        narratives_processed: true,
+        last_updated: new Date().toISOString()
+      };
+      
+      await this.updateIntegrationStatus(userId, 'gemini', integrationStatus, memoriaProfileId);
+      
+      // Update memoir data with the new narrative structure
+      await this.updateMemoirData(userId, { narratives: updatedNarrativesData }, memoriaProfileId);
+      
+      return updatedNarrativesData;
+    } catch (error) {
+      console.error('Error processing narratives with Gemini:', error);
+      
+      // Update integration status to error
+      const integrationStatus = {
+        status: 'error',
+        last_updated: new Date().toISOString()
+      };
+      
+      await this.updateIntegrationStatus(userId, 'gemini', integrationStatus, memoriaProfileId);
+      
       throw error;
     }
   }

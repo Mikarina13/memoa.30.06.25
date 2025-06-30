@@ -328,42 +328,35 @@ export function GeminiNarrativesInterface({ memoriaProfileId, onNarrativesProces
 
       // Organize narratives by type
       const organizedNarratives = narratives.reduce((acc, narrative) => {
-        if (!acc[narrative.type]) {
-          acc[narrative.type] = [];
+        const typeKey = narrative.type === 'personal_story' ? 'personal_stories' : 
+                        narrative.type === 'memory' ? 'memories' :
+                        narrative.type === 'value' ? 'values' :
+                        narrative.type === 'wisdom' ? 'wisdom' : 
+                        narrative.type === 'document' ? 'documents' : 'reflections';
+        
+        if (!acc[typeKey]) {
+          acc[typeKey] = [];
         }
-        acc[narrative.type].push({
+        
+        acc[typeKey].push({
           title: narrative.title,
           content: narrative.content,
           timestamp: narrative.timestamp.toISOString(),
-          aiEnhanced: narrative.aiEnhanced
+          aiEnhanced: narrative.aiEnhanced,
+          documentUrl: narrative.documentUrl,
+          documentType: narrative.documentType,
+          documentName: narrative.documentName
         });
+        
         return acc;
       }, {} as Record<string, any[]>);
 
-      // Mock Gemini AI processing (in real implementation, this would call Gemini API)
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Simulate AI enhancement
-      const enhancedNarratives = {
-        ...organizedNarratives,
-        ai_insights: {
-          personality_traits: ['thoughtful', 'reflective', 'empathetic'],
-          core_themes: ['family', 'growth', 'resilience'],
-          writing_style: 'contemplative and heartfelt',
-          processed_at: new Date().toISOString()
-        }
-      };
-
-      // Store processed narratives in memoir_data
-      await MemoirIntegrations.updateMemoirData(user.id, {
-        narratives: enhancedNarratives
-      }, memoriaProfileId);
-
-      // Update integration status to completed
-      await MemoirIntegrations.updateIntegrationStatus(user.id, 'gemini', {
-        status: 'completed',
-        narratives_processed: true
-      }, memoriaProfileId);
+      // Process narratives with Gemini AI
+      const enhancedNarratives = await MemoirIntegrations.processNarrativesWithGemini(
+        user.id,
+        organizedNarratives,
+        memoriaProfileId
+      );
 
       setProcessStatus('success');
       onNarrativesProcessed?.(enhancedNarratives);
@@ -376,7 +369,7 @@ export function GeminiNarrativesInterface({ memoriaProfileId, onNarrativesProces
       if (error instanceof Error) {
         if (error.message.includes('Invalid API key') || error.message.includes('401')) {
           setProcessError('Invalid Gemini API key. Please check your configuration.');
-        } else if (error.message.includes('quota') || error.message.includes('limit')) {
+        } else if (error.message.includes('quota') || error.message.includes('limit') || error.message.includes('429')) {
           setProcessError('Gemini API quota exceeded. Please try again later.');
         } else {
           setProcessError(error.message);
@@ -598,7 +591,10 @@ export function GeminiNarrativesInterface({ memoriaProfileId, onNarrativesProces
                     const Icon = typeInfo?.icon || FileText;
                     
                     return (
-                      <div key={narrative.id} className="bg-white/5 rounded-lg p-4">
+                      <div 
+                        key={narrative.id || narrative.timestamp} 
+                        className="bg-white/5 rounded-lg p-4"
+                      >
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
