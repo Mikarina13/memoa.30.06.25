@@ -13,6 +13,7 @@ import {
   validateSpaceCustomizationData,
   validateTributeImagesData
 } from './data-validation';
+import { GeminiAPI } from './gemini-api';
 
 // Define interfaces for various data types
 export interface MemoriaProfile {
@@ -1171,6 +1172,187 @@ export class MemoirIntegrations {
       }
     } catch (error) {
       console.error('Error storing personality test results:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Process narratives with Gemini AI
+   */
+  static async processNarrativesWithGemini(userId: string, narratives: any, memoriaProfileId?: string): Promise<any> {
+    try {
+      console.log(`Processing narratives with Gemini AI for user ${userId}${memoriaProfileId ? ` and memoria profile ${memoriaProfileId}` : ''}`);
+      
+      // Check if Gemini API key is available
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error('Gemini API key not configured. Please add VITE_GEMINI_API_KEY to your .env file.');
+      }
+      
+      // Initialize the Gemini API client
+      const geminiAPI = new GeminiAPI({ apiKey });
+      
+      // Concatenate all narratives into a single text for analysis
+      let narrativeText = '';
+      
+      // Add personal stories
+      if (narratives.personal_stories && narratives.personal_stories.length > 0) {
+        narrativeText += '--- PERSONAL STORIES ---\n\n';
+        narratives.personal_stories.forEach((story: any, index: number) => {
+          narrativeText += `TITLE: ${story.title}\n`;
+          narrativeText += `CONTENT: ${story.content}\n\n`;
+        });
+      }
+      
+      // Add memories
+      if (narratives.memories && narratives.memories.length > 0) {
+        narrativeText += '--- MEMORIES ---\n\n';
+        narratives.memories.forEach((memory: any, index: number) => {
+          narrativeText += `TITLE: ${memory.title}\n`;
+          narrativeText += `CONTENT: ${memory.content}\n\n`;
+        });
+      }
+      
+      // Add values
+      if (narratives.values && narratives.values.length > 0) {
+        narrativeText += '--- CORE VALUES ---\n\n';
+        narratives.values.forEach((value: any, index: number) => {
+          narrativeText += `TITLE: ${value.title}\n`;
+          narrativeText += `CONTENT: ${value.content}\n\n`;
+        });
+      }
+      
+      // Add wisdom
+      if (narratives.wisdom && narratives.wisdom.length > 0) {
+        narrativeText += '--- WISDOM ---\n\n';
+        narratives.wisdom.forEach((wisdom: any, index: number) => {
+          narrativeText += `TITLE: ${wisdom.title}\n`;
+          narrativeText += `CONTENT: ${wisdom.content}\n\n`;
+        });
+      }
+      
+      // Add reflections
+      if (narratives.reflections && narratives.reflections.length > 0) {
+        narrativeText += '--- REFLECTIONS ---\n\n';
+        narratives.reflections.forEach((reflection: any, index: number) => {
+          narrativeText += `TITLE: ${reflection.title}\n`;
+          narrativeText += `CONTENT: ${reflection.content}\n\n`;
+        });
+      }
+      
+      // If there's no narrative text, throw an error
+      if (!narrativeText.trim()) {
+        throw new Error('No narrative content to process. Please add some stories, memories, or reflections first.');
+      }
+      
+      console.log('Sending combined narrative text to Gemini API for analysis');
+      
+      // Send the narrative text to Gemini API for analysis
+      const aiInsights = await geminiAPI.analyzeNarratives(narrativeText);
+      
+      console.log('Received AI insights from Gemini API:', aiInsights);
+      
+      // Add AI insights to the narratives
+      const updatedNarratives = {
+        ...narratives,
+        ai_insights: aiInsights
+      };
+      
+      // Update the profile data
+      if (memoriaProfileId) {
+        // Get the current profile data
+        const { data: profile, error } = await supabase
+          .from('memoria_profiles')
+          .select('profile_data')
+          .eq('id', memoriaProfileId)
+          .eq('user_id', userId)
+          .maybeSingle();
+          
+        if (error) throw error;
+        
+        if (!profile) {
+          throw new Error(`Memoria profile not found: ${memoriaProfileId}`);
+        }
+        
+        // Update the narratives in the profile data
+        const updatedData = {
+          profile_data: {
+            ...profile.profile_data,
+            narratives: updatedNarratives
+          }
+        };
+        
+        // Update the profile
+        const { data, error: updateError } = await supabase
+          .from('memoria_profiles')
+          .update(updatedData)
+          .eq('id', memoriaProfileId)
+          .eq('user_id', userId)
+          .select('*')
+          .single();
+          
+        if (updateError) throw updateError;
+        
+        // Update integration status
+        await this.updateIntegrationStatus(
+          userId,
+          'gemini',
+          {
+            status: 'completed',
+            narratives_processed: true,
+            last_updated: new Date().toISOString()
+          },
+          memoriaProfileId
+        );
+        
+        return updatedNarratives;
+      } else {
+        // Get the current profile data
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('memoir_data')
+          .eq('user_id', userId)
+          .maybeSingle();
+          
+        if (error) throw error;
+        
+        if (!profile) {
+          throw new Error(`Profile not found for user: ${userId}`);
+        }
+        
+        // Update the narratives in the profile data
+        const updatedData = {
+          memoir_data: {
+            ...profile.memoir_data,
+            narratives: updatedNarratives
+          }
+        };
+        
+        // Update the profile
+        const { data, error: updateError } = await supabase
+          .from('profiles')
+          .update(updatedData)
+          .eq('user_id', userId)
+          .select('*')
+          .single();
+          
+        if (updateError) throw updateError;
+        
+        // Update integration status
+        await this.updateIntegrationStatus(
+          userId,
+          'gemini',
+          {
+            status: 'completed',
+            narratives_processed: true,
+            last_updated: new Date().toISOString()
+          }
+        );
+        
+        return updatedNarratives;
+      }
+    } catch (error) {
+      console.error('Error processing narratives with Gemini:', error);
       throw error;
     }
   }
