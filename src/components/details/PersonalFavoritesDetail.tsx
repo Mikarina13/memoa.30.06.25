@@ -77,6 +77,58 @@ export function PersonalFavoritesDetail({ data }: PersonalFavoritesDetailProps) 
     }
   };
 
+  // Get movie image URL based on content or keywords
+  const getMovieImageUrl = (movie: string) => {
+    // If it's a valid URL and looks like an image, use it directly
+    if (isValidUrl(movie) && /\.(jpg|jpeg|png|gif|webp)$/i.test(movie)) {
+      return movie;
+    }
+    
+    // Check for specific movie names and return corresponding images
+    const movieLower = movie.toLowerCase();
+    if (movieLower.includes('star wars')) {
+      return "https://images.pexels.com/photos/2085832/pexels-photo-2085832.jpeg?auto=compress&cs=tinysrgb&w=400";
+    }
+    if (movieLower.includes('inception')) {
+      return "https://images.pexels.com/photos/3131971/pexels-photo-3131971.jpeg?auto=compress&cs=tinysrgb&w=400";
+    }
+    if (movieLower.includes('interstellar')) {
+      return "https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=400";
+    }
+    if (movieLower.includes('matrix')) {
+      return "https://images.pexels.com/photos/1089438/pexels-photo-1089438.jpeg?auto=compress&cs=tinysrgb&w=400";
+    }
+    
+    // Default movie poster
+    return "https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg?auto=compress&cs=tinysrgb&w=400";
+  };
+  
+  // Get book image URL based on content or keywords
+  const getBookImageUrl = (book: string) => {
+    // If it's a valid URL and looks like an image, use it directly
+    if (isValidUrl(book) && /\.(jpg|jpeg|png|gif|webp)$/i.test(book)) {
+      return book;
+    }
+    
+    // Check for specific book names and return corresponding images
+    const bookLower = book.toLowerCase();
+    if (bookLower.includes('harry potter')) {
+      return "https://images.pexels.com/photos/8391515/pexels-photo-8391515.jpeg?auto=compress&cs=tinysrgb&w=400";
+    }
+    if (bookLower.includes('dune')) {
+      return "https://images.pexels.com/photos/3617500/pexels-photo-3617500.jpeg?auto=compress&cs=tinysrgb&w=400";
+    }
+    if (bookLower.includes('lord of the rings') || bookLower.includes('tolkien')) {
+      return "https://images.pexels.com/photos/3646105/pexels-photo-3646105.jpeg?auto=compress&cs=tinysrgb&w=400";
+    }
+    if (bookLower.includes('1984') || bookLower.includes('orwell')) {
+      return "https://images.pexels.com/photos/3964673/pexels-photo-3964673.jpeg?auto=compress&cs=tinysrgb&w=400";
+    }
+    
+    // Default book cover
+    return "https://images.pexels.com/photos/1370295/pexels-photo-1370295.jpeg?auto=compress&cs=tinysrgb&w=400";
+  };
+
   return (
     <div className="space-y-6 pt-4">
       <h2 className="text-2xl font-bold text-white mb-6 bg-gradient-to-r from-pink-400 to-purple-500 bg-clip-text text-transparent">Personal Favorites</h2>
@@ -106,6 +158,9 @@ export function PersonalFavoritesDetail({ data }: PersonalFavoritesDetailProps) 
                           src={`https://img.youtube.com/vi/${youtubeId}/0.jpg`}
                           alt="YouTube Thumbnail"
                           className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.src = "https://images.pexels.com/photos/164821/pexels-photo-164821.jpeg?auto=compress&cs=tinysrgb&w=400";
+                          }}
                         />
                         <div className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/50 transition-colors">
                           <Play className="w-8 h-8 text-white" />
@@ -239,6 +294,7 @@ export function PersonalFavoritesDetail({ data }: PersonalFavoritesDetailProps) 
               // Check if it's a URL
               const youtubeId = getYouTubeId(movie);
               const isUrl = isValidUrl(movie);
+              const isMoviePoster = isUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(movie);
               
               return (
                 <div key={index} className="bg-white/10 rounded-lg overflow-hidden">
@@ -249,6 +305,9 @@ export function PersonalFavoritesDetail({ data }: PersonalFavoritesDetailProps) 
                         src={`https://img.youtube.com/vi/${youtubeId}/0.jpg`}
                         alt="YouTube Thumbnail"
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = getMovieImageUrl("default movie");
+                        }}
                       />
                       <div className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/50 transition-colors">
                         <div className="w-12 h-12 bg-red-500/80 rounded-full flex items-center justify-center">
@@ -259,7 +318,7 @@ export function PersonalFavoritesDetail({ data }: PersonalFavoritesDetailProps) 
                         <p className="text-white text-sm font-medium">Movie Trailer</p>
                       </div>
                     </div>
-                  ) : isUrl && movie.includes('movieposters.com') ? (
+                  ) : isMoviePoster ? (
                     // Movie poster URL
                     <div className="h-40 relative">
                       <img 
@@ -267,22 +326,38 @@ export function PersonalFavoritesDetail({ data }: PersonalFavoritesDetailProps) 
                         alt="Movie Poster"
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          // Fallback if image fails to load
-                          e.currentTarget.src = "https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1";
+                          e.currentTarget.src = getMovieImageUrl("default movie");
                         }}
                       />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent/0 flex items-end">
+                        <div className="p-2">
+                          <Film className="w-5 h-5 text-blue-500 inline-block mr-1" />
+                          <span className="text-white text-sm font-medium">Movie Poster</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : isUrl ? (
+                    // Other movie URL (IMDb, etc)
+                    <div className="h-40 relative">
+                      <img 
+                        src={getMovieImageUrl(movie)}
+                        alt="Movie"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent/0 flex items-end">
+                        <div className="p-2">
+                          <Film className="w-5 h-5 text-blue-500 inline-block mr-1" />
+                          <span className="text-white text-sm font-medium">Movie Link</span>
+                        </div>
+                      </div>
                     </div>
                   ) : (
                     // Regular movie with poster from Pexels
                     <div className="h-40 relative">
                       <img 
-                        src={`https://images.pexels.com/photos/${7991579 + index * 100}/pexels-photo-${7991579 + index * 100}.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1`}
+                        src={getMovieImageUrl(movie)}
                         alt={movie}
                         className="w-full h-full object-cover"
-                        onError={(e) => {
-                          // Fallback if image fails to load
-                          e.currentTarget.src = "https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1";
-                        }}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent/0 flex items-end">
                         <div className="p-2">
@@ -322,14 +397,30 @@ export function PersonalFavoritesDetail({ data }: PersonalFavoritesDetailProps) 
             {data.favorite_books.map((book: string, index: number) => {
               const isUrl = isValidUrl(book);
               const isAmazonUrl = isUrl && book.includes('amazon.com');
+              const isBookCover = isUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(book);
               
               return (
                 <div key={index} className="bg-white/10 rounded-lg overflow-hidden">
-                  {isAmazonUrl ? (
+                  {isBookCover ? (
+                    // Direct book cover image
+                    <div className="h-40 relative">
+                      <img 
+                        src={book}
+                        alt="Book Cover"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = getBookImageUrl("default book");
+                        }}
+                      />
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-2">
+                        <p className="text-white text-sm font-medium">Book Cover</p>
+                      </div>
+                    </div>
+                  ) : isAmazonUrl ? (
                     // Amazon book link with image
                     <div className="h-40 relative">
                       <img 
-                        src="https://images.pexels.com/photos/1370295/pexels-photo-1370295.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1"
+                        src={getBookImageUrl(book)}
                         alt="Book Cover"
                         className="w-full h-full object-cover"
                       />
@@ -341,7 +432,7 @@ export function PersonalFavoritesDetail({ data }: PersonalFavoritesDetailProps) 
                     // External book URL that's not Amazon
                     <div className="h-40 relative">
                       <img 
-                        src="https://images.pexels.com/photos/1370295/pexels-photo-1370295.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1"
+                        src={getBookImageUrl("external")}
                         alt={book}
                         className="w-full h-full object-cover"
                       />
@@ -352,47 +443,13 @@ export function PersonalFavoritesDetail({ data }: PersonalFavoritesDetailProps) 
                         </div>
                       </div>
                     </div>
-                  ) : book.toLowerCase().includes('dune') ? (
-                    // Special case for Dune book
-                    <div className="h-40 relative">
-                      <img 
-                        src="https://images.pexels.com/photos/3617500/pexels-photo-3617500.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1"
-                        alt={book}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent/0 flex items-end">
-                        <div className="p-2">
-                          <BookOpen className="w-5 h-5 text-emerald-400 inline-block mr-1" />
-                          <span className="text-white text-sm font-medium">{book}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ) : book.toLowerCase().includes('harry potter') ? (
-                    // Special case for Harry Potter books
-                    <div className="h-40 relative">
-                      <img 
-                        src="https://images.pexels.com/photos/8391515/pexels-photo-8391515.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1"
-                        alt={book}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent/0 flex items-end">
-                        <div className="p-2">
-                          <BookOpen className="w-5 h-5 text-emerald-400 inline-block mr-1" />
-                          <span className="text-white text-sm font-medium">{book}</span>
-                        </div>
-                      </div>
-                    </div>
                   ) : (
-                    // Regular book with cover from Pexels
+                    // Regular book title with cover from Pexels based on name
                     <div className="h-40 relative">
                       <img 
-                        src={`https://images.pexels.com/photos/${1370295 + index * 100}/pexels-photo-${1370295 + index * 100}.jpeg?auto=compress&cs=tinysrgb&w=400`}
+                        src={getBookImageUrl(book)}
                         alt={book}
                         className="w-full h-full object-cover"
-                        onError={(e) => {
-                          // Fallback if image fails to load
-                          e.currentTarget.src = "https://images.pexels.com/photos/1370295/pexels-photo-1370295.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1";
-                        }}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent/0 flex items-end">
                         <div className="p-2">
