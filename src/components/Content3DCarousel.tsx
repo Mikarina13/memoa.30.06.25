@@ -465,13 +465,12 @@ export function renderGalleryContent(item: any, isActive: boolean, scale: number
 
   // Helper function to validate URL format
   const isValidHttpUrl = (string: string): boolean => {
-    let url;
     try {
-      url = new URL(string);
+      new URL(string);
+      return true;  
     } catch (_) {
       return false;  
     }
-    return url.protocol === "http:" || url.protocol === "https:";
   };
   
   // Validate the file path before attempting to load
@@ -657,18 +656,18 @@ export function renderMediaLinkContent(item: any, isActive: boolean, scale: numb
               <div className="text-xs bg-black/50 px-2 py-1 rounded-md text-white/60 truncate max-w-[140px]">
                 {new URL(item.url).hostname}
               </div>
-              <div className="bg-white/10 hover:bg-white/20 p-1.5 rounded-full transition-colors">
-                <ExternalLink className="w-4 h-4 text-white" />
-              </div>
-            </div>
-          </div>
-          
-          {/* Interactive Overlay */}
-          <div className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/30 transition-colors cursor-pointer">
-            <div className="opacity-0 hover:opacity-100 transition-opacity text-center">
-              <div className="bg-black/70 px-3 py-1 rounded-lg text-white text-sm">
-                Click to open
-              </div>
+              
+              {/* Added explicit button to open the link */}
+              <a
+                href={item.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-blue-500/70 hover:bg-blue-500 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 text-white text-xs"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <ExternalLink className="w-3 h-3" />
+                Open Link
+              </a>
             </div>
           </div>
         </div>
