@@ -80,7 +80,7 @@ function CarouselItemErrorFallback() {
   return (
     <group>
       <mesh>
-        <planeGeometry args={[6, 4]} />
+        <planeGeometry args={[8, 6]} />
         <meshBasicMaterial color="#333333" opacity={0.8} transparent />
       </mesh>
       <Html center>
@@ -351,7 +351,7 @@ function CarouselItem({
         return (
           <>
             <mesh>
-              <planeGeometry args={[6, 4]} />
+              <planeGeometry args={[8, 6]} />
               <meshBasicMaterial color="#111111" />
             </mesh>
             <Html center position={[0, 0, 0.1]}>
@@ -365,7 +365,7 @@ function CarouselItem({
         return (
           <>
             <mesh>
-              <planeGeometry args={[6, 4]} />
+              <planeGeometry args={[8, 6]} />
               <meshBasicMaterial color="#111111" />
             </mesh>
             <Html center position={[0, 0, 0.1]}>
@@ -379,7 +379,7 @@ function CarouselItem({
         return (
           <>
             <mesh>
-              <planeGeometry args={[6, 4]} />
+              <planeGeometry args={[8, 6]} />
               <meshBasicMaterial color="#111111" />
             </mesh>
             <Html center position={[0, 0, 0.1]}>
@@ -398,7 +398,7 @@ function CarouselItem({
         return (
           <>
             <mesh>
-              <planeGeometry args={[6, 4]} />
+              <planeGeometry args={[8, 6]} />
               <meshBasicMaterial color="#111111" />
             </mesh>
             <Html center position={[0, 0, 0.1]}>
@@ -415,7 +415,7 @@ function CarouselItem({
     return (
       <>
         <mesh>
-          <planeGeometry args={[6, 4]} />
+          <planeGeometry args={[8, 6]} />
           <meshBasicMaterial color="#111111" />
         </mesh>
         <Html center position={[0, 0, 0.1]}>
@@ -506,7 +506,7 @@ export function renderGalleryContent(item: any, isActive: boolean, scale: number
     <>
       {/* Visible image plane */}
       <mesh>
-        <planeGeometry args={[6, 4]} />
+        <planeGeometry args={[8, 6]} />
         <meshBasicMaterial 
           {...materialProps} 
           transparent
@@ -621,14 +621,14 @@ export function renderMediaLinkContent(item: any, isActive: boolean, scale: numb
     <>
       {/* Transparent 3D mesh as base */}
       <mesh>
-        <planeGeometry args={[6, 4]} />
+        <planeGeometry args={[8, 6]} />
         <meshBasicMaterial color="#000000" opacity={meshOpacity} transparent />
       </mesh>
       
       {/* HTML content with frame styling */}
       <Html center position={[0, 0, 0.1]} transform>
         <div 
-          className={`w-64 h-44 bg-gradient-to-r ${bgColor} backdrop-blur-sm rounded-lg p-4 ${activeClass} ${borderColor} transition-all duration-300 overflow-hidden`}
+          className={`w-80 h-60 bg-gradient-to-r ${bgColor} backdrop-blur-sm rounded-lg p-4 ${activeClass} ${borderColor} transition-all duration-300 overflow-hidden`}
           style={{ 
             boxShadow: isActive ? '0 0 25px rgba(255, 255, 255, 0.3)' : '0 0 15px rgba(0, 0, 0, 0.5)',
             transform: `scale(${scale})`,
@@ -747,14 +747,14 @@ export function renderDigitalPresenceContent(item: any, isActive: boolean, scale
     <>
       {/* Transparent 3D mesh as base */}
       <mesh>
-        <planeGeometry args={[6, 4]} />
+        <planeGeometry args={[8, 6]} />
         <meshBasicMaterial color="#000000" opacity={meshOpacity} transparent />
       </mesh>
       
       {/* HTML content with frame styling */}
       <Html center position={[0, 0, 0.1]} transform>
         <div 
-          className={`w-64 h-44 bg-gradient-to-r ${bgColor} backdrop-blur-sm rounded-lg p-4 ${activeClass} ${borderColor} transition-all duration-300 overflow-hidden`}
+          className={`w-80 h-60 bg-gradient-to-r ${bgColor} backdrop-blur-sm rounded-lg p-4 ${activeClass} ${borderColor} transition-all duration-300 overflow-hidden`}
           style={{ 
             boxShadow: isActive ? '0 0 25px rgba(255, 255, 255, 0.3)' : '0 0 15px rgba(0, 0, 0, 0.5)',
             transform: `scale(${scale})`,
@@ -888,14 +888,14 @@ export function renderPersonalFavoritesContent(item: any, isActive: boolean, sca
     <>
       {/* Transparent 3D mesh as base */}
       <mesh>
-        <planeGeometry args={[6, 4]} />
+        <planeGeometry args={[8, 6]} />
         <meshBasicMaterial color="#000000" opacity={meshOpacity} transparent />
       </mesh>
       
       {/* HTML content with frame styling */}
       <Html center position={[0, 0, 0.1]} transform>
         <div 
-          className={`w-64 h-44 bg-gradient-to-r ${bgColor} backdrop-blur-sm rounded-lg ${activeClass} ${borderColor} transition-all duration-300 overflow-hidden`}
+          className={`w-80 h-60 bg-gradient-to-r ${bgColor} backdrop-blur-sm rounded-lg ${activeClass} ${borderColor} transition-all duration-300 overflow-hidden`}
           style={{ 
             boxShadow: isActive ? '0 0 25px rgba(255, 255, 255, 0.3)' : '0 0 15px rgba(0, 0, 0, 0.5)',
             transform: `scale(${scale})`,
