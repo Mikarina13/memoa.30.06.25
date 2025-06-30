@@ -536,7 +536,7 @@ export function renderGalleryContent(item: any, isActive: boolean, scale: number
   );
 }
 
-// Get social platform icon and color
+// Helper function to get platform icon and color
 function getPlatformIconAndColor(item: any) {
   const source = item.source || '';
   const sourceLower = source.toLowerCase();
@@ -868,7 +868,7 @@ export function renderPersonalFavoritesContent(item: any, isActive: boolean, sca
     return (match && match[2].length === 11) ? match[2] : null;
   };
   
-  // Get the appropriate icon and theme based on the item type
+  // Determine item type and value
   const itemValue = item.value || '';
   const isYouTubeUrl = typeof itemValue === 'string' && (itemValue.includes('youtube.com') || itemValue.includes('youtu.be'));
   const youtubeVideoId = isYouTubeUrl ? getYouTubeId(itemValue) : null;
@@ -909,6 +909,32 @@ export function renderPersonalFavoritesContent(item: any, isActive: boolean, sca
   
   // Fully transparent 3D plane
   const meshOpacity = 0.0;
+
+  // Set up direct image URLs
+  // These are fixed Pexels URLs that will always work
+  const amazonBookImage = "https://images.pexels.com/photos/1370295/pexels-photo-1370295.jpeg?auto=compress&cs=tinysrgb&w=400";
+  const moviePosterImage = "https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg?auto=compress&cs=tinysrgb&w=400";
+  
+  // For books and movies, use specific images based on some keywords in the value
+  const getBookImageUrl = (value: string) => {
+    if (value.toLowerCase().includes('harry potter')) {
+      return "https://images.pexels.com/photos/8391515/pexels-photo-8391515.jpeg?auto=compress&cs=tinysrgb&w=400";
+    }
+    if (value.toLowerCase().includes('dune')) {
+      return "https://images.pexels.com/photos/3617500/pexels-photo-3617500.jpeg?auto=compress&cs=tinysrgb&w=400";
+    }
+    return amazonBookImage;
+  };
+  
+  const getMovieImageUrl = (value: string) => {
+    if (value.toLowerCase().includes('star wars')) {
+      return "https://images.pexels.com/photos/2085832/pexels-photo-2085832.jpeg?auto=compress&cs=tinysrgb&w=400";
+    }
+    if (value.toLowerCase().includes('inception')) {
+      return "https://images.pexels.com/photos/3131971/pexels-photo-3131971.jpeg?auto=compress&cs=tinysrgb&w=400";
+    }
+    return moviePosterImage;
+  };
 
   return (
     <>
@@ -982,7 +1008,12 @@ export function renderPersonalFavoritesContent(item: any, isActive: boolean, sca
             // Movie Poster Preview
             <>
               <div className="absolute inset-0 overflow-hidden">
-                <div className="w-full h-full bg-gradient-to-br from-blue-900 to-indigo-900 opacity-70"></div>
+                <img 
+                  src={getMovieImageUrl(itemValue)}
+                  alt="Movie Poster"
+                  className="w-full h-full object-cover opacity-80"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent"></div>
               </div>
               
               <div className="absolute top-0 left-0 right-0 p-3 flex justify-between">
@@ -994,26 +1025,19 @@ export function renderPersonalFavoritesContent(item: any, isActive: boolean, sca
                 </div>
               </div>
               
-              <div className="absolute inset-0 flex items-center justify-center p-6">
-                <div className="w-full h-full bg-black/50 rounded-lg flex items-center justify-center">
-                  <img 
-                    src="/placeholder-movie.jpg" 
-                    alt="Movie Poster" 
-                    className="max-h-32 max-w-full object-contain rounded shadow-lg"
-                    onError={(e) => {
-                      // Fallback if the URL fails to load
-                      (e.target as HTMLImageElement).src = "https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1";
-                    }}
-                  />
-                </div>
-              </div>
-              
               <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black to-transparent">
-                <div className="mb-1 text-white font-bold truncate">{item.value}</div>
+                <div className="mb-1 text-white font-bold truncate">{item.title || "Movie"}</div>
                 
                 <div className="mt-2 flex justify-between items-center">
-                  <div className="text-white/70 text-xs truncate">
-                    Movie Poster Link
+                  <div className="text-white/70 text-xs truncate max-w-[120px]">
+                    {/* Display just domain name */}
+                    {(() => {
+                      try {
+                        return new URL(item.value).hostname.replace('www.', '');
+                      } catch {
+                        return 'Movie Link';
+                      }
+                    })()}
                   </div>
                   <a
                     href={item.value}
@@ -1032,7 +1056,12 @@ export function renderPersonalFavoritesContent(item: any, isActive: boolean, sca
             // Amazon Book Preview
             <>
               <div className="absolute inset-0 overflow-hidden">
-                <div className="w-full h-full bg-gradient-to-br from-emerald-900 to-green-900 opacity-70"></div>
+                <img
+                  src={getBookImageUrl(itemValue)}
+                  alt="Book Cover"
+                  className="w-full h-full object-cover opacity-80"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent"></div>
               </div>
               
               <div className="absolute top-0 left-0 right-0 p-3 flex justify-between">
@@ -1044,26 +1073,19 @@ export function renderPersonalFavoritesContent(item: any, isActive: boolean, sca
                 </div>
               </div>
               
-              <div className="absolute inset-0 flex items-center justify-center p-6">
-                <div className="w-full h-full bg-black/50 rounded-lg flex items-center justify-center">
-                  <img 
-                    src="/placeholder-book.jpg" 
-                    alt="Book Cover" 
-                    className="max-h-32 max-w-full object-contain rounded shadow-lg"
-                    onError={(e) => {
-                      // Fallback if the URL fails to load
-                      (e.target as HTMLImageElement).src = "https://images.pexels.com/photos/1370295/pexels-photo-1370295.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1";
-                    }}
-                  />
-                </div>
-              </div>
-              
               <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black to-transparent">
-                <div className="mb-1 text-white font-bold truncate">{item.value}</div>
+                <div className="mb-1 text-white font-bold truncate">{item.title || "Book"}</div>
                 
                 <div className="mt-2 flex justify-between items-center">
-                  <div className="text-white/70 text-xs truncate">
-                    Amazon Book Link
+                  <div className="text-white/70 text-xs truncate max-w-[120px]">
+                    {/* Display just domain name */}
+                    {(() => {
+                      try {
+                        return new URL(item.value).hostname.replace('www.', '');
+                      } catch {
+                        return 'Book Link';
+                      }
+                    })()}
                   </div>
                   <a
                     href={item.value}
