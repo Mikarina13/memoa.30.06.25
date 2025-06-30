@@ -4,7 +4,7 @@ import { Html, useTexture } from '@react-three/drei';
 import { Vector3, Group, MathUtils } from 'three';
 import React from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
-import { AlertCircle, Loader, RefreshCw, XCircle, FileText, FileVideo, Mic, Newspaper, Link as LinkIcon, Facebook, Instagram, Twitter, Linkedin, Youtube, Github, Twitch, AlignJustify as Spotify, Rss, Mail, Globe2, MessageSquare, ExternalLink, Heart, Film, BookOpen, MapPin, Quote, Music, Utensils } from 'lucide-react';
+import { Heart, Volume2, User, Brain, Image as ImageIcon, FileText, Gamepad2, Globe, Camera, Cuboid as Cube, FileVideo, File as FilePdf, Sparkles, Link as LinkIcon, Facebook, Instagram, Twitter, Linkedin, Youtube, Github, Twitch, AlignJustify as Spotify, Rss, Mail, Globe2, MessageSquare, ExternalLink, Heart, Film, BookOpen, MapPin, Quote, Music, Utensils } from 'lucide-react';
 
 interface ContentItem {
   id: string;
@@ -915,6 +915,14 @@ export function renderPersonalFavoritesContent(item: any, isActive: boolean, sca
   const amazonBookImage = "https://images.pexels.com/photos/1370295/pexels-photo-1370295.jpeg?auto=compress&cs=tinysrgb&w=400";
   const moviePosterImage = "https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg?auto=compress&cs=tinysrgb&w=400";
   
+  // State for tracking image loading errors
+  const [imageError, setImageError] = useState(false);
+  
+  // Reset error state when item changes
+  useEffect(() => {
+    setImageError(false);
+  }, [itemValue]);
+  
   // For books and movies, use specific images based on some keywords in the value
   const getBookImageUrl = (value: string) => {
     if (value.toLowerCase().includes('harry potter')) {
@@ -964,6 +972,7 @@ export function renderPersonalFavoritesContent(item: any, isActive: boolean, sca
                   onError={(e) => {
                     // Fallback to standard quality if maxres not available
                     (e.target as HTMLImageElement).src = `https://img.youtube.com/vi/${youtubeVideoId}/0.jpg`;
+                    console.log('Switching to standard thumbnail for YouTube video:', youtubeVideoId);
                   }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-black/10"></div>
@@ -1009,9 +1018,15 @@ export function renderPersonalFavoritesContent(item: any, isActive: boolean, sca
             <>
               <div className="absolute inset-0 overflow-hidden">
                 <img 
-                  src={getMovieImageUrl(itemValue)}
+                  src={isMoviePoster && !imageError ? item.value : getMovieImageUrl(itemValue)}
                   alt="Movie Poster"
                   className="w-full h-full object-cover opacity-80"
+                  onError={(e) => {
+                    console.log('Movie poster failed to load:', item.value);
+                    setImageError(true);
+                    // Use fallback image
+                    (e.target as HTMLImageElement).src = getMovieImageUrl(itemValue);
+                  }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent"></div>
               </div>
@@ -1057,9 +1072,15 @@ export function renderPersonalFavoritesContent(item: any, isActive: boolean, sca
             <>
               <div className="absolute inset-0 overflow-hidden">
                 <img
-                  src={getBookImageUrl(itemValue)}
+                  src={isAmazonBook && !imageError ? item.value : getBookImageUrl(itemValue)}
                   alt="Book Cover"
                   className="w-full h-full object-cover opacity-80"
+                  onError={(e) => {
+                    console.log('Book cover failed to load:', item.value);
+                    setImageError(true);
+                    // Use fallback image
+                    (e.target as HTMLImageElement).src = getBookImageUrl(itemValue);
+                  }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent"></div>
               </div>
