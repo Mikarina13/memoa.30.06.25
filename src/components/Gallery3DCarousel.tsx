@@ -16,7 +16,7 @@ interface GalleryItem {
 interface Gallery3DCarouselProps {
   galleryItems: any[];
   onClose: () => void;
-  onItemSelect?: (item: any) => void;
+  onItemSelect?: (item: unknown) => void;
   currentIndex?: number;
   onIndexChange?: (index: number) => void;
   isLoading?: boolean;
@@ -132,30 +132,6 @@ export function Gallery3DCarousel({
     }
   });
   
-  // Set up keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Prevent default browser behavior for navigation keys
-      if (["ArrowLeft", "ArrowRight", "a", "d", "A", "D"].includes(e.key)) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-      
-      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
-        navigateCarousel(1); // Rotate counterclockwise
-      } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
-        navigateCarousel(-1); // Rotate clockwise
-      } else if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-    
-    // Use { passive: false } to allow preventDefault() to work properly
-    window.addEventListener('keydown', handleKeyDown, { passive: false });
-    
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
-  
   // Handle manual navigation
   const navigateCarousel = useCallback((direction: number) => {
     if (isTransitioning || galleryItems.length === 0) return;
@@ -179,6 +155,30 @@ export function Gallery3DCarousel({
       setIsTransitioning(false);
     }, 300);
   }, [angleStep, currentIndex, galleryItems.length, isTransitioning, onIndexChange]);
+  
+  // Set up keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Prevent default browser behavior for navigation keys
+      if (["ArrowLeft", "ArrowRight", "a", "d", "A", "D"].includes(e.key)) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+        navigateCarousel(1); // Rotate counterclockwise
+      } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+        navigateCarousel(-1); // Rotate clockwise
+      } else if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    
+    // Use { passive: false } to allow preventDefault() to work properly
+    window.addEventListener('keydown', handleKeyDown, { passive: false });
+    
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [navigateCarousel, onClose]);
   
   // Update index if controlled externally
   useEffect(() => {
@@ -302,17 +302,41 @@ function CarouselItem({
   const loadedRef = useRef(false);
   const [textureError, setTextureError] = useState(false);
   
+  // Helper function to check if a file path is an image based on extension
+  const isImageFile = (filePath: string): boolean => {
+    if (!filePath) return false;
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'];
+    const lowercasePath = filePath.toLowerCase();
+    return imageExtensions.some(ext => lowercasePath.endsWith(ext));
+  };
+
+  // Helper function to validate URL format
+  const isValidHttpUrl = (string: string): boolean => {
+    let url;
+    try {
+      url = new URL(string);
+    } catch (_) {
+      return false;  
+    }
+    return url.protocol === "http:" || url.protocol === "https:";
+  };
+  
+  // Validate the file path before attempting to load
+  const isValidPath = isValidHttpUrl(item.file_path);
+  
+  // Determine if this item should use texture loading
+  const shouldLoadTexture = item.media_type === 'image' && isImageFile(item.file_path) && isValidPath;
+  
   // Always call useTexture hook, but conditionally use the result
-  // This ensures the hook is called the same number of times on each render
   const texture = useTexture(
-    item.media_type === 'image' ? item.file_path || '' : '/placeholder.jpg', 
+    shouldLoadTexture ? item.file_path : '/placeholder.jpg', 
     undefined,
     (error) => {
       console.warn('Texture loading error:', error);
       setTextureError(true);
     },
     () => {
-      if (!loadedRef.current && item.media_type === 'image') {
+      if (!loadedRef.current && shouldLoadTexture) {
         loadedRef.current = true;
         onImageLoaded();
       }
@@ -327,7 +351,7 @@ function CarouselItem({
   }, [scale]);
   
   // Set material based on media type and error state
-  const materialProps = item.media_type === 'image' && !textureError
+  const materialProps = shouldLoadTexture && !textureError
     ? { map: texture } 
     : { color: textureError ? '#666666' : '#111111' };
   

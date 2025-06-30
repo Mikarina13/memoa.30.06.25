@@ -1,8 +1,8 @@
-import { useState, useEffect, Suspense, useMemo } from 'react';
+import { useRef, useState, useEffect, useMemo, Suspense } from 'react';
 import { Canvas, useThree, ThreeEvent } from '@react-three/fiber';
 import { OrbitControls, Environment, Html } from '@react-three/drei';
 import { motion, AnimatePresence } from 'framer-motion'; 
-import { X, Loader, RefreshCw, Settings, Cog, Image, ArrowLeft } from 'lucide-react';
+import { X, Loader, RefreshCw, Settings, Cog, Image, Home } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { EnhancedStars } from '../components/EnhancedStars';
 import { ProfileData3DDisplay } from '../components/ProfileData3DDisplay';
@@ -14,7 +14,6 @@ import { useAuth } from '../hooks/useAuth';
 import { MemoirIntegrations, MemoriaProfile } from '../lib/memoir-integrations';
 import { useRequireTermsAcceptance } from '../hooks/useRequireTermsAcceptance';
 import { TributeImageInterface } from '../components/TributeImageInterface';
-import { TributeImageDetail } from '../components/details/TributeImageDetail';
 import { Content3DCarousel, renderGalleryContent, renderMediaLinkContent } from '../components/Content3DCarousel';
 import { SPACE_THEMES } from '../utils/constants';
 
@@ -29,6 +28,7 @@ import { GalleryDetail } from '../components/details/GalleryDetail';
 import { PersonalityDetail } from '../components/details/PersonalityDetail';
 import { FamilyTreeDetail } from '../components/details/FamilyTreeDetail';
 import { MediaLinksDetail } from '../components/details/MediaLinksDetail';
+import { TributeImageDetail } from '../components/details/TributeImageDetail';
 
 // Default customization settings
 const DEFAULT_SETTINGS: SpaceCustomizationSettings = {
@@ -387,7 +387,7 @@ export function Profile3DSpacePage() {
       setShowGalleryCarousel(true);
       return;
     }
-    
+
     // Special handling for AI tribute images to show 3D carousel
     if (itemType === 'ai_tribute_images') {
       // Transform tribute image data to match the format expected by the carousel
@@ -442,6 +442,7 @@ export function Profile3DSpacePage() {
 
   // Handle close detail modal
   const handleCloseDetailModal = () => {
+    console.log('Closing detail modal, returning to profile view');
     setShowDetailModal(false);
     setSelectedItem(null);
   };
@@ -457,7 +458,7 @@ export function Profile3DSpacePage() {
     // The actual save is handled in the SpaceCustomizer component
   };
 
-  // Handle gallery navigation
+  // Gallery navigation handlers
   const handleGalleryPrev = () => {
     setGalleryCurrentIndex(prev => 
       prev === 0 ? selectedGalleryItems.length - 1 : prev - 1
@@ -501,22 +502,34 @@ export function Profile3DSpacePage() {
 
   // Handle closing of gallery and media carousels (NOT the entire view)
   const handleCloseCarousel = () => {
+    console.log('Closing carousel, returning to profile view');
     // Just close the current active carousel and return to the profile view
     setShowGalleryCarousel(false);
     setShowMediaLinksCarousel(false);
   };
   
   // Handle returning to profile or memento page
-  const handleCloseView = () => {
+  const handleNavigateBack = () => {
+    console.log('Navigating back from profile space...');
+    
+    // If a detail modal is open, close it first and stay on the profile
+    if (showDetailModal) {
+      console.log('Detail modal is open, closing it');
+      handleCloseDetailModal();
+      return;
+    }
+    
+    // If a carousel is open, close it first and stay on the profile
     if (showGalleryCarousel || showMediaLinksCarousel) {
-      // If we're in a carousel, just close it and stay on the profile space
+      console.log('Carousel is open, closing it');
       handleCloseCarousel();
       return;
     }
     
-    // If we have an initialUserId and it's different from the current user, 
-    // we're viewing someone else's profile, so go back to memento with appropriate state
+    // Otherwise, we're at the top level of the profile space
+    // For other users' profiles, go back to memento explorer
     if (initialUserId && initialUserId !== user?.id) {
+      console.log('Returning to Memento explorer from another user\'s profile');
       navigate('/memento', { 
         state: { 
           showExplorer: true, 
@@ -524,10 +537,12 @@ export function Profile3DSpacePage() {
         }
       });
     } else {
-      // For your own profiles, go to the appropriate dashboard
+      // For own profiles, go to the appropriate dashboard
       if (profileType === 'memoir') {
+        console.log('Returning to Memoir dashboard');
         navigate('/memoir/dashboard');
       } else {
+        console.log('Returning to Memoria dashboard');
         navigate('/memoria/dashboard');
       }
     }
@@ -745,16 +760,18 @@ export function Profile3DSpacePage() {
       exit={{ opacity: 0 }}
       className="w-full h-screen bg-black relative overflow-hidden"
     >
+      {/* Back button */}
       <div className="fixed top-8 left-8 z-50">
         <button
-          onClick={handleCloseView}
+          onClick={handleNavigateBack}
           className="flex items-center gap-2 px-3 py-2 bg-black/40 backdrop-blur-sm rounded-full border border-white/10 text-white/80 hover:text-white transition-colors"
-          title="Close view"
+          title="Return"
         >
           <X className="w-6 h-6" />
         </button>
       </div>
       
+      {/* Profile or Space title */}
       <div className="fixed top-8 right-8 z-50">
         <div className="flex items-center gap-2">
           <div 
@@ -927,6 +944,15 @@ export function Profile3DSpacePage() {
         <RefreshCw className="w-5 h-5" />
       </button>
       
+      {/* Home Button - Quick access to dashboard */}
+      <button 
+        onClick={handleNavigateBack}
+        className="fixed top-36 right-8 p-3 bg-black/50 backdrop-blur-sm rounded-full border border-white/10 text-white/70 hover:text-white transition-colors z-40" 
+        title="Return to Dashboard"
+      >
+        <Home className="w-5 h-5" />
+      </button>
+      
       {/* Gallery Button - Quick access to gallery carousel */}
       {(galleryItems.length > 0 || galleryLoadError) && (
         <button 
@@ -956,7 +982,7 @@ export function Profile3DSpacePage() {
               setShowGalleryCarousel(true);
             }
           }}
-          className={`fixed top-36 right-8 p-3 backdrop-blur-sm rounded-full border border-white/10 transition-colors z-40 ${
+          className={`fixed top-52 right-8 p-3 backdrop-blur-sm rounded-full border border-white/10 transition-colors z-40 ${
             galleryLoadError 
               ? 'bg-red-500/50 hover:bg-red-500/70 text-white'
               : 'bg-black/50 hover:bg-black/70 text-white/70 hover:text-white'
