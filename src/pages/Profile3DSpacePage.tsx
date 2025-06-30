@@ -6,7 +6,7 @@ import { X, Loader, RefreshCw, Settings, Cog, Image, Home } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { EnhancedStars } from '../components/EnhancedStars';
 import { ProfileData3DDisplay } from '../components/ProfileData3DDisplay';
-import { SpaceCustomizer, SpaceCustomizationSettings } from '../components/SpaceCustomizer'; 
+import { SpaceCustomizer, SpaceCustomizationSettings } from './SpaceCustomizer'; 
 import { Gallery3DCarousel, CarouselCameraControls } from '../components/Gallery3DCarousel';
 import { GalleryNavigationFooter } from '../components/GalleryNavigationFooter';
 import { useKeyboardControls } from '../hooks/useKeyboardControls';
@@ -14,7 +14,7 @@ import { useAuth } from '../hooks/useAuth';
 import { MemoirIntegrations, MemoriaProfile } from '../lib/memoir-integrations';
 import { useRequireTermsAcceptance } from '../hooks/useRequireTermsAcceptance';
 import { TributeImageInterface } from '../components/TributeImageInterface';
-import { Content3DCarousel, renderGalleryContent, renderMediaLinkContent } from '../components/Content3DCarousel';
+import { Content3DCarousel, renderGalleryContent, renderMediaLinkContent, renderDigitalPresenceContent } from '../components/Content3DCarousel';
 import { SPACE_THEMES } from '../utils/constants';
 
 // Import detail components
@@ -81,10 +81,13 @@ export function Profile3DSpacePage() {
   const [showTributeImageInterface, setShowTributeImageInterface] = useState(false);
   const [showGalleryCarousel, setShowGalleryCarousel] = useState(false);
   const [showMediaLinksCarousel, setShowMediaLinksCarousel] = useState(false);
+  const [showDigitalPresenceCarousel, setShowDigitalPresenceCarousel] = useState(false);
   const [selectedGalleryItems, setSelectedGalleryItems] = useState<any[]>([]);
   const [selectedMediaLinks, setSelectedMediaLinks] = useState<any[]>([]);
+  const [selectedDigitalPresenceItems, setSelectedDigitalPresenceItems] = useState<any[]>([]);
   const [galleryCurrentIndex, setGalleryCurrentIndex] = useState(0);
   const [mediaLinksCurrentIndex, setMediaLinksCurrentIndex] = useState(0);
+  const [digitalPresenceCurrentIndex, setDigitalPresenceCurrentIndex] = useState(0);
   
   // State for customization
   const [memoriaProfiles, setMemoriaProfiles] = useState<MemoriaProfile[]>([]);
@@ -413,6 +416,14 @@ export function Profile3DSpacePage() {
       return;
     }
     
+    // Special handling for digital presence to show 3D carousel
+    if (itemType === 'digital_presence') {
+      setSelectedDigitalPresenceItems(itemData);
+      setDigitalPresenceCurrentIndex(0); // Reset index to first item
+      setShowDigitalPresenceCarousel(true);
+      return;
+    }
+    
     if (itemType === 'personality') {
       navigate('/personality-test', { 
         state: { 
@@ -499,6 +510,27 @@ export function Profile3DSpacePage() {
     const adjustedIndex = Math.min(Math.max(0, targetIndex), selectedMediaLinks.length - 1);
     setMediaLinksCurrentIndex(adjustedIndex);
   };
+  
+  // Digital Presence navigation handlers
+  const handleDigitalPresencePrev = () => {
+    setDigitalPresenceCurrentIndex(prev => 
+      prev === 0 ? selectedDigitalPresenceItems.length - 1 : prev - 1
+    );
+  };
+
+  const handleDigitalPresenceNext = () => {
+    setDigitalPresenceCurrentIndex(prev => 
+      prev === selectedDigitalPresenceItems.length - 1 ? 0 : prev + 1
+    );
+  };
+
+  const handleDigitalPresenceSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseFloat(e.target.value);
+    const normalizedValue = value / 100;
+    const targetIndex = Math.floor(normalizedValue * selectedDigitalPresenceItems.length);
+    const adjustedIndex = Math.min(Math.max(0, targetIndex), selectedDigitalPresenceItems.length - 1);
+    setDigitalPresenceCurrentIndex(adjustedIndex);
+  };
 
   // Handle closing of gallery and media carousels (NOT the entire view)
   const handleCloseCarousel = () => {
@@ -506,6 +538,7 @@ export function Profile3DSpacePage() {
     // Just close the current active carousel and return to the profile view
     setShowGalleryCarousel(false);
     setShowMediaLinksCarousel(false);
+    setShowDigitalPresenceCarousel(false);
   };
   
   // Handle returning to profile or memento page
@@ -520,7 +553,7 @@ export function Profile3DSpacePage() {
     }
     
     // If a carousel is open, close it first and stay on the profile
-    if (showGalleryCarousel || showMediaLinksCarousel) {
+    if (showGalleryCarousel || showMediaLinksCarousel || showDigitalPresenceCarousel) {
       console.log('Carousel is open, closing it');
       handleCloseCarousel();
       return;
@@ -845,7 +878,10 @@ export function Profile3DSpacePage() {
             </div>
           </Html>
         }>
-          <ProfileSpaceControls settings={customizationSettings} isGalleryActive={showGalleryCarousel || showMediaLinksCarousel} />
+          <ProfileSpaceControls 
+            settings={customizationSettings} 
+            isGalleryActive={showGalleryCarousel || showMediaLinksCarousel || showDigitalPresenceCarousel} 
+          />
           <EnhancedStars 
             count={starCount}
             size={customizationSettings.particleSize}
@@ -896,9 +932,25 @@ export function Profile3DSpacePage() {
             />
           )}
           
+          {/* 3D Digital Presence Carousel */}
+          {showDigitalPresenceCarousel && selectedDigitalPresenceItems.length > 0 && (
+            <Content3DCarousel 
+              items={selectedDigitalPresenceItems} 
+              onClose={handleCloseCarousel}
+              onItemSelect={(item) => {
+                // Open the link directly in a new tab
+                window.open(item.url, '_blank', 'noopener,noreferrer');
+              }}
+              currentIndex={digitalPresenceCurrentIndex}
+              onIndexChange={setDigitalPresenceCurrentIndex}
+              title="Digital Presence"
+              renderItemContent={(item, isActive, scale) => renderDigitalPresenceContent(item, isActive, scale)}
+            />
+          )}
+          
           {/* Only render 3D icons when modal is NOT visible to prevent them from showing through */}
           <Suspense fallback={null}>
-            {profileData && !showDetailModal && !showGalleryCarousel && !showMediaLinksCarousel && (
+            {profileData && !showDetailModal && !showGalleryCarousel && !showMediaLinksCarousel && !showDigitalPresenceCarousel && (
               <ProfileData3DDisplay 
                 profileData={profileData} 
                 onItemClick={handleItemClick}
@@ -909,11 +961,11 @@ export function Profile3DSpacePage() {
           
           {/* Always render OrbitControls but disable when carousel is active */}
           <OrbitControls 
-            enabled={!showGalleryCarousel && !showMediaLinksCarousel}
-            enablePan={!showGalleryCarousel && !showMediaLinksCarousel}
-            enableZoom={!showGalleryCarousel && !showMediaLinksCarousel}
-            enableRotate={!showGalleryCarousel && !showMediaLinksCarousel}
-            autoRotate={customizationSettings.autoRotate && !showGalleryCarousel && !showMediaLinksCarousel} 
+            enabled={!showGalleryCarousel && !showMediaLinksCarousel && !showDigitalPresenceCarousel}
+            enablePan={!showGalleryCarousel && !showMediaLinksCarousel && !showDigitalPresenceCarousel}
+            enableZoom={!showGalleryCarousel && !showMediaLinksCarousel && !showDigitalPresenceCarousel}
+            enableRotate={!showGalleryCarousel && !showMediaLinksCarousel && !showDigitalPresenceCarousel}
+            autoRotate={customizationSettings.autoRotate && !showGalleryCarousel && !showMediaLinksCarousel && !showDigitalPresenceCarousel} 
             autoRotateSpeed={customizationSettings.rotationSpeed * 50}
             rotateSpeed={0.5}
             zoomSpeed={0.8}
@@ -1038,6 +1090,17 @@ export function Profile3DSpacePage() {
           onPrev={handleMediaLinksPrev}
           onNext={handleMediaLinksNext}
           onSliderChange={handleMediaLinksSliderChange}
+        />
+      )}
+      
+      {/* Digital Presence Navigation Footer - Only shown when digital presence carousel is active */}
+      {showDigitalPresenceCarousel && selectedDigitalPresenceItems.length > 0 && (
+        <GalleryNavigationFooter
+          currentIndex={digitalPresenceCurrentIndex}
+          totalItems={selectedDigitalPresenceItems.length}
+          onPrev={handleDigitalPresencePrev}
+          onNext={handleDigitalPresenceNext}
+          onSliderChange={handleDigitalPresenceSliderChange}
         />
       )}
       

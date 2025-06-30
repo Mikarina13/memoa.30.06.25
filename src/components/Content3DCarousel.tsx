@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useFrame, useThree, ThreeEvent } from '@react-three/fiber';
 import { Html, useTexture } from '@react-three/drei';
 import { Vector3, Group, MathUtils } from 'three';
 import React from 'react';
@@ -669,6 +669,125 @@ export function renderMediaLinkContent(item: any, isActive: boolean, scale: numb
                 Open Link
               </a>
             </div>
+          </div>
+        </div>
+      </Html>
+    </>
+  );
+}
+
+// Get social platform icon and color
+function getDigitalPresencePlatformIconAndColor(item: any) {
+  const name = item.name?.toLowerCase() || '';
+  
+  if (name.includes('facebook')) {
+    return { icon: Facebook, color: 'text-blue-500', bgColor: 'from-blue-500/30 to-blue-700/30', borderColor: 'border-blue-500/50' };
+  }
+  if (name.includes('instagram')) {
+    return { icon: Instagram, color: 'text-pink-500', bgColor: 'from-pink-500/30 to-purple-600/30', borderColor: 'border-pink-500/50' };
+  }
+  if (name.includes('twitter') || name.includes('x.com') || name.includes('x ')) {
+    return { icon: Twitter, color: 'text-blue-400', bgColor: 'from-blue-400/30 to-blue-600/30', borderColor: 'border-blue-400/50' };
+  }
+  if (name.includes('linkedin')) {
+    return { icon: Linkedin, color: 'text-blue-600', bgColor: 'from-blue-600/30 to-blue-800/30', borderColor: 'border-blue-600/50' };
+  }
+  if (name.includes('youtube')) {
+    return { icon: Youtube, color: 'text-red-500', bgColor: 'from-red-500/30 to-red-700/30', borderColor: 'border-red-500/50' };
+  }
+  if (name.includes('github')) {
+    return { icon: Github, color: 'text-white', bgColor: 'from-gray-600/30 to-gray-800/30', borderColor: 'border-gray-400/50' };
+  }
+  if (name.includes('twitch')) {
+    return { icon: Twitch, color: 'text-purple-500', bgColor: 'from-purple-500/30 to-purple-700/30', borderColor: 'border-purple-500/50' };
+  }
+  if (name.includes('spotify')) {
+    return { icon: Spotify, color: 'text-green-500', bgColor: 'from-green-500/30 to-green-700/30', borderColor: 'border-green-500/50' };
+  }
+  if (name.includes('medium') || name.includes('blog')) {
+    return { icon: Rss, color: 'text-orange-500', bgColor: 'from-orange-500/30 to-orange-700/30', borderColor: 'border-orange-500/50' };
+  }
+  if (name.includes('mail') || name.includes('email')) {
+    return { icon: Mail, color: 'text-blue-400', bgColor: 'from-blue-400/30 to-blue-600/30', borderColor: 'border-blue-400/50' };
+  }
+  if (name.includes('discord') || name.includes('slack')) {
+    return { icon: MessageSquare, color: 'text-indigo-400', bgColor: 'from-indigo-400/30 to-indigo-600/30', borderColor: 'border-indigo-400/50' };
+  }
+  
+  return { icon: Globe2, color: 'text-purple-400', bgColor: 'from-purple-500/30 to-indigo-500/30', borderColor: 'border-purple-500/50' };
+}
+
+// Digital presence renderer for social media and other online profiles
+export function renderDigitalPresenceContent(item: any, isActive: boolean, scale: number) {
+  // Get the platform-specific icon and styling
+  const { icon: IconComponent, color, bgColor, borderColor } = getDigitalPresencePlatformIconAndColor(item);
+
+  // Format URL for display
+  const displayUrl = (() => {
+    try {
+      if (item.url && typeof item.url === 'string') {
+        const url = new URL(item.url);
+        return url.hostname;
+      }
+      return 'Link';
+    } catch {
+      return 'Link';
+    }
+  })();
+
+  // Animation styles for active state
+  const activeClass = isActive ? 
+    'shadow-lg transform scale-105 border-2' : 
+    'shadow border';
+  
+  // Fully transparent 3D plane
+  const meshOpacity = 0.0;
+
+  return (
+    <>
+      {/* Transparent 3D mesh as base */}
+      <mesh>
+        <planeGeometry args={[6, 4]} />
+        <meshBasicMaterial color="#000000" opacity={meshOpacity} transparent />
+      </mesh>
+      
+      {/* HTML content with frame styling */}
+      <Html center position={[0, 0, 0.1]} transform>
+        <div 
+          className={`w-64 h-44 bg-gradient-to-r ${bgColor} backdrop-blur-sm rounded-lg p-4 ${activeClass} ${borderColor} transition-all duration-300 overflow-hidden`}
+          style={{ 
+            boxShadow: isActive ? '0 0 25px rgba(255, 255, 255, 0.3)' : '0 0 15px rgba(0, 0, 0, 0.5)',
+            transform: `scale(${scale})`,
+          }}
+        >
+          {/* Platform Logo */}
+          <div className="flex justify-between items-start mb-4">
+            <div className="p-3 bg-black/40 rounded-lg">
+              <IconComponent className={`w-10 h-10 ${color}`} />
+            </div>
+            <div className="text-right">
+              <div className="text-white/90 font-bold text-lg mb-1">{item.name}</div>
+              <div className="text-white/60 text-xs">{new Date(item.timestamp).toLocaleDateString()}</div>
+            </div>
+          </div>
+          
+          {/* URL Display */}
+          <div className="bg-black/40 px-3 py-2 rounded-lg mb-3 overflow-hidden">
+            <div className="text-white/70 text-sm truncate">{displayUrl}</div>
+          </div>
+          
+          {/* Action Button */}
+          <div className="absolute bottom-3 left-3 right-3">
+            <a
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-purple-500/70 hover:bg-purple-500 w-full py-2 rounded-lg transition-colors flex items-center justify-center gap-2 text-white text-sm"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <ExternalLink className="w-4 h-4" />
+              Visit {item.name}
+            </a>
           </div>
         </div>
       </Html>
