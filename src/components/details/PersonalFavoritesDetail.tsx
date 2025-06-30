@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { Heart, MapPin, Film, BookOpen, Quote, Globe, Gamepad2, ExternalLink, Play, Pause, X, Utensils } from 'lucide-react';
 
 interface PersonalFavoritesDetailProps {
@@ -271,21 +272,6 @@ export function PersonalFavoritesDetail({ data }: PersonalFavoritesDetailProps) 
                         }}
                       />
                     </div>
-                  ) : book.toLowerCase().includes('harry potter') ? (
-                    // Special case for Harry Potter books
-                    <div className="h-40 relative">
-                      <img 
-                        src="https://images.pexels.com/photos/8391515/pexels-photo-8391515.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1"
-                        alt={book}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent/0 flex items-end">
-                        <div className="p-2">
-                          <BookOpen className="w-5 h-5 text-emerald-400 inline-block mr-1" />
-                          <span className="text-white text-sm font-medium">{book}</span>
-                        </div>
-                      </div>
-                    </div>
                   ) : (
                     // Regular movie with poster from Pexels
                     <div className="h-40 relative">
@@ -343,13 +329,9 @@ export function PersonalFavoritesDetail({ data }: PersonalFavoritesDetailProps) 
                     // Amazon book link with image
                     <div className="h-40 relative">
                       <img 
-                        src={book}
+                        src="https://images.pexels.com/photos/1370295/pexels-photo-1370295.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1"
                         alt="Book Cover"
-                        className="w-full h-full object-contain bg-emerald-900/20"
-                        onError={(e) => {
-                          // Fallback if image fails to load
-                          e.currentTarget.src = "https://images.pexels.com/photos/1370295/pexels-photo-1370295.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1";
-                        }}
+                        className="w-full h-full object-cover"
                       />
                       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-2">
                         <p className="text-white text-sm font-medium">Amazon Book</p>
