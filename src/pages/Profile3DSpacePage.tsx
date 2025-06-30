@@ -6,7 +6,7 @@ import { X, Loader, RefreshCw, Settings, Cog, Image, Home } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { EnhancedStars } from '../components/EnhancedStars';
 import { ProfileData3DDisplay } from '../components/ProfileData3DDisplay';
-import { SpaceCustomizer, SpaceCustomizationSettings } from './SpaceCustomizer'; 
+import { SpaceCustomizer, SpaceCustomizationSettings } from '../components/SpaceCustomizer'; 
 import { Gallery3DCarousel, CarouselCameraControls } from '../components/Gallery3DCarousel';
 import { GalleryNavigationFooter } from '../components/GalleryNavigationFooter';
 import { useKeyboardControls } from '../hooks/useKeyboardControls';
