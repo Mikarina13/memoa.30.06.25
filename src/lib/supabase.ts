@@ -3,25 +3,58 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// Check if environment variables are properly configured
+const isPlaceholderValue = (value: string | undefined) => {
+  if (!value) return true;
+  const placeholders = [
+    'your_supabase_url',
+    'your_supabase_anon_key',
+    'YOUR_SUPABASE_URL',
+    'YOUR_SUPABASE_ANON_KEY'
+  ];
+  return placeholders.includes(value);
+};
+
 // Debug logging to console
 console.log('🔍 Debug Supabase Config:');
 console.log('URL:', supabaseUrl);
 console.log('Anon Key exists:', !!supabaseAnonKey);
 console.log('Anon Key length:', supabaseAnonKey?.length || 0);
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('❌ Missing Supabase environment variables!');
-  console.log('VITE_SUPABASE_URL:', supabaseUrl);
-  console.log('VITE_SUPABASE_ANON_KEY exists:', !!supabaseAnonKey);
-  throw new Error('Missing Supabase environment variables');
+// Check for missing or placeholder environment variables
+if (!supabaseUrl || !supabaseAnonKey || isPlaceholderValue(supabaseUrl) || isPlaceholderValue(supabaseAnonKey)) {
+  console.error('❌ Supabase environment variables not properly configured!');
+  console.log('');
+  console.log('🔧 To fix this issue:');
+  console.log('1. Create a Supabase account at https://supabase.com');
+  console.log('2. Create a new project in your Supabase dashboard');
+  console.log('3. Go to Settings > API in your project dashboard');
+  console.log('4. Copy your Project URL and anon/public key');
+  console.log('5. Update your .env file with the actual values:');
+  console.log('   VITE_SUPABASE_URL=https://your-project-ref.supabase.co');
+  console.log('   VITE_SUPABASE_ANON_KEY=your_actual_anon_key');
+  console.log('6. Restart your development server');
+  console.log('');
+  console.log('Current values:');
+  console.log('VITE_SUPABASE_URL:', supabaseUrl || 'undefined');
+  console.log('VITE_SUPABASE_ANON_KEY:', supabaseAnonKey ? 'exists but may be placeholder' : 'undefined');
+  console.log('');
+  console.log('📖 For detailed setup instructions, check README_ENVIRONMENT_SETUP.md');
+  
+  throw new Error('Supabase environment variables not configured. Please set up your .env file with actual Supabase credentials. See console for setup instructions.');
 }
 
-// Validate URL format
+// Validate URL format only if it's not a placeholder
 try {
   new URL(supabaseUrl);
 } catch (error) {
   console.error('❌ Invalid Supabase URL format:', supabaseUrl);
-  throw new Error('Invalid Supabase URL format');
+  console.log('');
+  console.log('🔧 Your Supabase URL should look like:');
+  console.log('   https://your-project-ref.supabase.co');
+  console.log('');
+  console.log('Please check your Supabase project settings and update your .env file.');
+  throw new Error('Invalid Supabase URL format. Please check your VITE_SUPABASE_URL in .env file.');
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
