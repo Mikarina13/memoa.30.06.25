@@ -4,7 +4,7 @@ import { Html, useTexture } from '@react-three/drei';
 import { Vector3, Group, MathUtils } from 'three';
 import React from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
-import { Heart, Volume2, User, Brain, Image as ImageIcon, FileText, Gamepad2, Globe, Camera, Cuboid as Cube, FileVideo, File as FilePdf, Sparkles, Link as LinkIcon, Facebook, Instagram, Twitter, Linkedin, Youtube, Github, Twitch, AlignJustify as Spotify, Rss, Mail, Globe2, MessageSquare, ExternalLink, Heart, Film, BookOpen, MapPin, Quote, Music, Utensils } from 'lucide-react';
+import { Heart, Volume2, User, Brain, Image as ImageIcon, FileText, Gamepad2, Globe, Camera, Cuboid as Cube, FileVideo, File as FilePdf, Sparkles, Link as LinkIcon, Facebook, Instagram, Twitter, Linkedin, Youtube, Github, Twitch, AlignJustify as Spotify, Rss, Mail, Globe2, MessageSquare, ExternalLink, Film, BookOpen, MapPin, Quote, Music, Utensils, AlertCircle, RefreshCw, Loader, Mic, Newspaper } from 'lucide-react';
 
 interface ContentItem {
   id: string;
