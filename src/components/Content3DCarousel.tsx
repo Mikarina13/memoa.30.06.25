@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { useFrame, useThree, ThreeEvent } from '@react-three/fiber';
 import { Html, useTexture } from '@react-three/drei';
 import { Vector3, Group, MathUtils } from 'three';
@@ -85,9 +85,9 @@ function CarouselItemErrorFallback() {
       </mesh>
       <Html center>
         <div className="bg-black/70 text-white p-4 rounded-lg text-center max-w-xs">
-          <XCircle className="w-8 h-8 mx-auto mb-2 text-red-400" />
+          <div className="text-red-400 mb-2">⚠️</div>
           <div className="text-sm font-medium mb-1">Failed to load content</div>
-          <div className="text-xs text-white/70">This item could not be displayed</div>
+          <div className="text-xs text-gray-300">This item could not be displayed</div>
         </div>
       </Html>
     </group>
@@ -536,7 +536,7 @@ export function renderGalleryContent(item: any, isActive: boolean, scale: number
   );
 }
 
-// Helper function to get platform icon and color
+// Get social platform icon and color
 function getPlatformIconAndColor(item: any) {
   const source = item.source || '';
   const sourceLower = source.toLowerCase();
@@ -857,16 +857,42 @@ function getFavoriteIconAndTheme(itemType: string, value: string) {
   }
 }
 
-// Personal favorites renderer
+// Personal favorites renderer with media previews
 export function renderPersonalFavoritesContent(item: any, isActive: boolean, scale: number) {
+  // Get YouTube video ID if it's a YouTube URL
+  const getYouTubeId = (url: string): string | null => {
+    if (!url || typeof url !== 'string') return null;
+    
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
+  
   // Get the appropriate icon and theme based on the item type
+  const itemValue = item.value || '';
+  const isYouTubeUrl = typeof itemValue === 'string' && (itemValue.includes('youtube.com') || itemValue.includes('youtu.be'));
+  const youtubeVideoId = isYouTubeUrl ? getYouTubeId(itemValue) : null;
+  
+  // Handle special case for YouTube links
+  const itemType = isYouTubeUrl ? 'video' : item.type || 'favorite';
   const { icon: IconComponent, color, bgColor, borderColor, label } = 
-    getFavoriteIconAndTheme(item.type || 'favorite', item.value);
+    getFavoriteIconAndTheme(itemType, itemValue);
 
-  // Check if the value is a URL
+  // Check if Amazon book link
+  const isAmazonBook = typeof itemValue === 'string' && 
+    (itemValue.includes('amazon.com') && 
+    (itemValue.includes('/books/') || itemValue.includes('/dp/')));
+    
+  // Check if movie poster URL
+  const isMoviePoster = typeof itemValue === 'string' && 
+    (itemValue.includes('movieposters.com') || 
+     itemValue.includes('imdb.com') || 
+     itemValue.includes('themoviedb.org'));
+
+  // Check if it's any URL
   const isUrl = (() => {
     try {
-      new URL(item.value);
+      new URL(itemValue);
       return true;
     } catch {
       return false;
@@ -895,53 +921,249 @@ export function renderPersonalFavoritesContent(item: any, isActive: boolean, sca
       {/* HTML content with frame styling */}
       <Html center position={[0, 0, 0.1]} transform>
         <div 
-          className={`w-80 h-60 bg-gradient-to-r ${bgColor} backdrop-blur-sm rounded-lg ${activeClass} ${borderColor} transition-all duration-300 overflow-hidden`}
+          className={`w-80 h-60 bg-gradient-to-r ${bgColor} backdrop-blur-sm rounded-lg ${activeClass} ${borderColor} transition-all duration-300 overflow-hidden relative`}
           style={{ 
             boxShadow: isActive ? '0 0 25px rgba(255, 255, 255, 0.3)' : '0 0 15px rgba(0, 0, 0, 0.5)',
             transform: `scale(${scale})`,
           }}
         >
-          {/* Item icon and type */}
-          <div className="flex justify-between items-start p-4">
-            <div className="p-3 bg-black/40 rounded-lg">
-              <IconComponent className={`w-8 h-8 ${color}`} />
-            </div>
-            <div className={`px-2 py-1 bg-black/40 rounded-full ${color} text-xs font-medium`}>
-              {label}
-            </div>
-          </div>
-          
-          {/* Item content */}
-          {isQuote ? (
-            <div className="px-4 pb-4">
-              <div className="bg-black/40 px-4 py-3 rounded-lg overflow-y-auto max-h-[100px]">
-                <p className="text-white/90 text-sm italic">
-                  "{item.value.length > 120 ? item.value.substring(0, 120) + '...' : item.value}"
+          {/* Special YouTube Video Preview */}
+          {youtubeVideoId ? (
+            <>
+              <div className="absolute inset-0 overflow-hidden">
+                <img
+                  src={`https://img.youtube.com/vi/${youtubeVideoId}/maxresdefault.jpg`}
+                  alt="YouTube Thumbnail"
+                  className="w-full h-full object-cover opacity-70"
+                  onError={(e) => {
+                    // Fallback to standard quality if maxres not available
+                    (e.target as HTMLImageElement).src = `https://img.youtube.com/vi/${youtubeVideoId}/0.jpg`;
+                  }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-black/10"></div>
+              </div>
+              
+              <div className="absolute top-2 left-2 right-2 flex justify-between items-start">
+                <div className="p-2 bg-black/60 rounded-lg">
+                  <FileVideo className={`w-6 h-6 ${color}`} />
+                </div>
+                <div className="px-2 py-1 bg-black/60 rounded-full text-xs text-white">
+                  YouTube Video
+                </div>
+              </div>
+              
+              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                <div className="w-16 h-16 bg-red-600/80 rounded-full flex items-center justify-center shadow-lg">
+                  <div className="w-0 h-0 border-t-[12px] border-t-transparent border-b-[12px] border-b-transparent border-l-[20px] border-l-white ml-1"></div>
+                </div>
+              </div>
+              
+              <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black to-transparent">
+                <p className="text-white font-bold truncate">{item.value}</p>
+                
+                <div className="mt-2 flex justify-between items-center">
+                  <div className="text-white/70 text-xs truncate">
+                    {item.title || "YouTube Video"}
+                  </div>
+                  <a
+                    href={item.value}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-red-600/80 hover:bg-red-600 px-3 py-1 rounded-lg transition-colors flex items-center gap-1 text-white text-xs"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    Watch
+                  </a>
+                </div>
+              </div>
+            </>
+          ) : isMoviePoster && isUrl ? (
+            // Movie Poster Preview
+            <>
+              <div className="absolute inset-0 overflow-hidden">
+                <div className="w-full h-full bg-gradient-to-br from-blue-900 to-indigo-900 opacity-70"></div>
+              </div>
+              
+              <div className="absolute top-0 left-0 right-0 p-3 flex justify-between">
+                <div className="p-2 bg-black/60 rounded-lg">
+                  <Film className={`w-6 h-6 ${color}`} />
+                </div>
+                <div className="px-2 py-1 bg-black/60 rounded-full text-xs text-white">
+                  Movie Poster
+                </div>
+              </div>
+              
+              <div className="absolute inset-0 flex items-center justify-center p-6">
+                <div className="w-full h-full bg-black/50 rounded-lg flex items-center justify-center">
+                  <img 
+                    src="/placeholder-movie.jpg" 
+                    alt="Movie Poster" 
+                    className="max-h-32 max-w-full object-contain rounded shadow-lg"
+                    onError={(e) => {
+                      // Fallback if the URL fails to load
+                      (e.target as HTMLImageElement).src = "https://images.pexels.com/photos/7991579/pexels-photo-7991579.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1";
+                    }}
+                  />
+                </div>
+              </div>
+              
+              <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black to-transparent">
+                <div className="mb-1 text-white font-bold truncate">{item.value}</div>
+                
+                <div className="mt-2 flex justify-between items-center">
+                  <div className="text-white/70 text-xs truncate">
+                    Movie Poster Link
+                  </div>
+                  <a
+                    href={item.value}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-blue-600/80 hover:bg-blue-600 px-3 py-1 rounded-lg transition-colors flex items-center gap-1 text-white text-xs"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    View
+                  </a>
+                </div>
+              </div>
+            </>
+          ) : isAmazonBook && isUrl ? (
+            // Amazon Book Preview
+            <>
+              <div className="absolute inset-0 overflow-hidden">
+                <div className="w-full h-full bg-gradient-to-br from-emerald-900 to-green-900 opacity-70"></div>
+              </div>
+              
+              <div className="absolute top-0 left-0 right-0 p-3 flex justify-between">
+                <div className="p-2 bg-black/60 rounded-lg">
+                  <BookOpen className={`w-6 h-6 ${color}`} />
+                </div>
+                <div className="px-2 py-1 bg-black/60 rounded-full text-xs text-white">
+                  Amazon Book
+                </div>
+              </div>
+              
+              <div className="absolute inset-0 flex items-center justify-center p-6">
+                <div className="w-full h-full bg-black/50 rounded-lg flex items-center justify-center">
+                  <img 
+                    src="/placeholder-book.jpg" 
+                    alt="Book Cover" 
+                    className="max-h-32 max-w-full object-contain rounded shadow-lg"
+                    onError={(e) => {
+                      // Fallback if the URL fails to load
+                      (e.target as HTMLImageElement).src = "https://images.pexels.com/photos/1370295/pexels-photo-1370295.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1";
+                    }}
+                  />
+                </div>
+              </div>
+              
+              <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black to-transparent">
+                <div className="mb-1 text-white font-bold truncate">{item.value}</div>
+                
+                <div className="mt-2 flex justify-between items-center">
+                  <div className="text-white/70 text-xs truncate">
+                    Amazon Book Link
+                  </div>
+                  <a
+                    href={item.value}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-emerald-600/80 hover:bg-emerald-600 px-3 py-1 rounded-lg transition-colors flex items-center gap-1 text-white text-xs"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    View
+                  </a>
+                </div>
+              </div>
+            </>
+          ) : isUrl ? (
+            // Generic URL Preview
+            <>
+              <div className="p-4">
+                {/* Item icon and type */}
+                <div className="flex justify-between items-start mb-4">
+                  <div className="p-3 bg-black/40 rounded-lg">
+                    <IconComponent className={`w-8 h-8 ${color}`} />
+                  </div>
+                  <div className={`px-2 py-1 bg-black/40 rounded-full ${color} text-xs font-medium`}>
+                    {label}
+                  </div>
+                </div>
+                
+                {/* URL display */}
+                <div className="bg-black/40 px-3 py-2 rounded-lg mb-4 overflow-hidden">
+                  <div className="text-white text-sm font-medium mb-1 truncate">{item.title || "Link"}</div>
+                  <div className="text-white/70 text-xs truncate">{item.value}</div>
+                </div>
+                
+                {/* Description or truncated URL */}
+                <div className="bg-black/30 px-3 py-2 rounded-lg mb-3">
+                  <p className="text-white/80 text-xs">
+                    {item.description || (() => {
+                      try {
+                        const url = new URL(item.value);
+                        return `Link to ${url.hostname}`;
+                      } catch {
+                        return "External Link";
+                      }
+                    })()}
+                  </p>
+                </div>
+              </div>
+              
+              {/* Action Button */}
+              <div className="absolute bottom-3 left-3 right-3">
+                <a
+                  href={item.value}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-blue-500/70 hover:bg-blue-500 w-full py-2 rounded-lg transition-colors flex items-center justify-center gap-2 text-white text-sm"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Open Link
+                </a>
+              </div>
+            </>
+          ) : isQuote ? (
+            // Quote Display
+            <div className="p-4">
+              <div className="flex justify-between items-start mb-3">
+                <div className="p-3 bg-black/40 rounded-lg">
+                  <Quote className={`w-8 h-8 ${color}`} />
+                </div>
+                <div className={`px-2 py-1 bg-black/40 rounded-full ${color} text-xs font-medium`}>
+                  {label}
+                </div>
+              </div>
+              
+              <div className="bg-black/40 px-4 py-3 rounded-lg flex flex-col h-[160px] overflow-hidden">
+                <Quote className={`w-6 h-6 ${color} mb-2`} />
+                <p className="text-white/90 text-sm italic overflow-y-auto">
+                  {itemValue}
                 </p>
               </div>
             </div>
           ) : (
-            <div className="px-4 pb-4">
-              <div className="bg-black/40 px-4 py-3 rounded-lg">
-                <p className="text-white/90 text-sm font-medium truncate">
-                  {item.value}
-                </p>
+            // Default content display
+            <div className="p-4">
+              <div className="flex justify-between items-start mb-4">
+                <div className="p-3 bg-black/40 rounded-lg">
+                  <IconComponent className={`w-8 h-8 ${color}`} />
+                </div>
+                <div className={`px-2 py-1 bg-black/40 rounded-full ${color} text-xs font-medium`}>
+                  {label}
+                </div>
               </div>
               
-              {isUrl && (
-                <div className="mt-3 text-center">
-                  <a 
-                    href={item.value}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs transition-colors"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <ExternalLink className="w-3 h-3" />
-                    Open Link
-                  </a>
-                </div>
-              )}
+              <div className="bg-black/40 px-4 py-3 rounded-lg flex flex-col h-36 overflow-auto">
+                <h3 className="text-white font-bold text-base mb-2">{item.title || label}</h3>
+                <p className="text-white/90 text-sm overflow-y-auto">
+                  {itemValue}
+                </p>
+              </div>
             </div>
           )}
         </div>
